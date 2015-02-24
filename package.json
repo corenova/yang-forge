@@ -1,0 +1,41 @@
+{
+  "name": "yang-compiler",
+  "version": "0.2.3",
+  "description": "A YANG module/compiler which parses text/json based input YANG schema into JS class hierarchy",
+  "author": "Peter K Lee <peter@intercloud.net>",
+  "main": "lib/yang-v1-compiler.js",
+  "scripts": {
+    "test": "mocha test",
+    "prepublish": "mkdir -p lib; coffee -o lib -c src"
+  },
+  "devDependencies": {
+    "coffee-script": ">=1.7"
+  },
+  "repository": {
+    "type": "git",
+    "url": "http://github.com/stormstack/yang-compiler"
+  },
+  "keywords": [
+    "stormify",
+    "stormstack",
+    "data-storm",
+    "yang-storm",
+		"yang-compiler",
+    "datastore",
+    "datamodel",
+    "model",
+    "yang",
+    "restconf",
+    "yang-json"
+  ],
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/stormstack/yang-compiler/issues"
+  },
+  "homepage": "https://github.com/stormstack/yang-compiler",
+  "dependencies": {
+    "meta-class": ">=0.1.0",
+    "tosource": "^0.1.3",
+    "yang-parser": "^0.1.0"
+  }
+}
