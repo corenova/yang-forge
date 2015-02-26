@@ -19,9 +19,9 @@ $ npm install yang-compiler
 The YANG schema file for generating the v1.0 compiler is [here](schemas/yang-v1-compiler.yang)
 
 ## License
-    [MIT](LICENSE)
+  [MIT](LICENSE)
 
-[npm-image]: https://img.shields.io/npm/v/express.svg
+[npm-image]: https://img.shields.io/npm/v/yang-compiler.svg
 [npm-url]: https://npmjs.org/package/yang-compiler
-[downloads-image]: https://img.shields.io/npm/dm/express.svg
+[downloads-image]: https://img.shields.io/npm/dm/yang-compiler.svg
 [downloads-url]: https://npmjs.org/package/yang-compiler
