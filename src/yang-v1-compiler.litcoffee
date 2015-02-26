@@ -2,10 +2,10 @@ Yang Version 1.0 Compiler
 =========================
 
 The Yang v1 compiler is a Yang schema derived compiler that implements
-the RFC 6020 compliant language extensions.  It is compiled by the
-`yang-core-compiler` to produce a new compiler that can then be used
-to compile any other v1 compatible Yang schema definitions into JS
-code.
+the [RFC 6020](http://www.rfc-editor.org/rfc/rfc6020.txt) compliant
+language extensions.  It is compiled by the `yang-core-compiler` to
+produce a new compiler that can then be used to compile any other v1
+compatible Yang schema definitions into JS code.
 
 Other uses of this compiler can be to compile yet another compiler
 that can extend the Yang v1 extension keywords with other syntax that
@@ -24,13 +24,18 @@ Compiling a new Compiler
 4. Extend the preprocessed schema's `meta` data with additional parameters
 5. Compile the schema with the modified `meta` data information
 
+Below we select the locally available `yang-core-compiler` as the
+initial compiler that will be used to generate the new Yang v1.0
+Compiler.  Click [here](./yang-core-compiler.litcoffee) to learn more
+about the core compiler.
+
     compiler = require './yang-core-compiler'
     schema = (require 'fs').readFileSync "#{__dirname}/../schemas/yang-v1-compiler.yang", 'utf-8'
 
-The below steps 3 and 4 are used **ONLY** when compiling a new
-`compiler`.  When using a `compiler` to compile a new Yang schema
-based module, there is usually no need to `preprocess` the schema and
-extend the `meta` data prior to `compile`.
+The steps 3 and 4 are used **ONLY** when compiling a new `compiler`.
+When using a `compiler` to compile a new Yang schema based module,
+there is usually no need to `preprocess` the schema and extend the
+`meta` data prior to `compile`.
 
     meta = compiler.preprocess schema
 
@@ -59,7 +64,10 @@ statement). This facility is provided here due to the fact that Yang
 version 1.0 language definition does not provide a sub-statement
 extension to the `extension` keyword to specify such constraints.
 
-Here we associate a new `resolver` to the `augment` statement extension.
+Here we associate a new `resolver` to the `augment` statement
+extension.  The behavior of `augment` is to expand the target-node
+identified by the `argument` with additional sub-statements described
+by the `augment` statement.
 
     meta.merge 'augment', resolver: (arg, params) -> @[arg]?.extend? params; null
 
@@ -68,12 +76,11 @@ associated to handle accessing the specified `argument` within the
 scope of the current schema being compiled.
       
     meta.merge 'import', resolver: (arg, params) -> @set params.prefix, (@get "module:#{arg}"); null
-      
     meta.merge 'include', resolver: (arg, params) -> @extend (@get "module:#{arg}"); null
 
-The `refine` statement uses similar extend capability as `augment`
+The `refine` statement uses similar extend capability as `augment`.
 
-    meta.merge 'refine', resolver: (arg, params) -> @[arg]?.extend? params; null # XXX - need to handle different?
+    meta.merge 'refine', resolver: (arg, params) -> @[arg]?.extend? params; null
 
 The `uses` statement references a `grouping` node available within the
 context of the schema being compiled to return the contents at the
@@ -82,5 +89,6 @@ current `uses` node context.
     meta.merge 'uses', resolver: (arg, params) -> @get "grouping:#{arg}"
 
 Finally, compile the schema with the modified `meta` data information
+and export it for use by external modules.
 
     module.exports = compiler.compile schema, meta
