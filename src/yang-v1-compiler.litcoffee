@@ -30,12 +30,16 @@ Compiler.  Click [here](./yang-core-compiler.litcoffee) to learn more
 about the core compiler.
 
     compiler = require './yang-core-compiler'
+
+The `schema` that will be used to compile a new compiler can be found
+[here](../schemas/yang-v1-compiler.yang).
+    
     schema = (require 'fs').readFileSync "#{__dirname}/../schemas/yang-v1-compiler.yang", 'utf-8'
 
-The steps 3 and 4 are used **ONLY** when compiling a new `compiler`.
-When using a `compiler` to compile a new Yang schema based module,
-there is usually no need to `preprocess` the schema and extend the
-`meta` data prior to `compile`.
+The following steps 3 and 4 are used **ONLY** when compiling a new
+`compiler`.  When using a `compiler` to compile a normal new Yang
+schema based module, there is usually no need to `preprocess` the
+schema and extend the `meta` data prior to `compile`.
 
     meta = compiler.preprocess schema
 
