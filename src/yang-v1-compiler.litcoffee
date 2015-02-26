@@ -20,6 +20,9 @@ Compiling a new Compiler
 
 1. Specify the compiler that will be utilized to compile
 2. Retrieve the target schema (in this case, a local schema file)
+3. Preprocess the schema to extract the meta data
+4. Extend the preprocessed schema's `meta` data with additional parameters
+5. Compile the schema with the modified `meta` data information
 
     compiler = require './yang-core-compiler'
     schema = (require 'fs').readFileSync "#{__dirname}/../schemas/yang-v1-compiler.yang", 'utf-8'
@@ -29,11 +32,7 @@ The below steps 3 and 4 are used **ONLY** when compiling a new
 based module, there is usually no need to `preprocess` the schema and
 extend the `meta` data prior to `compile`.
 
-3. Preprocess the schema to extract the meta data
-
     meta = compiler.preprocess schema
-
-4. Extend the preprocessed schema's `meta` data with additional parameters
 
 The `meta` data represents the set of **rules** that the `compiler`
 will utilize during `compile` operation.  The primary parameter for
@@ -82,6 +81,6 @@ current `uses` node context.
 
     meta.merge 'uses', resolver: (arg, params) -> @get "grouping:#{arg}"
 
-5. Compile the schema with the modified `meta` data information
+Finally, compile the schema with the modified `meta` data information
 
     module.exports = compiler.compile schema, meta
