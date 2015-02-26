@@ -18,9 +18,21 @@ augmentation of the base YANG v1.0 language specifications, to
 natively extend schema defined extensions for creating more powerful
 abstractions on top of the underlying YANG data model schema language.
 
-For an example of interesting ways new YANG compiler has been
+For an example of interesting ways new YANG compiler can be
 extended, take a look at
 [yang-storm](http://github.com/stormstack/yang-storm).
+
+Basic Usage
+-----------
+```coffeescript
+compiler = require 'yang-compiler'
+schema = """
+  module test {
+    description 'hello'
+  }
+  """
+module = compiler.compile schema
+```
 
 Compiling a new Compiler
 ------------------------
