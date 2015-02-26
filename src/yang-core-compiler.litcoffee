@@ -5,10 +5,11 @@ The **YangCoreCompiler** class provides support for basic set of YANG
 schema modeling language by using the built-in *extension* syntax to
 define additional schema language constructs.
 
-The core compiler only natively understands the new 'compiler' keyword
-at the top and should be used only to generate a new compiler such as
-'yang-v1-compiler' which implements the version 1.0 of the YANG
-language specifications.
+The core compiler only natively understands the **new** 'compiler'
+keyword at the top and should be used only to generate a new compiler
+such as 'yang-v1-compiler' which implements the version 1.0 of the
+YANG language specifications.  The top-level 'compiler' keyword is NOT
+YANG 1.0 standards compliant.
 
 First we declare the compiler class as an extension of the
 `meta-class`.  For details on `meta-class` please refer to
@@ -21,7 +22,7 @@ We initialize the `meta` data of this class by setting up built-in
 supported extension keywords.
 
       @set
-        module:
+        compiler:
           resolver: (arg, params) -> class extends this
           extension: '0..n'
         extension:
@@ -134,7 +135,7 @@ modules.
 
     module.exports = YangCoreCompiler
 
-    ###
+    ### DEPRECATED but retained for temporary reference...
         text: (require 'yang-parser').parse
         json: (obj) ->
           statements = []

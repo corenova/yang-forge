@@ -1,4 +1,4 @@
-module yang-v1-compiler {
+compiler yang-v1-compiler {
     extension anyxml { } // undefined
     extension augment { argument target-node; }
     extension base { argument name; }

@@ -11,9 +11,16 @@ Other uses of this compiler can be to compile yet another compiler
 that can extend the Yang v1 extension keywords with other syntax that
 can then natively support other Yang schemas without requiring the use
 of `prefix` semantics to define the schema definitions deriving from
-the extension keywords.  For an example of an extended compiler,
-please take a look at:
-[yang-storm](http://github.com/stormstack/yang-storm)
+the extension keywords.
+
+This `compiler` suite was created specifically to allow schema based
+augmentation of the base YANG v1.0 language specifications, to
+natively extend schema defined extensions for creating more powerful
+abstractions on top of the underlying YANG data model schema language.
+
+For an example of interesting ways new YANG compiler has been
+extended, take a look at
+[yang-storm](http://github.com/stormstack/yang-storm).
 
 Compiling a new Compiler
 ------------------------
