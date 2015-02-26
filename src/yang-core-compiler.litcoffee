@@ -134,7 +134,7 @@ modules.
 
     module.exports = YangCoreCompiler
 
-###
+    ###
         text: (require 'yang-parser').parse
         json: (obj) ->
           statements = []
@@ -158,4 +158,4 @@ modules.
             when statements.length is 1 then statements[0]
             else undefined
         source: (func) -> ((require 'tosource') func) if func instanceof Function
-###
+    ###
