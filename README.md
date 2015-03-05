@@ -1,6 +1,6 @@
 # Yang Compiler
 
-  A YANG module/compiler which parses YANG text schema into JS class
+  A YANG compiler which parses YANG text schema into JS class
 hierarchy for [node](http://nodejs.org).
 
   [![NPM Version][npm-image]][npm-url]

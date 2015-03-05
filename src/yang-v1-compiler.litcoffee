@@ -42,6 +42,7 @@ Compiling a new Compiler
 3. Preprocess the schema to extract the meta data
 4. Extend the preprocessed schema's `meta` data with additional parameters
 5. Compile the schema with the modified `meta` data information
+6. Extend the compiled output with compiler used to compile
 
 Below we select the locally available `yang-core-compiler` as the
 initial compiler that will be used to generate the new Yang v1.0
@@ -111,7 +112,10 @@ current `uses` node context.
 
     meta.merge 'uses', resolver: (arg, params) -> @get "grouping:#{arg}"
 
-Finally, compile the schema with the modified `meta` data information
-and export it for use by external modules.
+Finally, compile the schema with the modified `meta` data information,
+extend it with the compiler used to generate the output, and then
+export it for use by external modules.
 
-    module.exports = compiler.compile schema, meta
+    output = compiler.compile schema, meta
+    output.extend compiler
+    module.exports = output

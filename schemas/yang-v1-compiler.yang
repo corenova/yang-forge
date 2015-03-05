@@ -1,4 +1,4 @@
-compiler yang-v1-compiler {
+module yang-v1-compiler {
     extension anyxml { } // undefined
     extension augment { argument target-node; }
     extension base { argument name; }
@@ -128,7 +128,7 @@ compiler yang-v1-compiler {
     }
     extension import {
         argument module;
-        sub prefix { value '0..1'; }
+        sub prefix { value '1'; }
         sub revision-date { value '0..1'; }
     }
     extension include {
@@ -365,5 +365,5 @@ compiler yang-v1-compiler {
         reference "RFC-6020";
     }
     
-    yang-version '1.0';
+    yang-version 1;
 }
