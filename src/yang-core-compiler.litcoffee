@@ -36,7 +36,7 @@ supported extension keywords.
         description: 'argument text': 'yin-element': true
         reference: 'argument text': 'yin-element': true
         status: argument: 'value'
-        value: argument: 'value', any: true
+        value: argument: 'value'
         'yang-version': argument: 'value'
         'yin-element': argument: 'value'
 
@@ -90,6 +90,7 @@ passed in `context` should be a derivative of the meta data extracted
 via `preprocess` call prior to calling `compile`.
 
       @compile: (schema, meta={}) ->
+        return unless schema?
         (@merge meta) if meta instanceof Function
         output = @compileStatement (@parser.parse schema)
         output?.value
@@ -110,18 +111,13 @@ an array.
         unless target?
           console.log "WARN: unrecognized keyword extension '#{keyword}', skipping..."
           return null
-        unless statement.substmts?.length > 0
-          # console.log "no substatements for '#{keyword}'"
-          # console.log statement
-          return name: statement.kw, value: statement.arg
-
-        # TODO - add enforcement for cardinality specification '0..1' or '0..n'
+          
+        # TODO - add enforcement for cardinality specification '0..1', '0..n', '1..n' or '1'
         results = (@compileStatement stmt for stmt in statement.substmts when switch
           when not (meta = @get keyword)?
             console.log "WARN: unable to find metadata for #{keyword}"
             false
-          when meta.any is true then true
-          when not meta.hasOwnProperty(normalize stmt)
+          when not (meta.hasOwnProperty (normalize stmt))
             console.log "WARN: #{keyword} does not have sub-statement declared for #{normalize stmt}"
             false
           else true
@@ -130,43 +126,23 @@ an array.
         value = switch
           when target.resolver instanceof Function
             target.resolver.call this, statement.arg, params, target
-          else
+          when (Object.keys params).length > 0
             class extends MetaClass
+          else
+            statement.arg
 
         value?.set? yang: keyword
         value?.extend? params
 
-        (@set "#{statement.kw}:#{statement.arg}", value) if statement.arg? and value?.set?
+        (@set "#{statement.kw}:#{statement.arg}", value) if statement.arg? and value instanceof Function
 
-        return name: (statement.arg ? statement.kw), value: value
+        return switch
+          when (Object.keys params).length > 0
+            name: (statement.arg ? statement.kw), value: value
+          else
+            name: statement.kw, value: value
 
 Here we return the new `YangCoreCompiler` class for import by other
 modules.
 
     module.exports = YangCoreCompiler
-
-    ### DEPRECATED but retained for temporary reference...
-        text: (require 'yang-parser').parse
-        json: (obj) ->
-          statements = []
-          for key, val of obj
-            [ kw, arg ] = key.split ' '
-            [ prf, kw ] = kw.split ':'
-            unless kw?
-              kw = prf
-              prf = ''
-            substmts = undefined
-            switch
-              when val instanceof Function then arg ?= val
-              when val not instanceof Object then arg ?= val
-              else
-                substmts = @json val
-                unless substmts instanceof Array
-                  substmts = [ substmts ]
-            statements.push prf: prf, kw: kw, arg: arg, substmts: substmts
-          switch
-            when statements.length > 1 then statements
-            when statements.length is 1 then statements[0]
-            else undefined
-        source: (func) -> ((require 'tosource') func) if func instanceof Function
-    ###
