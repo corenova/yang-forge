@@ -142,7 +142,7 @@ an array.
         (@set "#{statement.kw}:#{statement.arg}", value) if statement.arg? and value instanceof Function
 
         return switch
-          when (Object.keys params).length > 0
+          when statement.substmts?.length > 0
             name: (statement.arg ? statement.kw), value: value
           else
             name: statement.kw, value: value
