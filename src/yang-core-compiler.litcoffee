@@ -93,6 +93,8 @@ via `preprocess` call prior to calling `compile`.
         return unless schema?
         (@merge meta) if meta instanceof Function
         output = @compileStatement (@parser.parse schema)
+        if output?.value?.get? 'yang' is 'module'
+          output.value.merge this # infuse with current meta data (a bit brute-force...)
         output?.value
 
 The `compileStatement` function performs recursive compilation of
