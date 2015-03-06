@@ -104,21 +104,26 @@ an array.
       @compileStatement: (statement) ->
         return unless statement? and statement instanceof Object
 
+        if !!statement.prf
+          target = (@get statement.prf)?.get? statement.kw
+        else
+          target = @get statement.kw
+
         normalize = (statement) -> ([ statement.prf, statement.kw ].filter (e) -> e? and !!e).join ':'
-        keyword = normalize statement
-        target = (@get keyword)
+        # keyword = normalize statement
+        # target = @get keyword
 
         unless target?
-          console.log "WARN: unrecognized keyword extension '#{keyword}', skipping..."
+          console.log "WARN: unrecognized keyword extension '#{normalize statement}', skipping..."
           return null
           
         # TODO - add enforcement for cardinality specification '0..1', '0..n', '1..n' or '1'
         results = (@compileStatement stmt for stmt in statement.substmts when switch
-          when not (meta = @get keyword)?
-            console.log "WARN: unable to find metadata for #{keyword}"
-            false
-          when not (meta.hasOwnProperty (normalize stmt))
-            console.log "WARN: #{keyword} does not have sub-statement declared for #{normalize stmt}"
+          # when not (meta = @get keyword)?
+          #   console.log "WARN: unable to find metadata for #{keyword}"
+          #   false
+          when not (target.hasOwnProperty stmt.kw)
+            console.log "WARN: #{statement.kw} does not have sub-statement declared for #{stmt.kw}"
             false
           else true
         )
@@ -131,7 +136,7 @@ an array.
           else
             statement.arg
 
-        value?.set? yang: keyword
+        value?.set? yang: statement.kw
         value?.extend? params
 
         (@set "#{statement.kw}:#{statement.arg}", value) if statement.arg? and value instanceof Function
