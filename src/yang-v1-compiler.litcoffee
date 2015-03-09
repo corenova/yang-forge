@@ -116,6 +116,6 @@ Finally, compile the schema with the modified `meta` data information,
 extend it with the compiler used to generate the output, and then
 export it for use by external modules.
 
-    output = compiler.compile schema, meta
+    output = compiler.compile schema, meta: meta
     output.extend compiler
     module.exports = output

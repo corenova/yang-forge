@@ -84,14 +84,15 @@ invoked on the schema by passing in the optional revised `context`.
 
 The `compile` function is the primary method of the compiler which
 takes in YANG schema input and produces JS output representing the
-input schema.  When called with `context`, it is merged into the meta
-data of the compiler to be used during the `compile` processing.  The
-passed in `context` should be a derivative of the meta data extracted
-via `preprocess` call prior to calling `compile`.
+input schema.  When called with `opts`, it looks for `opts.meta` to be
+merged into the meta data of the compiler to be used during the
+`compile` processing.  The passed in `opts.meta` should be a derivative
+of the meta data extracted via `preprocess` call prior to calling
+`compile`.
 
-      @compile: (schema, meta={}) ->
+      @compile: (schema, @opts={}) ->
         return unless schema?
-        (@merge meta) if meta instanceof Function
+        (@merge opts.meta) if opts.meta instanceof Function
         output = @compileStatement (@parser.parse schema)
         if (output?.value?.get? 'yang') is 'module'
           output.value.merge this # infuse with current meta data (a bit brute-force...)
