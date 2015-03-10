@@ -92,7 +92,7 @@ of the meta data extracted via `preprocess` call prior to calling
 
       @compile: (schema, @opts={}) ->
         return unless schema?
-        (@merge opts.meta) if opts.meta instanceof Function
+        (@merge @opts.meta) if @opts.meta instanceof Function
         output = @compileStatement (@parser.parse schema)
         if (output?.value?.get? 'yang') is 'module'
           output.value.merge this # infuse with current meta data (a bit brute-force...)
