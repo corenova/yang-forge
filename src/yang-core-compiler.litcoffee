@@ -95,7 +95,7 @@ of the meta data extracted via `preprocess` call prior to calling
         (@merge @opts.meta) if @opts.meta instanceof Function
         output = @compileStatement (@parser.parse schema)
         if (output?.value?.get? 'yang') is 'module'
-          output.value.merge (this.match /.*:.*/) # only infuse with meta-defined extensions
+          output.value.merge (this.match /import:.*/) # merge imported metadata
         output?.value
 
 The `compileStatement` function performs recursive compilation of
@@ -108,7 +108,7 @@ an array.
         return unless statement? and statement instanceof Object
 
         if !!statement.prf
-          target = (@get statement.prf)?.get? statement.kw
+          target = (@get "import:#{statement.prf}")?.get? statement.kw
         else
           target = @get statement.kw
 
