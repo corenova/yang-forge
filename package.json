@@ -34,7 +34,7 @@
   },
   "homepage": "https://github.com/stormstack/yang-compiler",
   "dependencies": {
-    "meta-class": ">=0.1.5",
+    "meta-class": ">=0.1.6",
     "yang-parser": "^0.1.0"
   }
 }
