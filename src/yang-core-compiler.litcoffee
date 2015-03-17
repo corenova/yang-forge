@@ -95,7 +95,7 @@ of the meta data extracted via `preprocess` call prior to calling
         (@merge @opts.meta) if @opts.meta instanceof Function
         output = @compileStatement (@parser.parse schema)
         if (output?.value?.get? 'yang') is 'module'
-          output.value.merge (this.match /import:.*/) # merge imported metadata
+          output.value.merge (this.match /.*:.*/) # merge exported metadata
         output?.value
 
 The `compileStatement` function performs recursive compilation of
@@ -142,7 +142,7 @@ an array.
         value?.set? yang: statement.kw
         value?.extend? params
 
-        (@set "#{statement.kw}:#{statement.arg}", value) if statement.arg? and value instanceof Function
+        (@set "#{statement.kw}:#{statement.arg}", value) if target.export is true
 
         return switch
           when statement.substmts?.length > 0

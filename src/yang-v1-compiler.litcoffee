@@ -99,7 +99,7 @@ For below `import` and `include` statements, special resolvers are
 associated to handle accessing the specified `argument` within the
 scope of the current schema being compiled.
       
-    meta.merge 'import', resolver: (arg, params) -> @set params.prefix, (@get "module:#{arg}"); null
+    meta.merge 'import', resolver: (arg, params) -> @set "import:#{params.prefix}", (@get "module:#{arg}"); null
     meta.merge 'include', resolver: (arg, params) -> @extend (@get "module:#{arg}"); null
 
 The `refine` statement uses similar extend capability as `augment`.
@@ -110,6 +110,7 @@ The `uses` statement references a `grouping` node available within the
 context of the schema being compiled to return the contents at the
 current `uses` node context.
 
+    meta.merge 'grouping', export: true
     meta.merge 'uses', resolver: (arg, params) -> @get "grouping:#{arg}"
 
 Finally, compile the schema with the modified `meta` data information,
