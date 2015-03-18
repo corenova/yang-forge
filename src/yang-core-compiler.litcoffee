@@ -142,7 +142,10 @@ an array.
         value?.set? yang: statement.kw
         value?.extend? params
 
-        (@set "#{statement.kw}:#{statement.arg}", value) if target.export is true
+        (@set "#{statement.kw}:#{statement.arg}", value) if (target.export is true) or (target.meta is true)
+
+        if target.meta is true
+          return null
 
         return switch
           when statement.substmts?.length > 0

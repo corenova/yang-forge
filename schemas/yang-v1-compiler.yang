@@ -373,6 +373,7 @@ module yang-v1-compiler {
     sub reference { value '0..1'; }
   }
   extension unique { argument tag; }
+  extension units { argument value; }
   extension uses {
     argument name;
     sub augment { value '0..1'; }
