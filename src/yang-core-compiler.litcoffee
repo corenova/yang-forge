@@ -108,7 +108,7 @@ an array.
         return unless statement? and statement instanceof Object
 
         if !!statement.prf
-          target = (@get "import:#{statement.prf}")?.get? statement.kw
+          target = (@get "schema:#{statement.prf}")?.get? statement.kw
         else
           target = @get statement.kw
 
@@ -119,6 +119,10 @@ an array.
         unless target?
           console.log "WARN: unrecognized keyword extension '#{normalize statement}', skipping..."
           return null
+
+        # Special treatment of 'module' by temporarily declaring itself into the metadata
+        if statement.kw is 'module'
+          @set "module:#{statement.arg}", this
           
         # TODO - add enforcement for cardinality specification '0..1', '0..n', '1..n' or '1'
         results = (@compileStatement stmt for stmt in statement.substmts when switch

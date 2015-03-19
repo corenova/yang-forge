@@ -17,7 +17,10 @@ module yang-v1-compiler {
     sub when { value '0..1'; }
   }
   extension base { argument name; }
-  extension belongs-to { argument module; }
+  extension belongs-to {
+    argument module;
+    sub prefix { value '1'; }
+  }
   extension bit {
     argument name;
     sub description { value '0..1'; }
@@ -342,10 +345,8 @@ module yang-v1-compiler {
     sub leaf { value '0..n'; }
     sub leaf-list { value '0..n'; }
     sub list { value '0..n'; }
-    sub namespace { value '0..1'; }
     sub notification { value '0..n'; }
     sub organization { value '0..1'; }
-    sub prefix { value '0..1'; }
     sub reference { value '0..1'; }
     sub revision { value '0..n'; }
     sub rpc { value '0..n'; }

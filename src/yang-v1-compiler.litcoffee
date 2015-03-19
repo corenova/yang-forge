@@ -99,8 +99,18 @@ For below `import` and `include` statements, special resolvers are
 associated to handle accessing the specified `argument` within the
 scope of the current schema being compiled.
       
-    meta.merge 'import', resolver: (arg, params) -> @set "import:#{params.prefix}", (@get "module:#{arg}"); null
-    meta.merge 'include', resolver: (arg, params) -> @extend (@get "module:#{arg}"); null
+    meta.merge 'import', resolver: (arg, params) -> @set "schema:#{params.prefix}", (@get "module:#{arg}"); null
+    meta.merge 'include', resolver: (arg, params) -> @extend (@get "submodule:#{arg}"); null
+
+The `belongs-to` statement is only used in the context of a
+`submodule` definition which is processed as a sub-compile stage
+within the containing `module` defintion.  Therefore, when this
+statement is encountered, it would be processed within the context of
+the governing `compile` process which means that the metadata
+available within that context will be made *eventually available* to
+the included submodule.
+
+    meta.merge 'belongs-to', resolver: (arg, params) -> @set "schema:#{params.prefix}", (@get "module:#{arg}"); null
 
 The `refine` statement uses similar extend capability as `augment`.
 
@@ -110,8 +120,25 @@ The `uses` statement references a `grouping` node available within the
 context of the schema being compiled to return the contents at the
 current `uses` node context.
 
-    meta.merge 'grouping', export: true
     meta.merge 'uses', resolver: (arg, params) -> @get "grouping:#{arg}"
+
+Specify the 'meta' type statements so that they are only added into
+the metadata section of the compiled output.
+
+    meta.merge 'feature',  meta: true
+    meta.merge 'grouping', meta: true
+    meta.merge 'identity', meta: true
+    meta.merge 'revision', meta: true
+    meta.merge 'typedef',  meta: true
+
+Specify the statements that should be added to the configuration
+defintions but also added into the metadata section of the compiled
+output.
+
+    meta.merge 'module',       export: true
+    meta.merge 'submodule',    export: true
+    meta.merge 'rpc',          export: true
+    meta.merge 'notification', export: true
 
 Finally, compile the schema with the modified `meta` data information,
 extend it with the compiler used to generate the output, and then
