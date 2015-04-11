@@ -67,14 +67,14 @@ extension.  The behavior of `augment` is to expand the target-node
 identified by the `argument` with additional sub-statements described
 by the `augment` statement.
 
-      @merge 'augment', resolver: (arg, params) -> @[arg]?.extend? params; null
+      @merge 'yang/augment', resolver: (arg, params) -> @[arg]?.extend? params; null
 
 For below `import` and `include` statements, special resolvers are
 associated to handle accessing the specified `argument` within the
 scope of the current schema being compiled.
       
-      @merge 'import', resolver: (arg, params) -> @set "schema:#{params.prefix}", (@get "module:#{arg}"); null
-      @merge 'include', resolver: (arg, params) -> @extend (@get "submodule:#{arg}"); null
+      @merge 'yang/import', resolver: (arg, params) -> @set "module/#{params.prefix}", (@get "module/#{arg}"); null
+      @merge 'yang/include', resolver: (arg, params) -> @extend (@get "submodule/#{arg}"); null
 
 The `belongs-to` statement is only used in the context of a
 `submodule` definition which is processed as a sub-compile stage
@@ -84,35 +84,35 @@ the governing `compile` process which means that the metadata
 available within that context will be made *eventually available* to
 the included submodule.
 
-      @merge 'belongs-to', resolver: (arg, params) -> @set "schema:#{params.prefix}", (@get "module:#{arg}"); null
+      @merge 'yang/belongs-to', resolver: (arg, params) -> @set "module/#{params.prefix}", (@get "module/#{arg}"); null
 
 The `refine` statement uses similar extend capability as `augment`.
 
-      @merge 'refine', resolver: (arg, params) -> @[arg]?.extend? params; null
+      @merge 'yang/refine', resolver: (arg, params) -> @[arg]?.extend? params; null
 
 The `uses` statement references a `grouping` node available within the
 context of the schema being compiled to return the contents at the
 current `uses` node context.
 
-      @merge 'uses', resolver: (arg, params) -> @get "grouping:#{arg}"
+      @merge 'yang/uses', resolver: (arg, params) -> @get "grouping/#{arg}"
 
 Specify the 'meta' type statements so that they are only added into
 the metadata section of the compiled output.
 
-      @merge 'feature',  meta: true
-      @merge 'grouping', meta: true
-      @merge 'identity', meta: true
-      @merge 'revision', meta: true
-      @merge 'typedef',  meta: true
+      @merge 'yang/feature',  meta: true
+      @merge 'yang/grouping', meta: true
+      @merge 'yang/identity', meta: true
+      @merge 'yang/revision', meta: true
+      @merge 'yang/typedef',  meta: true
 
 Specify the statements that should be added to the configuration
 defintions but also added into the metadata section of the compiled
 output.
 
-      @merge 'module',       export: true
-      @merge 'submodule',    export: true
-      @merge 'rpc',          export: true
-      @merge 'notification', export: true
+      @merge 'yang/module',       export: true
+      @merge 'yang/submodule',    export: true
+      @merge 'yang/rpc',          export: true
+      @merge 'yang/notification', export: true
       
 Finally, compile the [schema](../schemas/yang-v1-compiler.yang) with
 the newly configured `compiler` and extend the output with the

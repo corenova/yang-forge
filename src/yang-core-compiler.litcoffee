@@ -26,24 +26,24 @@ We initialize the `meta` data of this class by setting up built-in
 supported extension keywords.
 
       @set
-        module:
+        'yang/module':
           resolver: (arg, params) -> class extends this
           extension: '0..n'
           supplement: '0..n'
-        extension:
-          resolver: (arg, params) -> @merge arg, params; null
+        'yang/extension':
+          resolver: (arg, params) -> @merge "yang/#{arg}", params; null
           argument: '0..1'
           description: '0..1'
           reference: '0..1'
           status: '0..1'
           sub: '0..n' # non YANG 1.0 compliant
-        argument: 'yin-element': '0..1'
-        description: 'argument text': 'yin-element': true
-        reference: 'argument text': 'yin-element': true
-        status: argument: 'value'
-        value: argument: 'value'
-        'yang-version': argument: 'value'
-        'yin-element': argument: 'value'
+        'yang/argument': 'yin-element': '0..1'
+        'yang/description': 'argument text': 'yin-element': true
+        'yang/reference': 'argument text': 'yin-element': true
+        'yang/status': argument: 'value'
+        'yang/value': argument: 'value'
+        'yang/yang-version': argument: 'value'
+        'yang/yin-element': argument: 'value'
 
 The below `sub` statement is **not** a part of Yang 1.0 specification,
 but provided as part of the `yang-core-compiler` so that it can be
@@ -51,7 +51,7 @@ used to provide constraint enforcement around sub-statements validity
 and cardinality when a new statement extended via the schema
 `extension` facility.
 
-        sub:
+        'yang/sub':
           argument: 'extension-name'
           resolver: (arg, params) -> params?.value
           value: '0..1'
@@ -61,9 +61,9 @@ specification, but provided as part of the `yang-core-compiler` so
 that it can be used to provide schema driven augmentations to
 pre-defined extension statements.
 
-        supplement:
+        'yang/supplement':
           argument: 'extension-name'
-          resolver: (arg, params) -> @merge arg, params; null
+          resolver: (arg, params) -> @merge "yang/#{arg}", params; null
           sub: '0..n'
      
 The `configure` function accepts a function as an argument which will apply
@@ -104,7 +104,7 @@ input schema.
         return unless schema?
         output = @compileStatement (@parser.parse schema)
         if (output?.value?.get? 'yang') is 'module'
-          output.value.merge (this.match /.*:.*/) # merge exported metadata
+          output.value.merge (this.match /.*\/.*/) # merge exported metadata
         output?.value
 
 The `compileStatement` function performs recursive compilation of
@@ -117,9 +117,11 @@ an array.
         return unless statement? and statement instanceof Object
 
         if !!statement.prf
-          target = (@get "schema:#{statement.prf}")?.get? statement.kw
+          console.log "INFO: processing prefix keyword #{statement.prf}:#{statement.kw}"
+          console.log @get "module/#{statement.prf}"
+          target = (@get "module/#{statement.prf}")?.get? "yang/#{statement.kw}"
         else
-          target = @get statement.kw
+          target = @get "yang/#{statement.kw}"
 
         normalize = (statement) -> ([ statement.prf, statement.kw ].filter (e) -> e? and !!e).join ':'
         # keyword = normalize statement
@@ -131,7 +133,7 @@ an array.
 
         # Special treatment of 'module' by temporarily declaring itself into the metadata
         if statement.kw is 'module'
-          @set "module:#{statement.arg}", this
+          @set "module/#{statement.arg}", this
           
         # TODO - add enforcement for cardinality specification '0..1', '0..n', '1..n' or '1'
         results = (@compileStatement stmt for stmt in statement.substmts when switch
@@ -155,7 +157,7 @@ an array.
         value?.set? yang: statement.kw
         value?.extend? params
 
-        (@set "#{statement.kw}:#{statement.arg}", value) if (target.export is true) or (target.meta is true)
+        (@set "#{statement.kw}/#{statement.arg}", value) if (target.export is true) or (target.meta is true)
 
         if target.meta is true
           return null
