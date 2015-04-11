@@ -117,8 +117,6 @@ an array.
         return unless statement? and statement instanceof Object
 
         if !!statement.prf
-          console.log "INFO: processing prefix keyword #{statement.prf}:#{statement.kw}"
-          console.log @get "module/#{statement.prf}"
           target = (@get "module/#{statement.prf}")?.get? "yang/#{statement.kw}"
         else
           target = @get "yang/#{statement.kw}"
