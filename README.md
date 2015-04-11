@@ -11,6 +11,18 @@ hierarchy for [node](http://nodejs.org).
 $ npm install yang-compiler
 ```
 
+## Basic Usage
+
+```coffeescript
+compiler = require 'yang-compiler'
+schema = """
+  module test {
+    description 'hello'
+  }
+  """
+module = compiler.compile schema
+```
+
 ## Literate Coffeescript Documentation
 
 * [Yang Version 1.0 Compiler](src/yang-v1-compiler.litcoffee)

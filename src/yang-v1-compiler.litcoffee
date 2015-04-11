@@ -22,26 +22,12 @@ For an example of interesting ways new YANG compiler can be
 extended, take a look at
 [yang-storm](http://github.com/stormstack/yang-storm).
 
-Basic Usage
------------
-```coffeescript
-compiler = require 'yang-compiler'
-schema = """
-  module test {
-    description 'hello'
-  }
-  """
-module = compiler.compile schema
-```
-
 Compiling a new Compiler
 ------------------------
 
 1. Specify the compiler that will be utilized to compile
-2. Retrieve the target schema (in this case, a local schema file)
-3. Preprocess the schema to extract the meta data
-4. Extend the preprocessed schema's `meta` data with additional parameters
-5. Compile the schema with the modified `meta` data information
+2. Configure the compiler with `meta` data context
+3. Compile the target schema with the configured compiler
 6. Extend the compiled output with compiler used to compile
 
 Below we select the locally available `yang-core-compiler` as the
@@ -49,20 +35,8 @@ initial compiler that will be used to generate the new Yang v1.0
 Compiler.  Click [here](./yang-core-compiler.litcoffee) to learn more
 about the core compiler.
 
-    compiler = require './yang-core-compiler'
-
-The `schema` that will be used to compile a new compiler can be found
-[here](../schemas/yang-v1-compiler.yang).
-    
-    schema = (require 'fs').readFileSync "#{__dirname}/../schemas/yang-v1-compiler.yang", 'utf-8'
-
-The following steps 3 and 4 are used **ONLY** when compiling a new
-`compiler`.  When using a `compiler` to compile a normal new Yang
-schema based module, there is usually no need to `preprocess` the
-schema and extend the `meta` data prior to `compile`.
-
-    meta = compiler.preprocess schema
-
+    compiler = (require './yang-core-compiler').configure ->
+      
 The `meta` data represents the set of **rules** that the `compiler`
 will utilize during `compile` operation.  The primary parameter for
 extending the underlying `meta` data is the `resolver`.
@@ -93,14 +67,14 @@ extension.  The behavior of `augment` is to expand the target-node
 identified by the `argument` with additional sub-statements described
 by the `augment` statement.
 
-    meta.merge 'augment', resolver: (arg, params) -> @[arg]?.extend? params; null
+      @merge 'augment', resolver: (arg, params) -> @[arg]?.extend? params; null
 
 For below `import` and `include` statements, special resolvers are
 associated to handle accessing the specified `argument` within the
 scope of the current schema being compiled.
       
-    meta.merge 'import', resolver: (arg, params) -> @set "schema:#{params.prefix}", (@get "module:#{arg}"); null
-    meta.merge 'include', resolver: (arg, params) -> @extend (@get "submodule:#{arg}"); null
+      @merge 'import', resolver: (arg, params) -> @set "schema:#{params.prefix}", (@get "module:#{arg}"); null
+      @merge 'include', resolver: (arg, params) -> @extend (@get "submodule:#{arg}"); null
 
 The `belongs-to` statement is only used in the context of a
 `submodule` definition which is processed as a sub-compile stage
@@ -110,40 +84,41 @@ the governing `compile` process which means that the metadata
 available within that context will be made *eventually available* to
 the included submodule.
 
-    meta.merge 'belongs-to', resolver: (arg, params) -> @set "schema:#{params.prefix}", (@get "module:#{arg}"); null
+      @merge 'belongs-to', resolver: (arg, params) -> @set "schema:#{params.prefix}", (@get "module:#{arg}"); null
 
 The `refine` statement uses similar extend capability as `augment`.
 
-    meta.merge 'refine', resolver: (arg, params) -> @[arg]?.extend? params; null
+      @merge 'refine', resolver: (arg, params) -> @[arg]?.extend? params; null
 
 The `uses` statement references a `grouping` node available within the
 context of the schema being compiled to return the contents at the
 current `uses` node context.
 
-    meta.merge 'uses', resolver: (arg, params) -> @get "grouping:#{arg}"
+      @merge 'uses', resolver: (arg, params) -> @get "grouping:#{arg}"
 
 Specify the 'meta' type statements so that they are only added into
 the metadata section of the compiled output.
 
-    meta.merge 'feature',  meta: true
-    meta.merge 'grouping', meta: true
-    meta.merge 'identity', meta: true
-    meta.merge 'revision', meta: true
-    meta.merge 'typedef',  meta: true
+      @merge 'feature',  meta: true
+      @merge 'grouping', meta: true
+      @merge 'identity', meta: true
+      @merge 'revision', meta: true
+      @merge 'typedef',  meta: true
 
 Specify the statements that should be added to the configuration
 defintions but also added into the metadata section of the compiled
 output.
 
-    meta.merge 'module',       export: true
-    meta.merge 'submodule',    export: true
-    meta.merge 'rpc',          export: true
-    meta.merge 'notification', export: true
+      @merge 'module',       export: true
+      @merge 'submodule',    export: true
+      @merge 'rpc',          export: true
+      @merge 'notification', export: true
+      
+Finally, compile the [schema](../schemas/yang-v1-compiler.yang) with
+the newly configured `compiler` and extend the output with the
+compiler used to generate the output.
 
-Finally, compile the schema with the modified `meta` data information,
-extend it with the compiler used to generate the output, and then
-export it for use by external modules.
-
-    output = compiler.compile schema, meta: meta
+    output = compiler.compile (compiler.readSchema 'yang-v1-compiler.yang')
     output.extend compiler
+
     module.exports = output
