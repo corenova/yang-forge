@@ -17,11 +17,6 @@ http://github.com/stormstack/meta-class
     MetaClass = require 'meta-class'
     class YangCoreCompiler extends MetaClass
 
-Setup a default `schemadir` to be a relative directory location
-(../schemas) from this file.
-      
-      @set 'schemadir', (require 'path').resolve __dirname, '../schemas'
-      
 We initialize the `meta` data of this class by setting up built-in
 supported extension keywords.
 
@@ -65,31 +60,6 @@ pre-defined extension statements.
           argument: 'extension-name'
           resolver: (arg, params) -> @merge "yang/#{arg}", params; null
           sub: '0..n'
-     
-The `configure` function accepts a function as an argument which will apply
-against this class for setup/initialization.
-
-      @configure: (func) ->
-        func?.apply? this
-        this
-
-The `use` function specifies one or more extension components to merge
-the `meta` data into the `compiler` for reference during the `compile`
-process.
-
-      @use: (components...) ->
-        (@merge component) for component in components when component instanceof Function
-
-The `readSchema` function is used to retrieve a local file from
-specified `schemadir` as a helper input into `compile` routine.
-
-      @readSchema: (name) ->
-        file = (require 'path').resolve (@get 'schemadir'), name
-        console.log "readSchema: #{file}..."
-        try (require 'fs').readFileSync file, 'utf-8'
-        catch
-          console.log "WARN: unable to read from source #{arg}"
-          undefined
 
 We specify basic parser function to process YANG text-based schema as
 input into `compile` routine.
@@ -97,11 +67,11 @@ input into `compile` routine.
       @parser: require 'yang-parser'
 
 The `compile` function is the primary method of the compiler which
-takes in YANG schema input and produces JS output representing the
+takes in YANG text schema input and produces JS output representing the
 input schema.
 
       @compile: (schema) ->
-        return unless schema?
+        return unless schema? and typeof schema is 'string'
         output = @compileStatement (@parser.parse schema)
         if (output?.value?.get? 'yang') is 'module'
           output.value.merge (this.match /.*\/.*/) # merge exported metadata

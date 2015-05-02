@@ -28,7 +28,7 @@ module = compiler.compile schema
 * [Yang Version 1.0 Compiler](src/yang-v1-compiler.litcoffee)
 * [Yang Core Compiler](src/yang-core-compiler.litcoffee)
 
-The YANG schema file for generating the v1.0 compiler is [here](schemas/yang-v1-compiler.yang)
+The YANG schema file for generating the v1.0 compiler is [here](./yang-v1-compiler.yang)
 
 ## License
   [MIT](LICENSE)
