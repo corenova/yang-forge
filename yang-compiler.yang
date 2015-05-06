@@ -1,0 +1,50 @@
+module yang-compiler {
+  prefix yc;
+
+  include yang-v1-extensions;
+
+  organization
+    "ClearPath Networks NFV R&D Group";
+
+  contact
+    "Web:  <http://www.clearpathnet.com>
+     Code: <http://github.com/stormstack/yang-compiler>
+
+     Author: Peter K. Lee <mailto:plee@clearpathnet.com>";
+
+  description
+    "This module provides YANG v1 language based schema compilations.";
+
+  revision 2015-05-04 {
+    description "Initial revision";
+    reference "RFC-6020";
+  }
+    
+  grouping compiler-rules {
+    list module-map {
+      key name;
+      leaf name { type string; }
+      leaf source { type string; }
+    }
+
+    list importers {
+      leaf regexp { type regexp; }
+      leaf handler { type function; }
+      ordered-by user;
+    }
+  }
+
+  uses compiler-rules;
+  
+  rpc compile {
+    input {
+      leaf schema { type string; mandatory true; }
+    }
+  }
+
+  rpc import {
+    input {
+      leaf name { type string; mandatory true; }
+    }
+  }
+}

@@ -1,4 +1,6 @@
-module yang-v1-compiler {
+submodule yang-v1-extensions {
+  belongs-to yang-compiler { prefix yc; }
+
   extension anyxml { } // undefined
   extension augment {
     argument target-node;
@@ -387,11 +389,8 @@ module yang-v1-compiler {
   }
   extension value { argument value; }
   extension when { argument condition; }
-
-  revision 2015-02-19 {
-    description "Initial revision";
-    reference "RFC-6020";
-  }
-    
+  extension yang-version { argument value; }
+  extension yin-element { argument value; }
+  
   yang-version 1;
 }
