@@ -8,16 +8,19 @@ The meta compiler only supports bare minium set of YANG statements and
 should be used only to generate a new compiler such as 'yang-compiler'
 which implements the version 1.0 of the YANG language specifications.
 
-    class Extension extends (require 'meta-class')
-      @set resolver: undefined
-      @refine: (params={}) -> @merge params
-      @resolve: (target, context) ->
-        resolver = @get 'resolver'
+    class Extension
+      constructor: (@name, @params) -> this
+      
+      #@set resolver: undefined #(arg, params) -> o = {}; o[arg] = params; o
+      refine: (params={}) -> @merge params
+      resolve: (target, context) ->
+        resolver = @resolver
         return target unless resolver instanceof Function
         
         # TODO: qualify some internal meta params against passed-in target...
         context ?= target
-        params = objectify (target.get 'children')
+        params = {}
+        (target.get 'children').forEach (e) -> params[e.get 'name'] = e
         resolver.call context, (target.get 'name'), params, target
 
 First we declare the compiler class as an extension of the
@@ -30,25 +33,36 @@ resolvers.  The `compile` operation uses these definitions to produce
 the desired output.
 
     class YangMetaCompiler extends (require 'meta-class')
-      @set map: {}
+      @set map: {}, extension: {}, module: {}
+
+      @map = (obj) -> @merge 'map', obj
+
+      @extensions = (obj) ->
+        (@get "extension.#{name}")?.resolver = resolver for name, resolver of obj
 
       @define: (name, params={}) ->
-        extension = @get "extension/#{name}"
+        extension = @get "extension.#{name}"
         unless extension?
-          extension = class extends Extension
-          @set "extension/#{name}", extension
-        extension.refine params
+          extension = new Extension name, params
+          @set "extension.#{name}", extension
+        #extension.refine params
         extension
             
       @resolver: (name, resolver) ->
-        [ prefix..., name ] = name?.split? ':'
+        [ prefix..., name ] = (name.split ':' ) if typeof name is 'string'
         m = this
-        m = m.get "module/#{prf}" for prf in prefix
-        extension = m.get "extension/#{name}"
+        m = m.get "module.#{prf}" for prf in prefix if prefix?
+        extension = m.get "extension.#{name}"
         if resolver instanceof Function
-          extension?.merge? resolver: resolver
+          extension?.set? 'resolver', resolver
         extension ?= Extension
         extension
+
+      @find: (type, name) ->
+        [ prefix..., name ] = (name.split ':' ) if typeof name is 'string'
+        m = this
+        m = m.get "module.#{prf}" for prf in prefix if prefix?
+        m.get "#{type}.#{name}"
 
 We utilize the above define/resolver mechanisms to initialize the
 built-in supported language extensions, first of all which is the
@@ -73,58 +87,59 @@ expects a local file source which differs from more robust `import`
 extension.  The `yang-meta-compiler` does not natively provide any
 `import` facilities.
 
-      @map = (obj) -> @merge 'map', obj
-
       @define 'include',
         argument: 'module'
         resolver: (name, params) ->
-          @mixin @preprocess ->
+          source = @get "map.#{name}"
+          return unless typeof source is 'string'
+          submodule = @compile ->
             path = require 'path'
-            resolveFile = (filename) -> switch
-              when path.isAbsolute filename then filename
-              else path.resolve (path.dirname module.parent?.filename), filename
-            (require 'fs').readFileSync (resolveFile (@get "map.#{name}")), 'utf-8'
+            file = path.resolve (path.dirname module.parent?.filename), source
+            console.log "INFO: including '#{name}' using #{file}"
+            (require 'fs').readFileSync file, 'utf-8'
+          @merge 'extension', submodule.get 'extension'
+          submodule
           
-## pre-processing schema
+## compiling a new module given input
 
-The `preprocess` function is the initial primary method of the
-compiler which takes in YANG text schema input and produces JS output
-representing the input schema as meta data hierarchy.
-
-      @preprocess: (schema, parser=(require 'yang-parser')) ->
-        schema = switch
-          when typeof schema is 'string' then schema
-          when schema instanceof Function then schema.call this
-        return unless schema?
-
-The internal `processStatement` function performs recursive compilation of
+The internal/private `compileStatement` function performs recursive compilation of
 passed in statement and sub-statements and invoked within the cotext
 of the originating `compile` function above.  It expects the
 `statement` as an Object containing prf, kw, arg, and any substmts as
 an array.
 
-        processStatement = (statement) ->
-          return unless statement? and statement instanceof Object
+      compileStatement = (statement) ->
+        return unless statement? and statement instanceof Object
 
-          normalize = (statement) -> ([ statement.prf, statement.kw ].filter (e) -> e? and !!e).join ':'
-          keyword = normalize statement
+        normalize = (statement) -> ([ statement.prf, statement.kw ].filter (e) -> e? and !!e).join ':'
+        keyword = normalize statement
 
-          results = (processStatement stmt for stmt in statement.substmts).filter (e) -> e?
-          class extends (require 'meta-class')
-            @set yang: keyword, name: statement.arg, children: results 
+        results = (compileStatement stmt for stmt in statement.substmts).filter (e) -> e?
+        class extends (require 'meta-class')
+          @set yang: keyword, name: statement.arg, children: results 
 
-The output of `processStatement` is then traversed to handle the
-**built-in** extensions resolution (such as include).
+The `compile` function is the primary method of the compiler which
+takes in YANG text schema input and produces JS output representing
+the input schema as meta data hierarchy.
 
-        processStatement (parser.parse schema)
-        .mixin this
-        .traverse (parent, origin) -> (origin.resolver (@get 'yang')).resolve this, origin
+It accepts various forms of input: a text string, a function, and a
+meta class object.
+
+      @compile: (input, parser=(require 'yang-parser')) ->
+        return unless input?
         
-## compiling pre-processed output
+        console.log "INFO: compiling a new module using extensions..."
+        compiler = this
+        input = (input.call this) ? input if input instanceof Function
+        input = compileStatement (parser.parse schema=input) if typeof input is 'string'
+        input.set "schema.#{input.get 'name'}", schema if schema?
+        
+The input module is then traversed to resolve the **currently known**
+extensions for this compiler.
 
-      @compile: (func) ->
-        func?.call? this
-        @traverse (parent, origin) -> (origin.resolver (@get 'yang')).resolve this, origin
+        input.traverse (parent, root) ->
+          console.log @get 'yang'
+          (compiler.find 'extension', (@get 'yang'))?.resolve this, root
 
 Here we return the new `YangMetaCompiler` class for import and use by other
 modules.

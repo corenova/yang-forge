@@ -37,30 +37,31 @@ about the meta compiler.
 
     output = Compiler
 
-### 1. Preprocess input (provide schema)
+### 1. compile input (provide schema)
     
-    .preprocess ->
+    .compile ->
 
       @map 'yang-v1-extensions': '../yang-v1-extensions.yang'
 
-Here we are explicitly loading the [schema](../yang-compiler.yang)
-file contents and passing it into the `compiler` for the `preprocess`
-operation.  This is because the `yang-meta-compiler` only natively
-accepts YANG schema as text string.  We'll be extending this new
-`yang-compiler` to allow for more flexible input into the `preprocess`
-routine below during link.
+Here we are loading the [schema](../yang-compiler.yang) file contents
+and passing it into the `compiler` for the `preprocess` operation.
 
       path = require 'path'
       file = path.resolve __dirname, '../yang-compiler.yang'
-      console.log file
       (require 'fs').readFileSync file, 'utf-8'
 
-### 2. Compile preprocessing output (provide resolvers)
+### 2. configure the resulting meta compiler output
+
+    .configure ->
+
+First, since we are creating a new compiler, we `mixin` the `Compiler`
+class into the new module.  This allows the resulting module to
+provide `compile` operation, even to compile itself.
       
-    .compile ->
+      @mixin Compiler
 
 Then we perform various `meta` data operations to alter the behavior
-of the `compiler` during `compile` operation.  The primary parameter
+of the new compiler during `compile` operation.  The primary parameter
 for extending the underlying extensions is the `resolver`.
 
 The `resolver` is a JS function which is used by the `compiler` when
@@ -79,24 +80,15 @@ statement extensions.  The behavior of `augment` is to expand the
 target-node identified by the `argument` with additional
 sub-statements described by the `augment` statement.
 
-      @resolver 'augment', (arg, params) -> @[arg]?.extend? params; null
-      @resolver 'refine', (arg, params) -> @[arg]?.extend? params; null
-
-For below `import` and `include` statements, special resolvers are
-associated to handle accessing the specified `argument` within the
-scope of the current schema being compiled.
-
-      @resolver 'import', (arg, params) ->
-        mod = (@get "module/#{arg}") ? @import arg
-        params.prefix ?= mod?.prefix
-        @set "module/#{params.prefix}", mod
-        null
-
-      @resolver 'include', (arg, params) ->
-        mod = @get "submodule/#{arg}" ? @import arg
-        @extend mod
-        null
-
+      @extensions
+        augment: (arg, params) -> @[arg]?.extend? params; null
+        refine:  (arg, params) -> @[arg]?.extend? params; null
+        import:  (arg, params) ->
+          mod = (@get "module.#{arg}") ? @import arg
+          params.prefix ?= mod?.prefix
+          @set "module.#{params.prefix}", mod
+          null
+          
 The `belongs-to` statement is only used in the context of a
 `submodule` definition which is processed as a sub-compile stage
 within the containing `module` defintion.  Therefore, when this
@@ -132,37 +124,25 @@ output.
       @merge 'yang/rpc',          export: true
       @merge 'yang/notification', export: true
 
-### 3. Link compiled output
+### 3. compile itself with new extensions
 
-    .link ->
+This below (re)compile step in generating the new module is usually
+not necesary for most module compilation. In this case however, we are
+generating a new compiler that defines new extensions and uses these
+extensions, which requires it to essentially re-compile itself using
+its own extension definitions.
+
+    .compile -> this
       
-Since we are generating a new `compiler`, we infuse this module with
-`yang-meta-compiler` capabilities via a `mixin` operation during
-`link` phase.
-
-      @mixin Compiler
-
 Finally, we export the newly generated compiler.
 
     module.exports = output
 
 
     
-    
-    module.exports = ((new Compiler).compile schema).configure ->
-
 ## Configure the newly compiled yang-compiler module
 
-We then **override** the `compile` routine to accept more flexible
-input formats such as an Object with schema and directory properties.
-This enables the new compiler to directly fetch and read the passed in
-file's contents.
-
-      @when 'compile', (source) ->
-        compiler.compile.call this, switch
-          when typeof source is 'string' then source
-          when source instanceof Object
-            (require 'fs').readFileSync source.schema, 'utf-8'
+    something = ->
 
 The following defines built-in `map` and `importers` for the compiler
 to use when it encounters an `import` or `include` statement while
