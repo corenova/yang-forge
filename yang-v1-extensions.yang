@@ -1,5 +1,4 @@
 submodule yang-v1-extensions {
-  belongs-to yang-compiler { prefix yc; }
 
   extension anyxml { } // undefined
   extension augment {
@@ -391,6 +390,7 @@ submodule yang-v1-extensions {
   extension when { argument condition; }
   extension yang-version { argument value; }
   extension yin-element { argument value; }
-  
+
+  belongs-to yang-compiler { prefix yc; }
   yang-version 1;
 }
