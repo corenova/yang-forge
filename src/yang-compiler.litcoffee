@@ -1,14 +1,14 @@
-# Yang Compiler (Version 1.0)
+# YANG Compiler (Version 1.0)
 
-The Yang compiler is a Yang schema derived compiler that implements
+The YANG compiler is a YANG schema derived compiler that implements
 the [RFC 6020](http://www.rfc-editor.org/rfc/rfc6020.txt) compliant
 language extensions.  It is compiled by the `yang-meta-compiler` to
 produce a new compiler that can then be used to compile any other v1
-compatible Yang schema definitions into JS code.
+compatible YANG schema definitions into JS code.
 
 Other uses of this compiler can be to compile yet another compiler
-that can extend the Yang v1 extension keywords with other syntax that
-can then natively support other Yang schemas without requiring the use
+that can extend the YANG v1 extension keywords with other syntax that
+can then natively support other YANG schemas without requiring the use
 of `prefix` semantics to define the schema definitions deriving from
 the extension keywords.
 
@@ -28,16 +28,16 @@ extended, take a look at
 3. Compile the target schema with the configured compiler
 4. Extend the compiled output with compiler used to compile
 
-## 1. specify the compiler
+## 1. Specify the compiler
 
 We first select the locally available `yang-meta-compiler` as the
-initial compiler that will be used to generate the new Yang v1.0
+initial compiler that will be used to generate the new YANG v1.0
 Compiler.  Click [here](./yang-meta-compiler.litcoffee) to learn more
 about the meta compiler.
 
     MetaCompiler = (require './yang-meta-compiler')
 
-## 2. instantiate a new MetaCompiler with configuration
+## 2. Instantiate a new MetaCompiler with configuration
 
 As part of new MetaCompiler instantiation, we pass in various
 configuration params to alter the behavior of the compiler during
@@ -50,7 +50,7 @@ underlying extensions is the `resolver`.
 ### Defining resolvers for YANG v1.0 extensions
 
 The `resolver` is a JS function which is used by the `compiler` when
-defined for a given Yang extension keyword to handle that particular
+defined for a given YANG extension keyword to handle that particular
 extension keyword.  It can resolve to a new class definition that will
 house the keyword and its sub-statements (for container style
 keywords) or perform a specific operation without returning any value
@@ -62,11 +62,11 @@ other functions available within the given `compiler`.
 
       resolvers:
         module:    (self) -> self
-        submodule: (self) -> self.extend collapse: true
-        feature:   (self, arg, params) -> @set "exports.feature.#{arg}", params
-        identity:  (self, arg, params) -> @set "exports.identity.#{arg}", params
-        typedef:   (self, arg, params) -> @set "exports.typedef.#{arg}", params
-        revision:  (self, arg, params) -> @set "exports.revision.#{arg}", params
+        submodule: (self) -> self.set collapse: true
+        feature:   (self, arg, params) -> @define 'feature', arg, params
+        identity:  (self, arg, params) -> @define 'identity', arg, params
+        typedef:   (self, arg, params) -> @define 'typedef', arg, params
+        revision:  (self, arg, params) -> @define 'revision', arg, params
 
         type: (self) -> self
 
@@ -80,11 +80,11 @@ other functions available within the given `compiler`.
           class extends (require 'meta-class')
             @set yang: 'list', name: arg, model: self, children: children
             
-        rpc:    (self) -> self.extend action: true
+        rpc:    (self) -> self.set action: true
         input:  (self) -> self
         output: (self) -> self
         
-        notification: (self) -> self.extend action: true
+        notification: (self) -> self.set action: true
 
 The `belongs-to` statement is only used in the context of a
 `submodule` definition which is processed as a sub-compile stage
@@ -94,18 +94,16 @@ the governing `compile` process which means that the metadata
 available within that context will be made *eventually available* to
 the included submodule.
 
-        'belongs-to': (self, arg, params) -> @set "#{params.prefix}", (@get "modules.#{arg}")
+        'belongs-to': (self, arg, params) -> @define 'module', params.prefix, (@resolve 'module', arg)
         
 The `uses` statement references a `grouping` node available within the
 context of the schema being compiled to return the contents at the
 current `uses` node context.
 
-        uses: (self, arg) ->
-          #@get "#{prf}.exports.grouping.#{arg}"
-          @get "exports.grouping.#{arg}"
+        uses: (self, arg) -> @resolve 'grouping', arg
         grouping: (self, arg, params) ->
-          self.extend collapse: true
-          @set "exports.grouping.#{arg}", self
+          self.set collapse: true
+          @define 'grouping', arg, self
 
 Here we associate a new `resolver` to the `augment` and `refine`
 statement extensions.  The behavior of `augment` is to expand the
@@ -115,7 +113,7 @@ sub-statements described by the `augment` statement.
         augment: (self, arg, params) -> @[arg]?.extend? params; undefined
         refine:  (self, arg, params) -> @[arg]?.extend? params; undefined
 
-## 3. compile using the target schema as input
+## 3. Compile using the target schema as input
 
 Here we are loading the [schema](../yang-compiler.yang) file contents
 and passing it into the `compiler` for the `compile` operation.
@@ -125,7 +123,7 @@ and passing it into the `compiler` for the `compile` operation.
       file = path.resolve __dirname, '../yang-compiler.yang'
       (require 'fs').readFileSync file, 'utf-8'
 
-## 4. configure the newly generated compiler with additional capabilities
+## 4. Configure the newly generated compiler with additional capabilities
 
     output.configure ->
 
@@ -168,7 +166,7 @@ We then retrieve the **active** meta data (functions) and convert them
 to actual runtime functions as necessary if they were provided as a
 serialized string.
         
-        actors = meta.extract 'resolvers', 'importers', 'handlers'
+        actors = meta.extract 'resolvers', 'importers', 'handlers', 'hooks'
         for type, map of actors
           continue unless map instanceof Object
           for name, func of map
@@ -226,9 +224,9 @@ as name, source, map, resolvers, etc.
         exists = switch
           when Meta.instanceof input then input
           when Meta.instanceof input.source then input.source
-          when Meta.instanceof (@get "modules.#{input.name}") then @get "modules.#{input.name}"
+          else @resolve 'module', input.name
         if exists?
-          @set "modules.#{exists.get 'name'}", exists
+          @define 'module', (exists.get 'name'), exists
           return exists
         
         input.source ?= @get "map.#{input.name}"
@@ -254,7 +252,7 @@ as name, source, map, resolvers, etc.
 
         # TODO: what to do if output name does not match input.name?
         output = @generate payload
-        @set "modules.#{output.get 'name'}", output if output?
+        @define 'module', (output.get 'name'), output if output?
         output
 
 The following `import` resolver utilizes the `import` functionality
@@ -285,12 +283,14 @@ TODO: add exporters support similar to how we can add importers.
 
       @include export: (input) ->
         assert input instanceof Object, "invalid input to export module"
-        assert typeof input.name is 'string' and !!input.name, "need to pass in 'name' of the module to export"
+        assert typeof input.name is 'string' and !!input.name,
+          "need to pass in 'name' of the module to export"
         format = input.format ? 'json'
         m = switch
           when (Meta.instanceof input) then input
-          else (@get "modules.#{input.name}")
-        assert (Meta.instanceof m), "unable to retrieve requested module #{input.name} for export"
+          else @resolve 'module', input.name
+        assert (Meta.instanceof m),
+          "unable to retrieve requested module #{input.name} for export"
 
         tosource = require 'tosource'
 

@@ -23,9 +23,7 @@ which implements the version 1.0 of the YANG language specifications.
         unless @params.resolver?
           throw new Error "no resolver found for '#{target.get 'yang'}' extension", target
 
-        arg = (target.get 'name').replace ':','.'
-        # do something if arg has prefix:something
-
+        arg = (target.get 'name')
         
         # TODO: qualify some internal meta params against passed-in target...
         params = {}
@@ -93,7 +91,8 @@ extension.  The `yang-meta-compiler` does not natively provide any
           argument: 'name'
           resolver: (self, arg, params) ->
             source = @get "map.#{arg}"
-            assert typeof source is 'string', "unable to include '#{arg}' without mapping defined for source"
+            assert typeof source is 'string',
+              "unable to include '#{arg}' without mapping defined for source"
             @compile ->
               path = require 'path'
               file = path.resolve (path.dirname module.parent?.filename), source
@@ -120,6 +119,19 @@ desired output.
             error: err
           undefined
 
+      define: (type, key, value) ->
+        exists = @get "exports.#{type}.#{key}"
+        unless exists?
+          @set "exports.#{type}.#{key}", value
+        undefined
+
+      resolve: (type, key) ->
+        [ prefix..., key ] = key.split ':'
+        from = switch
+          when prefix.length > 0 then @get prefix[0]
+          else this
+        from?.get? "exports.#{type}.#{key}"
+
 The below `assembler` performs the task of combining the source object
 into the destination object by creating a binding between the two.
 This allows the source object to be auto constructed when the
@@ -128,11 +140,12 @@ compilation as part of reduce traversal.
 
       assembler: (dest, src) ->
         objs = switch
-          when src.collapse is true
-            name: k, value: v for k, v of (src.get 'bindings')
           when (Meta.instanceof src)
-            name: @normalizeKey src
-            value: src
+            if (src.get 'collapse')
+              name: k, value: v for k, v of (src.get 'bindings')
+            else
+              name: @normalizeKey src
+              value: src
           when src.constructor is Object
             src
         objs = [ objs ] unless objs instanceof Array
