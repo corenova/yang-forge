@@ -24,9 +24,8 @@ extended, take a look at
 # Compiling a new Compiler
 
 1. Define configuration options for the compiler
-2. Instantiate the compiler with configuration options
-3. Compile the target schema with the configured compiler
-4. Extend the compiled output with compiler used to compile
+2. Compile the target schema with the configured compiler
+3. Mixin additional capabilities into the the newly generated compiler module
 
 ## 1. Define configuration options for the compiler
 
@@ -37,8 +36,6 @@ underlying extensions is the `resolver`.
 
     options = 
       map: 'yang-v1-extensions': '../yang-v1-extensions.yang'
-
-### Defining resolver functions for YANG v1.0 extensions
 
 The `resolver` is a JS function which is used by the `compiler` when
 defined for a given YANG extension keyword to handle that particular
@@ -120,20 +117,15 @@ introduced via the
       procedures:
         import: (input) -> @import input
 
-## 1. Specify the compiler
+## 2. Compile the target schema with the configured compiler
 
-We first select the locally available `yang-meta-compiler` as the
-initial compiler that will be used to generate the new YANG v1.0
-Compiler.  Click [here](./yang-meta-compiler.litcoffee) to learn more
-about the meta compiler.
+We select the locally available `yang-meta-compiler` as the initial
+compiler that will be used to generate the new YANG v1.0 Compiler.
+Click [here](./yang-meta-compiler.litcoffee) to learn more about the
+meta compiler.
 
     MetaCompiler = (require './yang-meta-compiler')
-
-## 2. Instantiate a new MetaCompiler with configuration
-
     compiler = new MetaCompiler options
-
-## 3. Compile using the target schema as input
 
 Here we are loading the [schema](../yang-compiler.yang) file contents
 and passing it into the `compiler` for the `compile` operation.
@@ -143,7 +135,7 @@ and passing it into the `compiler` for the `compile` operation.
       file = path.resolve __dirname, '../yang-compiler.yang'
       (require 'fs').readFileSync file, 'utf-8'
 
-## 4. Mixin additional capabilities into the the newly generated compiler module
+## 3. Mixin additional capabilities into the the newly generated compiler module
 
 Since we are creating a new compiler, we `mixin` the
 [MetaCompiler](./yang-meta-compiler.litcoffee) module along with

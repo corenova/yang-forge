@@ -1,6 +1,6 @@
 {
   "name": "yang-compiler",
-  "version": "0.5.2",
+  "version": "0.5.3",
   "description": "A YANG module/compiler which parses text/json based input YANG schema into JS class hierarchy (among other things)",
   "author": "Peter K Lee <peter@intercloud.net>",
   "main": "lib/yang-compiler.js",
