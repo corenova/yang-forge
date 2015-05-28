@@ -68,7 +68,7 @@ add to these `importers` to support additional forms of input.
         file = path.resolve (path.dirname module.parent?.filename), filename
         fs.readFileSync file, 'utf-8'
 
-      @set importers:
+      @importers =
         '^meta:.*\.json$': (input) -> readLocalFile input.file
         '^schema:.*\.yang$': (input) -> input.schema = readLocalFile input.file; input
         '^module:': (input) -> require input.file
@@ -106,7 +106,7 @@ as name, source, map, resolvers, etc.
 
         # register any `importers` from metadata (if currently not defined)
         importers = (@get 'importers') ? {}
-        for k, v of (@constructor.get 'importers')
+        for k, v of (@constructor.importers)
           unless importers[k]?
             importers[k] = v
         @set "importers", importers
@@ -144,8 +144,8 @@ TODO: add exporters support similar to how we can add importers.
 
         tosource = require 'tosource'
 
-        obj = m.extract 'name', 'schema', 'map', 'extensions', 'importers', 'exporters', 'handlers'
-        for key in [ 'extensions', 'importers', 'handlers' ]
+        obj = m.extract 'name', 'schema', 'map', 'extensions', 'importers', 'exporters', 'procedures'
+        for key in [ 'extensions', 'importers', 'procedures' ]
           obj[key]?.toJSON = ->
             @[k] = tosource v for k, v of this when k isnt 'toJSON' and v instanceof Function
             this
