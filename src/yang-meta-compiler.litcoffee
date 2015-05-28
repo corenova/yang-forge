@@ -11,16 +11,16 @@ which implements the version 1.0 of the YANG language specifications.
     Meta = require 'meta-class'
 
     class Extension
-      constructor: (@params={}) -> this
-      refine: (params={}) -> Meta.copy @params, params
+      constructor: (@opts={}) -> this
+      refine: (opts={}) -> Meta.copy @opts, opts
       resolve: (target, compiler) ->
         # TODO should ignore 'date'
         # Also this bypass logic should also be based on whether sub-statements are allowed or not
-        switch @params.argument
+        switch @opts.argument
           when 'value','text','date'
             return name: (target.get 'yang'), value: (target.get 'name')
 
-        unless @params.resolver?
+        unless @opts.resolver?
           throw new Error "no resolver found for '#{target.get 'yang'}' extension", target
 
         arg = (target.get 'name')
@@ -33,7 +33,7 @@ which implements the version 1.0 of the YANG language specifications.
               params[e.get 'yang'] = e.get 'name'
             when e?.constructor is Object
               params[e.name] = e.value
-        @params.resolver?.call? compiler, target, arg, params
+        @opts.resolver?.call? compiler, target, arg, params
 
 First we declare the compiler class as an extension of the
 `meta-class`.  For details on `meta-class` please refer to
@@ -43,7 +43,7 @@ http://github.com/stormstack/meta-class
 
       assert = require 'assert'
 
-      @set extensions:
+      @set 'exports.yang',
       
 We configure meta data of the compiler to initialize the built-in
 supported language extensions, first of which is the 'extension'
@@ -58,11 +58,11 @@ extension by the compiler.
           'sub:status': '0..1'
           'sub:sub': '0..n'
           resolver: (self, arg, params) ->
-            ext = @get "extensions.#{arg}"
+            ext = @resolve 'yang', arg
             unless ext?
-              params.resolver ?= @get "resolvers.#{arg}"
+              params.resolver ?= @get "extensions.#{arg}"
               ext = new Extension params
-              @set "extensions.#{arg}", ext
+              @define 'yang', arg, ext
             else
               ext.refine params
             ext
@@ -99,18 +99,34 @@ extension.  The `yang-meta-compiler` does not natively provide any
               console.log "INFO: including '#{arg}' using #{file}"
               (require 'fs').readFileSync file, 'utf-8'
 
+As the compiler encounters various YANG statement extensions, the
+`resolver` routines invoked will take different actions, including
+`define` of a new meta attribute to be associated with the module as
+well as `resolve` to retrieve meta attribute about the module being
+compiled (including from external imported modules mapped by prefix).
+
+      define: (type, key, value) ->
+        exists = @resolve type, key
+        unless exists?
+          @context[type] ?= {}
+          @context[type][key] = value
+        undefined
+
+      resolve: (type, key) ->
+        [ prefix..., key ] = key.split ':'
+        from = switch
+          when prefix.length > 0 then (@resolve 'module', prefix[0])?.get 'exports'
+          else @context
+        from?[type]?[key]
+
 One of the key function of the compiler is to `resolve` language
 extension statements with custom resolvers given the meta class input.
 The `compile` operation uses the `resolve` definitions to produce the
 desired output.
 
-      resolver: (meta, context) ->
+      resolveNode: (meta) ->
         yang = meta.get 'yang'
-        [ prefix..., yang ] = (yang.split ':' ) if typeof yang is 'string'
-        ext = switch
-          when prefix.length > 0 then (@get "#{prefix[0]}")?.get "extensions.#{yang}"
-          else @get "extensions.#{yang}"
-
+        ext = (@resolve 'yang', yang)
         try ext.resolve meta, this
         catch err
           @errors ?= []
@@ -119,37 +135,24 @@ desired output.
             error: err
           undefined
 
-      define: (type, key, value) ->
-        exists = @get "exports.#{type}.#{key}"
-        unless exists?
-          @set "exports.#{type}.#{key}", value
-        undefined
+The below `assembler` performs the task of combining the 'from' object
+into the 'to' object by creating a binding between the two.  This
+allows the source object to be auto constructed when the destination
+object is created.  This is a helper routine used during compilation
+as part of reduce traversal.
 
-      resolve: (type, key) ->
-        [ prefix..., key ] = key.split ':'
-        from = switch
-          when prefix.length > 0 then @get prefix[0]
-          else this
-        from?.get? "exports.#{type}.#{key}"
-
-The below `assembler` performs the task of combining the source object
-into the destination object by creating a binding between the two.
-This allows the source object to be auto constructed when the
-destination object is created.  This is a helper routine used during
-compilation as part of reduce traversal.
-
-      assembler: (dest, src) ->
+      assembleNode: (to, from) ->
         objs = switch
-          when (Meta.instanceof src)
-            if (src.get 'collapse')
-              name: k, value: v for k, v of (src.get 'bindings')
+          when (Meta.instanceof from)
+            if (from.get 'collapse')
+              name: k, value: v for k, v of (from.get 'bindings')
             else
-              name: @normalizeKey src
-              value: src
-          when src.constructor is Object
-            src
+              name: @normalizeKey from
+              value: from
+          when from.constructor is Object
+            from
         objs = [ objs ] unless objs instanceof Array
-        Meta.bind.apply dest, objs
+        Meta.bind.apply to, objs
         
       normalizeKey: (meta) ->
         ([ (meta.get 'yang'), (meta.get 'name') ].filter (e) -> e? and !!e).join '.'
@@ -191,25 +194,23 @@ to ensure that any `get/set` operations do not impact the primary
 compiler instance.
 
         @fork ->
-          @set 'extensions', @constructor.get 'extensions'
+          @context = yang: @constructor.get 'exports.yang'
         
-          # refine existing resolvers if new ones supplied during instantiation
-          for name, ext of (@get 'extensions') when (@get "resolvers.#{name}") instanceof Function
-            ext.refine resolver: @get "resolvers.#{name}"
+          # refine existing extensions if new ones supplied during instantiation
+          for name, ext of @context.yang when (@get "extensions.#{name}") instanceof Function
+            ext.refine resolver: @get "extensions.#{name}"
 
           output =
             @parse schema
-            .map    => @resolver.apply this, arguments
-            .reduce => @assembler.apply this, arguments
-            
+            .map    => @resolveNode.apply this, arguments
+            .reduce => @assembleNode.apply this, arguments
+            .set schema: schema, exports: @context, 'compiled-using': @get()
+
           if @errors?
             console.log "WARN: the following errors were encountered by the compiler"
             console.log @errors
-            
-          self = this
-          output.configure ->
-            @set "schema", schema
-            @merge self.extract 'map', 'extensions', 'exports'
+
+          return output
 
 Here we return the new `YangMetaCompiler` class for import and use by
 other modules.

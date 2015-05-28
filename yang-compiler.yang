@@ -35,37 +35,23 @@ module yang-compiler {
       leaf source { type string; }
     }
 
+    list extensions {
+      leaf name     { type string; mandatory true; }
+      leaf resolver { type binary; mandatory true; }
+    }
+    
     list importers {
       leaf regexp { type regexp; }
       leaf importer { type binary; }
       ordered-by user;
     }
 
-    list resolvers {
-      leaf name     { type string; mandatory true; }
-      leaf resolver { type binary; mandatory true; }
+    list procedures {
+      leaf name { type string; mandatory true; }
+      leaf exec { type binary; mandatory true; }
     }
   }
 
-  grouping compiler-state-info {
-    description
-      "The compiler-state-info describes current compiler internal state.";
-    
-    list extensions {
-      config false;
-      key name;
-      leaf name { type string; }
-      leaf extension { type instance-identifier; }
-    }
-
-    list modules {
-      config false;
-      key name;
-      leaf name { type string; }
-      leaf module { type instance-identifier; }
-    }
-  }
-  
   grouping meta-module {
     description
       "The meta-module describes configuration structure for import/export operations.";
@@ -78,7 +64,6 @@ module yang-compiler {
   }
 
   uses compiler-rules;
-  uses compiler-state-info;
   
   rpc import {
     input { uses meta-module; }
