@@ -106,8 +106,10 @@ object as well as the instantiated class. Please refer to the
 The source code is documented in Markdown format. It's code combined
 with documentation all-in-one.
 
-* [YANG Compiler Source](src/yang-compiler.litcoffee)
-* [YANG Compiler Schema](./yang-compiler.yang)
+* YANG Compiler
+  * [Source](src/yang-compiler.litcoffee)
+  * [Mixin](src/yang-compiler-mixin.litcoffee)
+  * [Schema](./yang-compiler.yang)
 * [YANG v1.0 Extensions](./yang-v1-extensions.yang)
 * [YANG Meta Compiler](src/yang-meta-compiler.litcoffee)
 
