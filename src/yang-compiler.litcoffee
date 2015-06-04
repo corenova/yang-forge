@@ -97,7 +97,8 @@ extension.
         # the governing `compile` process which means that the metadata
         # available within that context will be made *eventually available* to
         # the included submodule.
-        'belongs-to': (key, value) -> @compiler.define 'module', (value.get 'prefix'), (@compiler.resolve 'module', key)
+        'belongs-to': (key, value) ->
+          @compiler.define 'module', (value.get 'prefix'), (@compiler.resolve 'module', key)
 
         # The following `import` resolver utilizes the `import` functionality
         # introduced via the
@@ -110,19 +111,19 @@ extension.
       procedures:
         import: (input) -> @import input
 
-## 2. Compile the target schema with the configured compiler
+## 2. Compile the target schema with the compiler using options
 
 We select the locally available `yang-meta-compiler` as the initial
 compiler that will be used to generate the new YANG v1.0 Compiler.
 Click [here](./yang-meta-compiler.litcoffee) to learn more about the
 meta compiler.
 
-    MetaCompiler = (require './yang-meta-compiler')
-    compiler = new MetaCompiler options
-
 Here we are loading the [schema](../yang-compiler.yang) file contents
 and passing it into the `compiler` for the `compile` operation.
 
+    MetaCompiler = (require './yang-meta-compiler')
+    compiler = new MetaCompiler options
+    
     output = compiler.compile ->
       path = require 'path'
       file = path.resolve __dirname, '../yang-compiler.yang'
