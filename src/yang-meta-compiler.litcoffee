@@ -10,31 +10,6 @@ which implements the version 1.0 of the YANG language specifications.
 
     Meta = require 'meta-class'
 
-    class Extension
-      constructor: (@opts={}) -> this
-      refine: (opts={}) -> Meta.copy @opts, opts
-      resolve: (target, compiler) ->
-        # TODO should ignore 'date'
-        # Also this bypass logic should also be based on whether sub-statements are allowed or not
-        switch @opts.argument
-          when 'value','text','date'
-            return name: (target.get 'yang'), value: (target.get 'name')
-
-        unless @opts.resolver?
-          throw new Error "no resolver found for '#{target.get 'yang'}' extension", target
-
-        arg = (target.get 'name')
-        
-        # TODO: qualify some internal meta params against passed-in target...
-        params = {}
-        (target.get 'children')?.forEach (e) ->
-          switch
-            when (Meta.instanceof e) and (e.get 'children').length is 0
-              params[e.get 'yang'] = e.get 'name'
-            when e?.constructor is Object
-              params[e.name] = e.value
-        @opts.resolver?.call? compiler, target, arg, params
-
 First we declare the compiler class as an extension of the
 `meta-class`.  For details on `meta-class` please refer to
 http://github.com/stormstack/meta-class
@@ -42,62 +17,6 @@ http://github.com/stormstack/meta-class
     class YangMetaCompiler extends Meta
 
       assert = require 'assert'
-
-      @set 'exports.yang',
-      
-We configure meta data of the compiler to initialize the built-in
-supported language extensions, first of which is the 'extension'
-statement itself.  This allows any `extension` statement found in the
-input schema to define a new `Extension` object for handling the
-extension by the compiler.
-      
-        extension: new Extension
-          argument: 'extension-name'
-          'sub:description': '0..1'
-          'sub:reference': '0..1'
-          'sub:status': '0..1'
-          'sub:sub': '0..n'
-          resolver: (self, arg, params) ->
-            ext = @resolve 'yang', arg
-            unless ext?
-              params.resolver ?= @get "extensions.#{arg}"
-              ext = new Extension params
-              @define 'yang', arg, ext
-            else
-              ext.refine params
-            ext
-
-The following set of built-in Extensions are statements used in
-defining the extension itself.
-
-        argument: new Extension
-          'sub:yin-element': '0..1'
-          resolver: (self, arg) -> name: 'argument', value: arg
-          
-        'yin-element': new Extension argument: 'value'
-
-        value:  new Extension resolver: (self, arg) -> name: 'value', value: arg
-        sub:    new Extension resolver: (self, arg, params) -> name: "sub:#{arg}", value: params
-        prefix: new Extension argument: 'value'
-
-The `include` extension is also a built-in to the `yang-meta-compiler`
-and invoked during `compile` operation to pull-in the included
-submodule schema as part of the preprocessing output.  It always
-expects a local file source which differs from more robust `import`
-extension.  The `yang-meta-compiler` does not natively provide any
-`import` facilities.
-
-        include: new Extension
-          argument: 'name'
-          resolver: (self, arg, params) ->
-            source = @get "map.#{arg}"
-            assert typeof source is 'string',
-              "unable to include '#{arg}' without mapping defined for source"
-            @compile ->
-              path = require 'path'
-              file = path.resolve (path.dirname module.parent?.filename), source
-              console.log "INFO: including '#{arg}' using #{file}"
-              (require 'fs').readFileSync file, 'utf-8'
 
 As the compiler encounters various YANG statement extensions, the
 `resolver` routines invoked will take different actions, including
@@ -108,109 +27,143 @@ compiled (including from external imported modules mapped by prefix).
       define: (type, key, value) ->
         exists = @resolve type, key
         unless exists?
-          @context[type] ?= {}
-          @context[type][key] = value
+          @context ?= {}
+          Meta.copy @context, Meta.objectify "#{type}.#{key}", value
         undefined
 
       resolve: (type, key) ->
         [ prefix..., key ] = key.split ':'
-        from = switch
-          when prefix.length > 0 then (@resolve 'module', prefix[0])?.get 'exports'
-          else @context
-        from?[type]?[key]
-
-One of the key function of the compiler is to `resolve` language
-extension statements with custom resolvers given the meta class input.
-The `compile` operation uses the `resolve` definitions to produce the
-desired output.
-
-      resolveNode: (meta) ->
-        yang = meta.get 'yang'
-        ext = (@resolve 'yang', yang)
-        try ext.resolve meta, this
-        catch err
-          @errors ?= []
-          @errors.push
-            yang: yang
-            error: err
-          undefined
-
-The below `assembler` performs the task of combining the 'from' object
-into the 'to' object by creating a binding between the two.  This
-allows the source object to be auto constructed when the destination
-object is created.  This is a helper routine used during compilation
-as part of reduce traversal.
-
-      assembleNode: (to, from) ->
-        objs = switch
-          when (Meta.instanceof from)
-            if (from.get 'collapse')
-              name: k, value: v for k, v of (from.get 'bindings')
-            else
-              name: @normalizeKey from
-              value: from
-          when from.constructor is Object
-            from
-        objs = [ objs ] unless objs instanceof Array
-        Meta.bind.apply to, objs
-        
-      normalizeKey: (meta) ->
-        ([ (meta.get 'yang'), (meta.get 'name') ].filter (e) -> e? and !!e).join '.'
+        switch
+          when prefix.length > 0
+            (@resolve 'module', prefix[0])?.get "#{type}.#{key}"
+          else
+            @context?[type]?[key]
 
 The `parse` function performs recursive parsing of passed in statement
 and sub-statements and usually invoked in the context of the
 originating `compile` function below.  It expects the `statement` as
 an Object containing prf, kw, arg, and any substmts as an array.
 
-      parse: (schema, parser=(require 'yang-parser')) ->
-        if typeof schema is 'string'
-          return @parse (parser.parse schema)
+      parse: (schema, context, parser=(require 'yang-parser')) ->
+        return @fork (-> @parse schema, this) unless context?
 
-        return unless schema? and schema instanceof Object
+        if typeof schema is 'string'
+          return @parse (parser.parse schema), context
+
+        assert schema instanceof Object,
+          "must pass in proper input to parse"
 
         statement = schema
         normalize = (obj) -> ([ obj.prf, obj.kw ].filter (e) -> e? and !!e).join ':'
         keyword = normalize statement
 
-        results = (@parse stmt for stmt in statement.substmts).filter (e) -> e?
-        class extends (require 'meta-class')
-          @set yang: keyword, name: statement.arg, children: results
+        params = 
+          (@parse stmt, kw: keyword for stmt in statement.substmts)
+          .filter (e) -> e?
+          .reduce ((a, b) -> Meta.copy a, b), {}
+
+        if keyword is 'include' and /^(sub)*module$/.test context.kw
+          source = @get "map.#{statement.arg}"
+          assert typeof source is 'string',
+            "unable to include '#{statement.arg}' without mapping defined for source"
+          path = require 'path'
+          file = path.resolve (path.dirname module.parent?.filename), source
+          console.log "INFO: including '#{statement.arg}' using #{file}"
+          schema = (require 'fs').readFileSync file, 'utf-8'
+          res = @parse schema, context
+          sub = res?.submodule?[statement.arg]
+          # TODO: qualify belongs-to
+          return sub
+
+        if keyword is 'extension' and /^(sub)*module$/.test context.kw
+          params.resolver = @get "extensions.#{statement.arg}"
+          @define 'extension', statement.arg, params
+
+        switch
+          when Object.keys(params).length > 0
+            Meta.objectify "#{keyword}.#{statement.arg}", params
+          else
+            Meta.objectify keyword, statement.arg
 
 The `compile` function is the primary method of the compiler which
-takes in YANG text schema input and produces JS output representing
-the input schema as meta data hierarchy.
+takes in YANG schema input and produces JS output representing the
+input schema as meta data hierarchy.
 
-It accepts two forms of input: a YANG schema text string or a function
-that will return a YANG schema text string.
+It accepts following forms of input:
+* YANG schema text string
+* function that will return a YANG schema text string
+* Object output from `parse`
 
-      compile: (schema) ->
-        schema = (schema.call this) if schema instanceof Function
-        return unless typeof schema is 'string'
+The compilation process can compile any partials or complete
+representation of the schema and recursively compiles the data tree to
+return a Meta class object representation (with child bindings) of the
+provided input.
 
-The `fork` operation below performs the actual compile logic within
-the context of a **child** compiler instance, which is discarded
-unless it is returned as an output of the `fork` operation.  This is
-to ensure that any `get/set` operations do not impact the primary
-compiler instance.
+      compile: (input, context) ->
 
-        @fork ->
-          @context = yang: @constructor.get 'exports.yang'
+First we check if `context` is provided as part of `compile`
+execution.  This is a special argument which informs whether a brand
+new `compile` process is being invoked or whether it is being invoked
+as a sub request.  This is to ensure that proper `fork` and state
+initialization can take place prior to conducting the actual `compile`
+operation for the requested `input`.  It also ensures that any symbols
+being define/resolve from the compiler does not impact any subsequent
+invocation of the `compile` routine.
         
-          # refine existing extensions if new ones supplied during instantiation
-          for name, ext of @context.yang when (@get "extensions.#{name}") instanceof Function
-            ext.refine resolver: @get "extensions.#{name}"
+        unless context?
+          return @fork ->
+            obj = @constructor.extract 'extension'
+            for key, value of obj.extension
+              override = @get "extensions.#{key}"
+              value.resolver = override if override?
+              @define 'extension', key, value
+            @compile input, this
 
-          output =
-            @parse schema
-            .map    => @resolveNode.apply this, arguments
-            .reduce => @assembleNode.apply this, arguments
-            .set schema: schema, exports: @context, 'compiled-using': @get()
+        input = (input.call this) if input instanceof Function
+        input = @parse input, context if typeof input is 'string'
 
-          if @errors?
-            console.log "WARN: the following errors were encountered by the compiler"
-            console.log @errors
+        assert input instanceof Object,
+          "must pass in proper input to compile"
 
-          return output
+        output = class extends Meta
+        output.compiler = this
+
+        validSubs = context?.extension?.sub
+
+Here we go through each of the keys of the input object and validate
+the extension keywords and resolve these keywords if resolvers are
+associated with these extension keywords.
+
+TODO: need to also assert on cardinality of each sub-statements
+
+        for key, val of input when not validSubs? or key of validSubs
+          if key is 'extension'
+            output.set key, val
+            continue
+
+          ext = @resolve 'extension', key
+          assert ext instanceof Object,
+            "ERROR: cannot compile statement with unknown extension '#{key}'"
+
+Here we determine whether there are additional instances of this
+extension or sub-statements to be proceseed and perform additional
+recursive statement compilations.
+
+          if val instanceof Object and ext.argument? then for arg, params of val
+            #console.log "INFO: compiling #{key}.#{arg} with: #{Object.keys(params)}"
+            res = @compile params, key: "#{key}.#{arg}", extension: ext
+            output.set "#{key}.#{arg}", params
+            ext.resolver?.call? output, arg, res
+          else
+            #console.log "INFO: compiling #{key}"
+            output.set key, val
+            if ext.argument?
+              ext.resolver?.call? output, val, {}
+            else
+              ext.resolver?.call? output, key, val
+
+        delete output.compiler
+        output
 
 Here we return the new `YangMetaCompiler` class for import and use by
 other modules.

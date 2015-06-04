@@ -15,9 +15,6 @@ It is written primarily using CoffeeScript and runs on
 * **Parse** YANG schema files and generate runtime JavaScript
   [meta-class](http://github.com/stormstack/meta-class) semantic tree
   hierarchy
-* **Map/Reduce** traversal of the parser output to dynamically resolve
-  YANG statement extensions and transform nodes in the tree as well as
-  collapsing them into a final output module
 * **Import/Export** capabilities to load modules using customizable
   importers based on regular expressions and custom import
   routines. Ability to serialize module meta data into JSON format
@@ -82,10 +79,6 @@ A = compiler.import json
 * Instantiating a newly imported module with configurations
 ```coffeescript
 hello = new A map: 'foo': 'schema:./yang-compiler.yang'
-```
-* Invoking a YANG RPC extension to import by name (like foo)
-```coffeescript
-B = hello.invoke 'import', name: 'foo'
 ```
 * Various operations to get/set different configurations
 ```coffeescript

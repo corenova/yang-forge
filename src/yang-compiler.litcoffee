@@ -34,6 +34,8 @@ configuration params to alter the behavior of the compiler during
 `compile` operation.  The primary parameter for extending the
 underlying extensions is the `resolver`.
 
+    Meta = require 'meta-class'
+
     options = 
       map: 'yang-v1-extensions': '../yang-v1-extensions.yang'
 
@@ -49,34 +51,52 @@ so that the `this` keyword can be used to access any `meta` data or
 other functions available within the given `compiler`.
 
       extensions:
-        module:    (self) -> self
-        submodule: (self) -> self.set collapse: true
-        feature:   (self, arg, params) -> @define 'feature', arg, params
-        identity:  (self, arg, params) -> @define 'identity', arg, params
-        typedef:   (self, arg, params) -> @define 'typedef', arg, params
-        revision:  (self, arg, params) -> @define 'revision', arg, params
+        module:      (key, value) -> @merge value
+        container:   (key, value) -> @bind key, value
+        leaf:        (key, value) -> @bind key, value
+        enum:        (key, value) -> @bind key, value
+        'leaf-list': (key, value) -> @bind key, value
+        list:        (key, value) -> @bind key, (class extends Meta).set model: value
 
-        type: (self) -> self
+The following extensions declare externally shared metadata
+definitions about the module.  They are not attached into the
+generated module's configuration tree but instead defined in the
+metadata section of the module only.
 
-        container:    (self) -> self
-        enum:         (self) -> self
-        leaf:         (self) -> self
-        'leaf-list':  (self) -> self
-        list:         (self, arg, params) ->
-          children = (self.get 'children').filter (e) -> not (self.instanceof e)
-          self.reduce => @assembleNode.apply this, arguments
-          class extends (require 'meta-class')
-            @set yang: 'list', name: arg, model: self, children: children
-            
-        input:  (self) -> self
-        output: (self) -> self
-        rpc:    (self, arg) ->
-          func = @get "procedures.#{arg}"
-          self.configure ->
-            @set action: true
-            @include exec: func
-        
-        notification: (self) -> self.set action: true
+        grouping: (key, value) -> @compiler.define 'grouping', key, value
+        typedef:  (key, value) -> @compiler.define 'type', key, value
+
+The following extensions makes alterations to the configuration tree.
+
+The `uses` statement references a `grouping` node available within the
+context of the schema being compiled to return the contents at the
+current `uses` node context.
+
+        uses: (key, value) ->
+          Grouping = (@compiler.resolve 'grouping', key) ? Meta
+          Grouping = (class extends Grouping).merge value
+          @merge Grouping.extract 'bindings'
+
+Here we associate a new `resolver` to the `augment` and `refine`
+statement extensions.  The behavior of `augment` is to expand the
+target-node identified by the `argument` with additional
+sub-statements described by the `augment` statement.
+      
+        augment: (key, value) -> @[arg]?.extend? params; undefined
+        refine:  (key, value) -> @merge value
+
+        type: (key, value) ->
+          Type = @compiler.resolve 'type', key
+          @set 'type', Type if Type?
+
+        rpc: (key, value) ->
+          @set "methods.#{key}", value
+          @bind key, @compiler.get "procedures.#{key}"
+
+        input:  (key, value) -> @bind 'input', value
+        output: (key, value) -> @bind 'output', value
+
+        notification: (key, value) -> @compiler.define 'notification', key, value
 
 The `belongs-to` statement is only used in the context of a
 `submodule` definition which is processed as a sub-compile stage
@@ -86,33 +106,16 @@ the governing `compile` process which means that the metadata
 available within that context will be made *eventually available* to
 the included submodule.
 
-        'belongs-to': (self, arg, params) -> @define 'module', params.prefix, (@resolve 'module', arg)
-        
-The `uses` statement references a `grouping` node available within the
-context of the schema being compiled to return the contents at the
-current `uses` node context.
-
-        uses: (self, arg) -> @resolve 'grouping', arg
-        grouping: (self, arg, params) ->
-          self.set collapse: true
-          @define 'grouping', arg, self
-
-Here we associate a new `resolver` to the `augment` and `refine`
-statement extensions.  The behavior of `augment` is to expand the
-target-node identified by the `argument` with additional
-sub-statements described by the `augment` statement.
-      
-        augment: (self, arg, params) -> @[arg]?.extend? params; undefined
-        refine:  (self, arg, params) -> @[arg]?.extend? params; undefined
+        'belongs-to': (key, value) -> @compiler.define 'module', (value.get 'prefix'), (@compiler.resolve 'module', key)
 
 The following `import` resolver utilizes the `import` functionality
 introduced via the
 [YangCompilerMixin](./yang-compiler-mixin.litcoffee) module.
 
-        import: (self, arg, params) ->
-          mod = @import name: arg
-          params.prefix ?= mod?.prefix
-          @define 'module', params.prefix, mod
+        import: (key, value) ->
+          mod = @compiler.import name: key
+          prefix = (value.get 'prefix') ? (mod.get 'prefix')
+          @compiler.define 'module', prefix, mod
 
       procedures:
         import: (input) -> @import input

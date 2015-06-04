@@ -1,6 +1,6 @@
 {
   "name": "yang-compiler",
-  "version": "0.5.3",
+  "version": "0.6.0",
   "description": "A YANG module/compiler which parses text/json based input YANG schema into JS class hierarchy (among other things)",
   "author": "Peter K Lee <peter@intercloud.net>",
   "main": "lib/yang-compiler.js",
@@ -34,7 +34,7 @@
   },
   "homepage": "https://github.com/stormstack/yang-compiler",
   "dependencies": {
-    "meta-class": "^0.3.4",
+    "meta-class": "^0.4.1",
     "tosource": "^0.1.3",
     "yang-parser": "^0.1.0"
   }

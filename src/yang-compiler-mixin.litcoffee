@@ -49,7 +49,7 @@ module.
         @fork ->
           @set map: (meta.get 'map'), version: (meta.get 'version')
           @set actors
-          @compile (meta.get 'schema')
+          @compile (meta.get 'schema'), this
 
 ## Enhance the compiler with ability to import external modules
 
@@ -120,7 +120,7 @@ as name, source, map, resolvers, etc.
 
         # TODO: what to do if output name does not match input.name?
         output = @generate payload
-        @define 'module', (output.get 'name'), output if output?
+        @define 'module', (output.get 'prefix'), output if output?
         output
 
 ## Enhance the compiler with ability to export known modules
