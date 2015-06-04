@@ -8,11 +8,11 @@ The meta compiler only supports bare minium set of YANG statements and
 should be used only to generate a new compiler such as 'yang-compiler'
 which implements the version 1.0 of the YANG language specifications.
 
-    Meta = require 'meta-class'
-
 First we declare the compiler class as an extension of the
 `meta-class`.  For details on `meta-class` please refer to
 http://github.com/stormstack/meta-class
+
+    Meta = require 'meta-class'
 
     class YangMetaCompiler extends Meta
 
@@ -101,15 +101,16 @@ provided input.
 
       compile: (input, context) ->
 
-First we check if `context` is provided as part of `compile`
-execution.  This is a special argument which informs whether a brand
-new `compile` process is being invoked or whether it is being invoked
-as a sub request.  This is to ensure that proper `fork` and state
-initialization can take place prior to conducting the actual `compile`
-operation for the requested `input`.  It also ensures that any symbols
-being define/resolve from the compiler does not impact any subsequent
-invocation of the `compile` routine.
-        
+        # First we check if `context` is provided as part of `compile`
+        # execution.  This is a special argument which informs whether
+        # a brand new `compile` process is being invoked or whether it
+        # is being invoked as a sub request.  This is to ensure that
+        # proper `fork` and state initialization can take place prior
+        # to conducting the actual `compile` operation for the
+        # requested `input`.  It also ensures that any symbols being
+        # define/resolve from the compiler does not impact any
+        # subsequent invocation of the `compile` routine.
+
         unless context?
           return @fork ->
             obj = @constructor.extract 'extension'
@@ -130,11 +131,12 @@ invocation of the `compile` routine.
 
         validSubs = context?.extension?.sub
 
-Here we go through each of the keys of the input object and validate
-the extension keywords and resolve these keywords if resolvers are
-associated with these extension keywords.
+        # Here we go through each of the keys of the input object and
+        # validate the extension keywords and resolve these keywords
+        # if resolvers are associated with these extension keywords.
 
-TODO: need to also assert on cardinality of each sub-statements
+        # TODO: need to also assert on cardinality of each
+        # sub-statements
 
         for key, val of input when not validSubs? or key of validSubs
           if key is 'extension'
@@ -145,9 +147,9 @@ TODO: need to also assert on cardinality of each sub-statements
           assert ext instanceof Object,
             "ERROR: cannot compile statement with unknown extension '#{key}'"
 
-Here we determine whether there are additional instances of this
-extension or sub-statements to be proceseed and perform additional
-recursive statement compilations.
+          # Here we determine whether there are additional instances
+          # of this extension or sub-statements to be proceseed and
+          # perform additional recursive statement compilations.
 
           if val instanceof Object and ext.argument? then for arg, params of val
             #console.log "INFO: compiling #{key}.#{arg} with: #{Object.keys(params)}"

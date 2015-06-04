@@ -30,27 +30,26 @@ extended, take a look at
 ## 1. Define configuration options for the compiler
 
 As part of new MetaCompiler instantiation, we pass in various
-configuration params to alter the behavior of the compiler during
-`compile` operation.  The primary parameter for extending the
-underlying extensions is the `resolver`.
+configuration `options` to alter the behavior of the compiler during
+`compile` operation.
+
+As part of configuration options, we can specify various JS functions
+to handle the YANG `extensions` during the `compile` process.  It is
+invoked in the context of the containing statement (parent object) and
+it can alter how it is related/used in the containing statemnt
+context.  The return value of the extension resolving functions are
+ignored.  It can also access `@compiler` to perform additional
+operations available to the `@compiler` as it operates on the given
+extension.
 
     Meta = require 'meta-class'
 
     options = 
       map: 'yang-v1-extensions': '../yang-v1-extensions.yang'
 
-The `resolver` is a JS function which is used by the `compiler` when
-defined for a given YANG extension keyword to handle that particular
-extension keyword.  It can resolve to a new class definition that will
-house the keyword and its sub-statements (for container style
-keywords) or perform a specific operation without returning any value
-for handling non-data schema extensions such as import, include, etc.
-
-The `resolver` function runs with the context of the `compiler` itself
-so that the `this` keyword can be used to access any `meta` data or
-other functions available within the given `compiler`.
-
       extensions:
+        # The following extension resolvers deal with configuration
+        # hierarchy definition statements.
         module:      (key, value) -> @merge value
         container:   (key, value) -> @bind key, value
         leaf:        (key, value) -> @bind key, value
@@ -58,31 +57,24 @@ other functions available within the given `compiler`.
         'leaf-list': (key, value) -> @bind key, value
         list:        (key, value) -> @bind key, (class extends Meta).set model: value
 
-The following extensions declare externally shared metadata
-definitions about the module.  They are not attached into the
-generated module's configuration tree but instead defined in the
-metadata section of the module only.
-
+        # The following extensions declare externally shared metadata
+        # definitions about the module.  They are not attached into
+        # the generated module's configuration tree but instead
+        # defined in the metadata section of the module only.
         grouping: (key, value) -> @compiler.define 'grouping', key, value
         typedef:  (key, value) -> @compiler.define 'type', key, value
 
-The following extensions makes alterations to the configuration tree.
-
-The `uses` statement references a `grouping` node available within the
-context of the schema being compiled to return the contents at the
-current `uses` node context.
-
+        # The following extensions makes alterations to the
+        # configuration tree.  The `uses` statement references a
+        # `grouping` node available within the context of the schema
+        # being compiled to return the contents at the current `uses`
+        # node context.  The `augment/refine` statements helps to
+        # alter the containing statement with changes to the schema.
         uses: (key, value) ->
           Grouping = (@compiler.resolve 'grouping', key) ? Meta
           Grouping = (class extends Grouping).merge value
           @merge Grouping.extract 'bindings'
-
-Here we associate a new `resolver` to the `augment` and `refine`
-statement extensions.  The behavior of `augment` is to expand the
-target-node identified by the `argument` with additional
-sub-statements described by the `augment` statement.
-      
-        augment: (key, value) -> @[arg]?.extend? params; undefined
+        augment: (key, value) -> @merge value
         refine:  (key, value) -> @merge value
 
         type: (key, value) ->
@@ -98,20 +90,18 @@ sub-statements described by the `augment` statement.
 
         notification: (key, value) -> @compiler.define 'notification', key, value
 
-The `belongs-to` statement is only used in the context of a
-`submodule` definition which is processed as a sub-compile stage
-within the containing `module` defintion.  Therefore, when this
-statement is encountered, it would be processed within the context of
-the governing `compile` process which means that the metadata
-available within that context will be made *eventually available* to
-the included submodule.
-
+        # The `belongs-to` statement is only used in the context of a
+        # `submodule` definition which is processed as a sub-compile stage
+        # within the containing `module` defintion.  Therefore, when this
+        # statement is encountered, it would be processed within the context of
+        # the governing `compile` process which means that the metadata
+        # available within that context will be made *eventually available* to
+        # the included submodule.
         'belongs-to': (key, value) -> @compiler.define 'module', (value.get 'prefix'), (@compiler.resolve 'module', key)
 
-The following `import` resolver utilizes the `import` functionality
-introduced via the
-[YangCompilerMixin](./yang-compiler-mixin.litcoffee) module.
-
+        # The following `import` resolver utilizes the `import` functionality
+        # introduced via the
+        # [YangCompilerMixin](./yang-compiler-mixin.litcoffee) module.
         import: (key, value) ->
           mod = @compiler.import name: key
           prefix = (value.get 'prefix') ? (mod.get 'prefix')
