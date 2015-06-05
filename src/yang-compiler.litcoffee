@@ -17,6 +17,11 @@ augmentation of the base YANG v1.0 language specifications, to
 natively extend schema defined extensions for creating more powerful
 abstractions on top of the underlying YANG data model schema language.
 
+It is **important** to note that the compiler is used to generate
+**runtime** JS class object hierarchy - which means that immediately
+following the schema compilation, the resulting output can be
+instatiated via `new` keyword to bring the compiled output to life.
+
 For an example of interesting ways new YANG compiler can be
 extended, take a look at
 [storm-compiler](http://github.com/stormstack/storm-compiler).
@@ -50,10 +55,10 @@ extension.
       extensions:
         # The following extension resolvers deal with configuration
         # hierarchy definition statements.
-        module:      (key, value) -> @merge value
+        module:      (key, value) -> @mixin value
         container:   (key, value) -> @bind key, value
-        leaf:        (key, value) -> @bind key, value
         enum:        (key, value) -> @bind key, value
+        leaf:        (key, value) -> @bind key, value
         'leaf-list': (key, value) -> @bind key, value
         list:        (key, value) -> @bind key, (class extends Meta).set model: value
 
@@ -72,8 +77,7 @@ extension.
         # alter the containing statement with changes to the schema.
         uses: (key, value) ->
           Grouping = (@compiler.resolve 'grouping', key) ? Meta
-          Grouping = (class extends Grouping).merge value
-          @merge Grouping.extract 'bindings'
+          @mixin (class extends Grouping).merge value
         augment: (key, value) -> @merge value
         refine:  (key, value) -> @merge value
 
