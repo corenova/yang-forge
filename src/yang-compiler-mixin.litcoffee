@@ -3,7 +3,7 @@
 We then define a new Mixin class to capture addtional capabilities we
 want to infuse into the generated compiler output.
 
-    Meta = require 'meta-class'
+    Meta = require './meta-class'
     class YangCompilerMixin extends Meta
 
 ## Enhance the compiler with ability to process JSON input format

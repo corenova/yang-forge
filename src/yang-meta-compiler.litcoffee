@@ -10,9 +10,9 @@ which implements the version 1.0 of the YANG language specifications.
 
 First we declare the compiler class as an extension of the
 `meta-class`.  For details on `meta-class` please refer to
-http://github.com/stormstack/meta-class
+[meta-class source](./meta-class.litcoffee).
 
-    Meta = require 'meta-class'
+    Meta = require './meta-class'
 
     class YangMetaCompiler extends Meta
 

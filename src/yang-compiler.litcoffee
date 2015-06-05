@@ -47,7 +47,7 @@ ignored.  It can also access `@compiler` to perform additional
 operations available to the `@compiler` as it operates on the given
 extension.
 
-    Meta = require 'meta-class'
+    Meta = require './meta-class'
 
     options = 
       map: 'yang-v1-extensions': '../yang-v1-extensions.yang'

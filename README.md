@@ -1,6 +1,6 @@
-# YANG Compiler
+# YANGJS
 
-YANG Compiler provides necessary tooling to enable runtime JavaScript
+YANGJS provides necessary tooling to enable runtime JavaScript
 execution based on YANG schema modeling language as defined in IETF
 drafts and standards ([RFC 6020](http://tools.ietf.org/html/rfc6020)).
 
@@ -38,14 +38,14 @@ importers, among other things.
 
 ## Installation
 ```bash
-$ npm install yang-compiler
+$ npm install yangjs
 ```
 
 ## Quick Example
 
 ```coffeescript
-YangCompiler = require 'yang-compiler'
-compiler = new YangCompiler
+Yang = require 'yangjs'
+yang = new Yang
 
 schema = """
   module test {
@@ -53,7 +53,7 @@ schema = """
 	leaf works { type string; }
   }
   """
-Test = compiler.compile schema
+Test = yang.compile schema
 test = new Test
 test.set 'works', 'very well'
 test.get 'works'
@@ -104,15 +104,12 @@ with documentation all-in-one.
   * [Compiler Schema](./yang-compiler.yang)
   * [YANG v1.0 Extensions](./yang-v1-extensions.yang)
 * [YANG Meta Compiler](src/yang-meta-compiler.litcoffee)
-
-### External Dependencies
-
-* [Meta Class](http://github.com/stormstack/meta-class)
+* [Meta Class](src/meta-class.litcoffee)
 
 ## License
   [MIT](LICENSE)
 
-[npm-image]: https://img.shields.io/npm/v/yang-compiler.svg
-[npm-url]: https://npmjs.org/package/yang-compiler
-[downloads-image]: https://img.shields.io/npm/dm/yang-compiler.svg
-[downloads-url]: https://npmjs.org/package/yang-compiler
+[npm-image]: https://img.shields.io/npm/v/yangjs.svg
+[npm-url]: https://npmjs.org/package/yangjs
+[downloads-image]: https://img.shields.io/npm/dm/yangjs.svg
+[downloads-url]: https://npmjs.org/package/yangjs
