@@ -13,7 +13,7 @@ It is written primarily using CoffeeScript and runs on
 ## Key Features
 
 * **Parse** YANG schema files and generate runtime JavaScript
-  [meta-class](http://github.com/stormstack/meta-class) semantic tree
+  [Meta Class](src/meta-class.litcoffee) semantic tree
   hierarchy
 * **Import/Export** capabilities to load modules using customizable
   importers based on regular expressions and custom import
