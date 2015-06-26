@@ -55,7 +55,7 @@ extension.
       extensions:
         # The following extension resolvers deal with configuration
         # hierarchy definition statements.
-        module:      (key, value) -> @mixin value
+        module:      (key, value) -> (@mixin value).merge @compiler.context
         container:   (key, value) -> @bind key, value
         enum:        (key, value) -> @bind key, value
         leaf:        (key, value) -> @bind key, value

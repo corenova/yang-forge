@@ -1,6 +1,6 @@
 {
   "name": "yangjs",
-  "version": "0.7.1",
+  "version": "0.7.2",
   "description": "YANG driven JS execution runtime",
   "author": "Peter K Lee <peter@corenova.com>",
   "main": "lib/yang-compiler.js",
@@ -13,7 +13,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "http://github.com/corenova/yangjs"
+    "url": "http://github.com/saintkepha/yangjs"
   },
   "keywords": [
     "datastore",
@@ -25,9 +25,9 @@
   ],
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/corenova/yangjs/issues"
+    "url": "https://github.com/saintkepha/yangjs/issues"
   },
-  "homepage": "https://github.com/corenova/yangjs",
+  "homepage": "https://github.com/saintkepha/yangjs",
   "dependencies": {
     "tosource": "^0.1.3",
     "yang-parser": "^0.1.0"
