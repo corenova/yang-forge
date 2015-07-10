@@ -9,10 +9,10 @@ should be used only to generate a new compiler such as 'yang-compiler'
 which implements the version 1.0 of the YANG language specifications.
 
 First we declare the compiler class as an extension of the
-`meta-class`.  For details on `meta-class` please refer to
-[meta-class source](./meta-class.litcoffee).
+`Meta` class.  For details on `Meta` please refer to
+[Meta class source](http://github.com/saintkepha/data-synth/src/meta.litcoffee).
 
-    Meta = require './meta-class'
+    Meta = (require 'data-synth').Meta
 
     class YangMetaCompiler extends Meta
 
@@ -118,7 +118,8 @@ provided input.
               override = @get "extensions.#{key}"
               value.resolver = override if override?
               @define 'extension', key, value
-            @compile input, this
+            output = @compile input, this
+            output?.merge @context
 
         input = (input.call this) if input instanceof Function
         input = @parse input, context if typeof input is 'string'

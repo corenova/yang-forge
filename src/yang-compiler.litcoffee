@@ -22,10 +22,6 @@ It is **important** to note that the compiler is used to generate
 following the schema compilation, the resulting output can be
 instatiated via `new` keyword to bring the compiled output to life.
 
-For an example of interesting ways new YANG compiler can be
-extended, take a look at
-[storm-compiler](http://github.com/stormstack/storm-compiler).
-
 # Compiling a new Compiler
 
 1. Define configuration options for the compiler
@@ -47,7 +43,7 @@ ignored.  It can also access `@compiler` to perform additional
 operations available to the `@compiler` as it operates on the given
 extension.
 
-    Meta = require './meta-class'
+    DS = require 'data-synth'
 
     options = 
       map: 'yang-v1-extensions': '../yang-v1-extensions.yang'
@@ -55,12 +51,15 @@ extension.
       extensions:
         # The following extension resolvers deal with configuration
         # hierarchy definition statements.
-        module:      (key, value) -> (@mixin value).merge @compiler.context
-        container:   (key, value) -> @bind key, value
-        enum:        (key, value) -> @bind key, value
-        leaf:        (key, value) -> @bind key, value
-        'leaf-list': (key, value) -> @bind key, value
-        list:        (key, value) -> @bind key, (class extends Meta).set model: value
+        module:      (key, value) -> @bind key, (DS.Module.extend value)
+        container:   (key, value) -> @bind key, (DS.Object.extend value)
+        enum:        (key, value) -> @bind key, (DS.Enumeration.extend value)
+        leaf:        (key, value) ->
+          @bind key, switch
+            when (DS.Meta.instanceof (value.get? 'type')) then DS.BelongsTo.extend value
+            else DS.Property.extend value
+        'leaf-list': (key, value) -> @bind key, (DS.Array.extend value)
+        list:        (key, value) -> @bind key, (DS.Array.extend model: value)
 
         # The following extensions declare externally shared metadata
         # definitions about the module.  They are not attached into
@@ -76,8 +75,8 @@ extension.
         # node context.  The `augment/refine` statements helps to
         # alter the containing statement with changes to the schema.
         uses: (key, value) ->
-          Grouping = (@compiler.resolve 'grouping', key) ? Meta
-          @mixin (class extends Grouping).merge value
+          Grouping = (@compiler.resolve 'grouping', key) ? DS.Meta
+          @mixin (Grouping.extend value)
         augment: (key, value) -> @merge value
         refine:  (key, value) -> @merge value
 

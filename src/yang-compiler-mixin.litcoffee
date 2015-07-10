@@ -3,7 +3,8 @@
 We then define a new Mixin class to capture addtional capabilities we
 want to infuse into the generated compiler output.
 
-    Meta = require './meta-class'
+    Meta = (require 'data-synth').Meta
+    
     class YangCompilerMixin extends Meta
 
 ## Enhance the compiler with ability to process JSON input format
@@ -26,8 +27,7 @@ a function that returns one of the first two formats.
         assert obj instanceof Object, "cannot generate using invalid input data"
         return obj if Meta.instanceof obj # if it is already meta class object, just return it
 
-        meta = class extends Meta
-          @merge obj
+        meta = Meta.extend obj
         assert typeof (meta.get 'schema') is 'string', "missing text schema to use for generate"
 
 We then retrieve the **active** meta data (functions) and convert them
