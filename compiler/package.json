@@ -1,0 +1,15 @@
+{
+  "version": "0.3.1",
+  "name": "yang-compiler",
+  "description": "YANG schema JS runtime compiler",
+  "license": "MIT",
+  "main": "compiler.js",
+  "scripts": {
+    "prepublish": "coffee -c *coffee"
+  },
+  "dependencies": {
+    "data-synth": "^0.5.1",
+    "tosource": "^0.1.3",
+    "yang-parser": "^0.1.0"
+  }
+}

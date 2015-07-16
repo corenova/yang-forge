@@ -1,14 +1,15 @@
-module yang-compiler {
-  prefix yc;
+module yangforge {
+  prefix yf;
 
   include yang-v1-extensions;
+  //import complex-types { prefix ct; }
 
   organization
     "ClearPath Networks NFV R&D Group";
 
   contact
     "Web:  <http://www.clearpathnet.com>
-     Code: <http://github.com/stormstack/yang-compiler>
+     Code: <http://github.com/clearpath-networks/yangforge>
 
      Author: Peter K. Lee <mailto:plee@clearpathnet.com>";
 
@@ -26,7 +27,7 @@ module yang-compiler {
     
     list map {
       description
-        "The map defines a list of modules and their source description.  It is
+        "The map defines a list of modules and their source definition. It is
          referenced by the compiler to locate the module for retrieval
          during include/import operation.";
       

@@ -1,0 +1,93 @@
+{
+  "version": "0.1.0",
+  "name": "complex-types",
+  "description": "yangforged complex-types module",
+  "license": "MIT",
+  "main": "complex-types.js",
+  "scripts": {
+    "prepublish": "coffee -c complex-types.coffee"
+  },
+  "dependencies": {
+    "yangforge": "file:.."
+  },
+  "schema": "./complex-types.yang",
+  "extensions": {
+    "complex-type": {
+      "abstract": "0..1",
+      "container": "0..n",
+      "description": "0..1",
+      "extends": "0..1",
+      "grouping": "0..n",
+      "if-feature": "0..n",
+      "key": "0..1",
+      "instance": "0..n",
+      "instance-list": "0..n",
+      "leaf": "0..n",
+      "leaf-list": "0..n",
+      "refine": "0..n"
+    },
+    "extends": {
+      "description": "0..1",
+      "reference": "0..1",
+      "status": "0..1"
+    },
+    "instance": {
+      "choice": "0..n",
+      "config": "0..1",
+      "container": "0..n",
+      "description": "0..1",
+      "if-feature": "0..n",
+      "instance": "0..n",
+      "instance-list": "0..n",
+      "instance-type": "1",
+      "leaf": "0..n",
+      "leaf-list": "0..n",
+      "list": "0..n",
+      "mandatory": "0..1",
+      "must": "0..n",
+      "reference": "0..1",
+      "status": "0..1",
+      "when": "0..1"
+    },
+    "instance-list": {
+      "choice": "0..n",
+      "config": "0..1",
+      "container": "0..n",
+      "description": "0..1",
+      "if-feature": "0..n",
+      "instance": "0..n",
+      "instance-list": "0..n",
+      "instance-type": "1",
+      "leaf": "0..n",
+      "leaf-list": "0..n",
+      "list": "0..n",
+      "min-elements": "0..n",
+      "max-elements": "0..n",
+      "must": "0..n",
+      "reference": "0..1",
+      "status": "0..1",
+      "when": "0..1"
+    },
+    "module": {
+      "complex-type": "0..n",
+      "instance": "0..n",
+      "instance-list": "0..n"
+    },
+    "submodule": {
+      "complex-type": "0..n",
+      "instance": "0..n",
+      "instance-list": "0..n"
+    },
+    "container": {
+      "instance": "0..n",
+      "instance-list": "0..n"
+    },
+    "grouping": {
+      "instance": "0..n",
+      "instance-list": "0..n"
+    },
+    "type": {
+      "instance-type": "0..1"
+    }
+  }
+}

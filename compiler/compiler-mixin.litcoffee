@@ -17,7 +17,7 @@ utilized for `import` workflow.
 It accepts various forms of input: a JSON text string, a JS object, or
 a function that returns one of the first two formats.
 
-      generate: (input) ->
+      generate: (input=this) ->
         input = (input.call this) if input instanceof Function
         obj = switch
           when typeof input is 'string'
@@ -27,7 +27,7 @@ a function that returns one of the first two formats.
         assert obj instanceof Object, "cannot generate using invalid input data"
         return obj if Meta.instanceof obj # if it is already meta class object, just return it
 
-        meta = Meta.extend obj
+        meta = (class extends Meta).merge obj
         assert typeof (meta.get 'schema') is 'string', "missing text schema to use for generate"
 
 We then retrieve the **active** meta data (functions) and convert them
@@ -85,42 +85,53 @@ using the lower-level `compile` routine by taking advantage of the
 It expects an object as input which provides various properties, such
 as name, source, map, resolvers, etc. 
 
-      import: (input) ->
+      import: (input={}) ->
         assert input instanceof Object,
           "cannot call import without proper input object"
         
         exists = switch
           when Meta.instanceof input then input
-          when Meta.instanceof input.source then input.source
+          #when Meta.instanceof input.source then input.source
           else @resolve 'module', input.name
         if exists?
           @define 'module', (exists.get 'name'), exists
           return exists
-        
-        input.source ?= @get "map.#{input.name}"
 
-        assert typeof input.source is 'string' and !!input.source,
-          "unable to initiate import without a valid source parameter"
+        try
+          console.log "INFO: importing '#{input.name}'"
+          pkg = (require input.name)
+          hack = @context
+          output = @fork ->
+            @set (pkg.extract 'dependencies', 'extensions', 'methods')
+            @context = hack
+            @compile (pkg.get 'schema.source'), this
+        catch e then console.log e
           
-        input.file ?= input.source.replace /^.*:/, ''
+        @define 'module', input.name, output if output?
+        return output
+        
+        # input.source ?= @get "map.#{input.name}"
+        # assert typeof input.source is 'string' and !!input.source,
+        #   "unable to initiate import without a valid source parameter"
+        # input.file ?= input.source.replace /^.*:/, ''
 
-        # register any `importers` from metadata (if currently not defined)
-        importers = (@get 'importers') ? {}
-        for k, v of (@constructor.importers)
-          unless importers[k]?
-            importers[k] = v
-        @set "importers", importers
+        # # register any `importers` from metadata (if currently not defined)
+        # importers = (@get 'importers') ? {}
+        # for k, v of (@constructor.importers)
+        #   unless importers[k]?
+        #     importers[k] = v
+        # @set "importers", importers
 
-        for regex, importer of (@get 'importers') when (new RegExp regex).test input.source
-          try payload = importer.call this, input
-          catch e then console.log e; continue
-          break if payload?
+        # for regex, importer of (@get 'importers') when (new RegExp regex).test input.source
+        #   try payload = importer.call this, input
+        #   catch e then console.log e; continue
+        #   break if payload?
 
-        assert payload?, "unable to import requested module using '#{input.source}'"
+        # assert payload?, "unable to import requested module using '#{input.source}'"
 
         # TODO: what to do if output name does not match input.name?
         output = @generate payload
-        @define 'module', (output.get 'prefix'), output if output?
+        @define 'module', input.name, output if output?
         output
 
 ## Enhance the compiler with ability to export known modules
