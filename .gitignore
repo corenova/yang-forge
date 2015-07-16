@@ -31,5 +31,3 @@ node_modules
 .lock-wscript
 
 *~
-lib
-*.js
