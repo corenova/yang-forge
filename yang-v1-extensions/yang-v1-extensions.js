@@ -24,72 +24,78 @@ found inside the main `yangforge` project.
 
   forge = require('yangforge');
 
-  module.exports = forge(module, function() {
-    var DS;
-    DS = require('data-synth');
-    this.extension('module', function(key, value) {
-      return this.bind(key, DS.Module.extend(value));
-    });
-    this.extension('container', function(key, value) {
-      return this.bind(key, DS.Object.extend(value));
-    });
-    this.extension('enum', function(key, value) {
-      return this.bind(key, DS.Enumeration.extend(value));
-    });
-    this.extension('leaf', function(key, value) {
-      return this.bind(key, DS.Property.extend(value));
-    });
-    this.extension('leaf-list', function(key, value) {
-      return this.bind(key, DS.Array.extend(value));
-    });
-    this.extension('list', function(key, value) {
-      return this.bind(key, DS.Array.extend({
-        model: value
-      }));
-    });
-    this.extension('grouping', function(key, value) {
-      return this.compiler.define('grouping', key, value);
-    });
-    this.extension('typedef', function(key, value) {
-      return this.compiler.define('type', key, value);
-    });
-    this.extension('uses', function(key, value) {
-      var ref;
-      return this.mixin(((ref = this.compiler.resolve('grouping', key)) != null ? ref : DS.Meta).extend(value));
-    });
-    this.extension('augment', function(key, value) {
-      return this.merge(value);
-    });
-    this.extension('refine', function(key, value) {
-      return this.merge(value);
-    });
-    this.extension('type', function(key, value) {
-      return this.set('type', this.compiler.resolve('type', key));
-    });
-    this.extension('rpc', function(key, value) {
-      this.set("methods." + key, value);
-      return this.bind(key, this.compiler.get("procedures." + key));
-    });
-    this.extension('input', function(key, value) {
-      return this.bind('input', value);
-    });
-    this.extension('output', function(key, value) {
-      return this.bind('output', value);
-    });
-    this.extension('notification', function(key, value) {
-      return this.compiler.define('notification', key, value);
-    });
-    this.extension('belongs-to', function(key, value) {
-      return this.compiler.define('module', value.get('prefix'), this.compiler.resolve('module', key));
-    });
-    return this.extension('import', function(key, value) {
-      var mod, prefix, ref;
-      mod = this.compiler["import"]({
-        name: key
+  module.exports = forge(module, {
+    before: function() {
+      var DS;
+      DS = require('data-synth');
+      this.extension('module', function(key, value) {
+        return this.bind(key, DS.Module.extend(value));
       });
-      prefix = (ref = value.get('prefix')) != null ? ref : mod.get('prefix');
-      return this.compiler.define('module', prefix, mod);
-    });
+      this.extension('container', function(key, value) {
+        return this.bind(key, DS.Object.extend(value));
+      });
+      this.extension('enum', function(key, value) {
+        return this.bind(key, DS.Enumeration.extend(value));
+      });
+      this.extension('leaf', function(key, value) {
+        return this.bind(key, DS.Property.extend(value));
+      });
+      this.extension('leaf-list', function(key, value) {
+        return this.bind(key, DS.List.extend(value));
+      });
+      this.extension('list', function(key, value) {
+        var entry;
+        entry = DS.Object.extend(function() {
+          return this.merge(value.extract('bindings'));
+        });
+        return this.bind(key, (DS.List.extend(value.unbind())).set({
+          type: entry
+        }));
+      });
+      this.extension('grouping', function(key, value) {
+        return this.compiler.define('grouping', key, value);
+      });
+      this.extension('typedef', function(key, value) {
+        return this.compiler.define('type', key, value);
+      });
+      this.extension('uses', function(key, value) {
+        var ref;
+        return this.mixin(((ref = this.compiler.resolve('grouping', key)) != null ? ref : DS.Meta).extend(value));
+      });
+      this.extension('augment', function(key, value) {
+        return this.merge(value);
+      });
+      this.extension('refine', function(key, value) {
+        return this.merge(value);
+      });
+      this.extension('type', function(key, value) {
+        return this.set('type', this.compiler.resolve('type', key));
+      });
+      this.extension('rpc', function(key, value) {
+        this.set("methods." + key, value);
+        return this.bind(key, this.compiler.get("procedures." + key));
+      });
+      this.extension('input', function(key, value) {
+        return this.bind('input', value);
+      });
+      this.extension('output', function(key, value) {
+        return this.bind('output', value);
+      });
+      this.extension('notification', function(key, value) {
+        return this.compiler.define('notification', key, value);
+      });
+      this.extension('belongs-to', function(key, value) {
+        return this.compiler.define('module', value.get('prefix'), this.compiler.resolve('module', key));
+      });
+      return this.extension('import', function(key, value) {
+        var mod, prefix, ref;
+        mod = this.compiler["import"]({
+          name: key
+        });
+        prefix = (ref = value.get('prefix')) != null ? ref : mod.get('prefix');
+        return this.compiler.define('module', prefix, mod);
+      });
+    }
   });
 
 }).call(this);

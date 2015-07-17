@@ -7,13 +7,14 @@
   YangCompiler = require('yang-compiler');
 
   YangForge = (function(superClass) {
-    var fs, path;
+    var assert, fs, path;
 
     extend(YangForge, superClass);
 
     YangForge.set({
+      synth: 'forge',
       extensions: {},
-      methods: {}
+      actions: {}
     });
 
     YangForge.extension = function(name, func) {
@@ -21,15 +22,23 @@
     };
 
     YangForge.action = function(name, func) {
-      return this.set("methods." + name, func);
+      return this.set("actions." + name, func);
     };
+
+    assert = require('assert');
 
     path = require('path');
 
     fs = require('fs');
 
-    function YangForge(input, func) {
-      var compiler, config, err, forgery, output, pkgdir;
+    function YangForge(input, hooks) {
+      var Forgery, config, err, i, len, pkgdir, schema, schemas;
+      if (input == null) {
+        input = {};
+      }
+      if (hooks == null) {
+        hooks = {};
+      }
       if (this.constructor === Object) {
         assert(input instanceof (require('module')), "must pass in 'module' when forging a new module definition, i.e. forge(module)");
         if (module.loaded !== true) {
@@ -39,36 +48,36 @@
         try {
           pkgdir = path.dirname(input.filename);
           config = require(path.resolve(pkgdir, './package.json'));
-          if (!(config.schema instanceof Object)) {
-            config.schema = {
-              path: config.schema,
-              source: fs.readFileSync(path.resolve(pkgdir, config.schema), 'utf-8')
-            };
-          }
+          schemas = (config.schema instanceof Array ? config.schema : [config.schema]).filter(function(e) {
+            return (e != null) && !!e;
+          }).map(function(schema) {
+            return fs.readFileSync(path.resolve(pkgdir, schema), 'utf-8');
+          });
         } catch (_error) {
           err = _error;
           console.log("Unable to discover YANG schema for the target module, missing 'schema' in package.json?");
           throw err;
         }
-        console.log("INFO: [forge] forging " + config.name + " (" + config.version + ") using schema from " + config.schema.path);
-        forgery = (function(superClass1) {
+        console.log("INFO: [forge] forging " + config.name + " (" + config.version + ") using schema(s): " + config.schema);
+        Forgery = ((function(superClass1) {
           extend(_Class, superClass1);
 
           function _Class() {
             return _Class.__super__.constructor.apply(this, arguments);
           }
 
-          _Class.merge(config);
-
-          _Class.configure(func);
-
           return _Class;
 
-        })(YangForge);
-        compiler = new YangCompiler(forgery.extract('dependencies', 'extensions', 'methods'));
-        output = compiler.compile(forgery.get('schema.source'));
-        return forgery.merge(output);
+        })(YangForge)).merge(config);
+        Forgery.configure(hooks.before);
+        for (i = 0, len = schemas.length; i < len; i++) {
+          schema = schemas[i];
+          Forgery.merge((new Forgery).compile(schema));
+        }
+        Forgery.configure(hooks.after);
+        return Forgery;
       }
+      this.constructor.copy(input, this.constructor.extract('extensions'));
       YangForge.__super__.constructor.apply(this, arguments);
     }
 
@@ -76,10 +85,13 @@
 
   })(YangCompiler);
 
-  module.exports = YangForge(module, function() {
-    return this.action('import', function(input) {
-      return this["import"](input);
-    });
+  module.exports = YangForge(module, {
+    before: function() {},
+    after: function() {
+      return this.action('import', function(input) {
+        return this["import"](input);
+      });
+    }
   });
 
 }).call(this);

@@ -107,7 +107,7 @@
           });
         }
       };
-      console.log("INFO: [preprocess] scanning input for 'extension' and 'include' statements");
+      console.log("INFO: [preprocess:" + this.id + "] scanning input for 'extension' and 'include' statements");
       if (context.exports == null) {
         context.exports = {};
       }
@@ -121,68 +121,71 @@
               continue;
             }
             if (params.extension != null) {
-              params.extension = (extractKeys(params.extension)).map(function(name) {
-                var extension;
-                foundExtensions.push(name);
-                extension = (function() {
-                  switch (false) {
-                    case !(params.extension instanceof Object):
-                      return params.extension[name];
-                    default:
-                      return {};
-                  }
-                })();
-                Meta.copy(extension, context.get("extensions." + name));
-                context.define('extension', name, extension);
-                return Meta.objectify(name, extension);
-              }).reduce((function(a, b) {
+              params.extension = (extractKeys(params.extension)).map((function(_this) {
+                return function(name) {
+                  var extension;
+                  foundExtensions.push(name);
+                  extension = (function() {
+                    switch (false) {
+                      case !(params.extension instanceof Object):
+                        return params.extension[name];
+                      default:
+                        return {};
+                    }
+                  })();
+                  Meta.copy(extension, context.get("extensions." + name));
+                  context.define('extension', name, extension);
+                  return Meta.objectify(name, extension);
+                };
+              })(this)).reduce((function(a, b) {
                 return Meta.copy(a, b);
               }), {});
             }
             if (params.include != null) {
-              params.include = (extractKeys(params.include)).map(function(name) {
-                var submod;
-                console.log("INFO: [preprocess/include] submodule '" + name + "'");
-                submod = require(name);
-                console.log("INFO: [preprocess/include] submodule '" + name + "' loaded: " + (submod != null));
-                Meta.copy(context.exports, submod != null ? submod.extract() : void 0);
-                return Meta.objectify(name, submod);
-              }).reduce((function(a, b) {
+              params.include = (extractKeys(params.include)).map((function(_this) {
+                return function(name) {
+                  var submod;
+                  console.log("INFO: [preprocess:" + _this.id + ":include] submodule '" + name + "'");
+                  submod = require(name);
+                  console.log("INFO: [preprocess:" + _this.id + ":include] submodule '" + name + "' loaded: " + (submod != null));
+                  Meta.copy(context, submod != null ? submod.extract('exports') : void 0);
+                  return Meta.objectify(name, submod);
+                };
+              })(this)).reduce((function(a, b) {
                 return Meta.copy(a, b);
               }), {});
             }
           }
         }
       }
-      console.log("INFO: [preprocess] found extensions: '" + foundExtensions + "'");
+      console.log("INFO: [preprocess:" + this.id + "] found extensions: '" + foundExtensions + "'");
       return input;
     };
 
     id = 0;
 
-    YangCompiler.prototype.compile = function(input, context) {
-      var arg, ext, key, output, params, ref, ref1, ref2, res, stuff, val, validSubs;
+    YangCompiler.prototype.compile = function(input, context, scope) {
+      var arg, ext, key, output, params, ref, ref1, ref2, res, stuff, val;
       if (input == null) {
         return;
       }
       if (context == null) {
         return this.fork(function() {
-          var key, obj, output, ref, ref1, value;
-          id += 1;
-          console.log("INFO: [compile] forked a new compile context " + id);
-          obj = this.constructor.extract('extension');
-          ref = obj.extension;
-          for (key in ref) {
-            value = ref[key];
+          var key, obj, output, value;
+          this.id = id += 1;
+          console.log("INFO: [compile] forked a new compile context " + this.id);
+          obj = this.constructor.get('exports.extension');
+          for (key in obj) {
+            value = obj[key];
             Meta.copy(value, this.get("extensions." + key));
             this.define('extension', key, value);
           }
-          console.log("INFO: [compile:" + id + "] job started with following extensions: " + (Object.keys((ref1 = obj.extension) != null ? ref1 : {})));
+          console.log("INFO: [compile:" + this.id + "] job started with following extensions: " + (Object.keys(obj != null ? obj : {})));
           output = this.compile(input, this);
           if (output != null) {
-            output.merge(this.exports);
+            output.merge('exports', this.exports);
           }
-          console.log("INFO: [compile:" + id + "] job finished");
+          console.log("INFO: [compile:" + this.id + "] job finished");
           return output;
         });
       }
@@ -203,11 +206,10 @@
         return _Class;
 
       })(Meta);
-      output.compiler = this;
-      validSubs = context != null ? context.extension : void 0;
+      output.compiler = context;
       for (key in input) {
         val = input[key];
-        if (!((validSubs == null) || key in validSubs)) {
+        if (!((scope == null) || key in scope)) {
           continue;
         }
         if (key === 'extension') {
@@ -221,7 +223,7 @@
             params = val[arg];
             stuff = (function() {
               switch (false) {
-                case !(Meta["instanceof"](params)):
+                case !(params instanceof Function):
                   return "{ [native code] }";
                 case params == null:
                   return "{ " + (Object.keys(params)) + " }";
@@ -236,10 +238,7 @@
                 case 'include':
                   return params;
                 default:
-                  return this.compile(params, {
-                    key: key + "." + arg,
-                    extension: ext
-                  });
+                  return this.compile(params, context, ext);
               }
             }).call(this);
             output.set(key + "." + arg, params);

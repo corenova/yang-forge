@@ -107,7 +107,7 @@
     };
 
     YangCompilerMixin.prototype["import"] = function(input) {
-      var e, exists, hack, output, pkg;
+      var e, exists, output, pkg;
       if (input == null) {
         input = {};
       }
@@ -124,20 +124,14 @@
         this.define('module', exists.get('name'), exists);
         return exists;
       }
+      console.log("INFO: importing '" + input.name + "'");
       try {
-        console.log("INFO: importing '" + input.name + "'");
         pkg = require(input.name);
-        hack = this.context;
-        output = this.fork(function() {
-          this.set(pkg.extract('dependencies', 'extensions', 'methods'));
-          this.context = hack;
-          return this.compile(pkg.get('schema.source'), this);
-        });
       } catch (_error) {
         e = _error;
         console.log(e);
       }
-      if (output != null) {
+      if (typeof output !== "undefined" && output !== null) {
         this.define('module', input.name, output);
       }
       return output;

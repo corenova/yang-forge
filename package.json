@@ -1,5 +1,5 @@
 {
-  "version": "0.8.2",
+  "version": "0.8.3",
   "name": "yangforge",
   "description": "YANG driven JS application builder",
   "keywords": [
@@ -25,7 +25,7 @@
   "schema": "./yangforge.yang",
   "dependencies": {
     "complex-types": "file:complex-types",
-    "data-synth": "^0.5.1",
+    "data-synth": "^0.5.3",
     "yang-compiler": "file:compiler",
     "yang-parser": "^0.1.0",
     "yang-v1-extensions": "file:yang-v1-extensions"

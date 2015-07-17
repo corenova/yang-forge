@@ -19,57 +19,61 @@ found inside the main `yangforge` project.
 
 forge = require 'yangforge'
 
-module.exports = forge module, ->
-  DS = require 'data-synth'
-  
-  @extension 'module',    (key, value) -> @bind key, (DS.Module.extend value)
-  @extension 'container', (key, value) -> @bind key, (DS.Object.extend value)
-  @extension 'enum',      (key, value) -> @bind key, (DS.Enumeration.extend value)
-  @extension 'leaf',      (key, value) -> @bind key, (DS.Property.extend value)
-  @extension 'leaf-list', (key, value) -> @bind key, (DS.Array.extend value)
-  @extension 'list',      (key, value) -> @bind key, (DS.Array.extend model: value)
+module.exports = forge module,
+  before: ->
+    DS = require 'data-synth'
+    @extension 'module',    (key, value) -> @bind key, (DS.Module.extend value)
+    @extension 'container', (key, value) -> @bind key, (DS.Object.extend value)
+    @extension 'enum',      (key, value) -> @bind key, (DS.Enumeration.extend value)
+    @extension 'leaf',      (key, value) -> @bind key, (DS.Property.extend value)
+    @extension 'leaf-list', (key, value) -> @bind key, (DS.List.extend value)
 
-  # The following extensions declare externally shared metadata
-  # definitions about the module.  They are not attached into
-  # the generated module's configuration tree but instead
-  # defined in the metadata section of the module only.
-  @extension 'grouping', (key, value) -> @compiler.define 'grouping', key, value
-  @extension 'typedef',  (key, value) -> @compiler.define 'type', key, value
+    # The `list` is handled in a special way
+    @extension 'list', (key, value) ->
+      entry = DS.Object.extend -> @merge value.extract 'bindings'
+      @bind key, (DS.List.extend value.unbind()).set type: entry
 
-  # The following extensions makes alterations to the
-  # configuration tree.  The `uses` statement references a
-  # `grouping` node available within the context of the schema
-  # being compiled to return the contents at the current `uses`
-  # node context.  The `augment/refine` statements helps to
-  # alter the containing statement with changes to the schema.
-  @extension 'uses',    (key, value) -> @mixin ((@compiler.resolve 'grouping', key) ? DS.Meta).extend value
-  @extension 'augment', (key, value) -> @merge value
-  @extension 'refine',  (key, value) -> @merge value
-  @extension 'type',    (key, value) -> @set 'type', (@compiler.resolve 'type', key)
+    # The following extensions declare externally shared metadata
+    # definitions about the module.  They are not attached into
+    # the generated module's configuration tree but instead
+    # defined in the metadata section of the module only.
+    @extension 'grouping', (key, value) -> @compiler.define 'grouping', key, value
+    @extension 'typedef',  (key, value) -> @compiler.define 'type', key, value
 
-  @extension 'rpc', (key, value) ->
-    @set "methods.#{key}", value
-    @bind key, @compiler.get "procedures.#{key}"
+    # The following extensions makes alterations to the
+    # configuration tree.  The `uses` statement references a
+    # `grouping` node available within the context of the schema
+    # being compiled to return the contents at the current `uses`
+    # node context.  The `augment/refine` statements helps to
+    # alter the containing statement with changes to the schema.
+    @extension 'uses',    (key, value) -> @mixin ((@compiler.resolve 'grouping', key) ? DS.Meta).extend value
+    @extension 'augment', (key, value) -> @merge value
+    @extension 'refine',  (key, value) -> @merge value
+    @extension 'type',    (key, value) -> @set 'type', (@compiler.resolve 'type', key)
 
-  @extension 'input',  (key, value) -> @bind 'input', value
-  @extension 'output', (key, value) -> @bind 'output', value
+    @extension 'rpc', (key, value) ->
+      @set "methods.#{key}", value
+      @bind key, @compiler.get "procedures.#{key}"
 
-  @extension 'notification', (key, value) -> @compiler.define 'notification', key, value
+    @extension 'input',  (key, value) -> @bind 'input', value
+    @extension 'output', (key, value) -> @bind 'output', value
 
-  # The `belongs-to` statement is only used in the context of a
-  # `submodule` definition which is processed as a sub-compile stage
-  # within the containing `module` defintion.  Therefore, when this
-  # statement is encountered, it would be processed within the context of
-  # the governing `compile` process which means that the metadata
-  # available within that context will be made *eventually available* to
-  # the included submodule.
-  @extension 'belongs-to', (key, value) ->
-    @compiler.define 'module', (value.get 'prefix'), (@compiler.resolve 'module', key)
+    @extension 'notification', (key, value) -> @compiler.define 'notification', key, value
 
-  # The following `import` resolver utilizes the `import` functionality
-  # introduced via the
-  # [YangCompilerMixin](./yang-compiler-mixin.litcoffee) module.
-  @extension 'import', (key, value) ->
-    mod = @compiler.import name: key
-    prefix = (value.get 'prefix') ? (mod.get 'prefix')
-    @compiler.define 'module', prefix, mod
+    # The `belongs-to` statement is only used in the context of a
+    # `submodule` definition which is processed as a sub-compile stage
+    # within the containing `module` defintion.  Therefore, when this
+    # statement is encountered, it would be processed within the context of
+    # the governing `compile` process which means that the metadata
+    # available within that context will be made *eventually available* to
+    # the included submodule.
+    @extension 'belongs-to', (key, value) ->
+      @compiler.define 'module', (value.get 'prefix'), (@compiler.resolve 'module', key)
+
+    # The following `import` resolver utilizes the `import` functionality
+    # introduced via the
+    # [YangCompilerMixin](./yang-compiler-mixin.litcoffee) module.
+    @extension 'import', (key, value) ->
+      mod = @compiler.import name: key
+      prefix = (value.get 'prefix') ? (mod.get 'prefix')
+      @compiler.define 'module', prefix, mod

@@ -17,28 +17,29 @@ models.
 
   forge = require('yangforge');
 
-  module.exports = forge(module, function() {
-    console.log('COMPLEX TYPE MAKER');
-    this.extension('complex-type', function(key, value) {
-      return this.compiler.define('complext-type', key, value);
-    });
-    this.extension('abstract', function(key, value) {
-      return void 0;
-    });
-    this.extension('extends', function(key, value) {
-      return this.merge((this.compiler.resolve('complex-type', key)).extend(value));
-    });
-    this.extension('instance-type', function(key, value) {
-      return this.bind(key, (this.compiler.resolve('complex-type', key)).extend(value));
-    });
-    this.extension('instance', function(key, value) {
-      return this.bind(key, yforge.Model.extend(value));
-    });
-    return this.extension('instance-list', function(key, value) {
-      return this.bind(key, yforge.Array.extend({
-        model: value
-      }));
-    });
+  module.exports = forge(module, {
+    before: function() {
+      this.extension('complex-type', function(key, value) {
+        return this.compiler.define('complext-type', key, value);
+      });
+      this.extension('abstract', function(key, value) {
+        return void 0;
+      });
+      this.extension('extends', function(key, value) {
+        return this.merge((this.compiler.resolve('complex-type', key)).extend(value));
+      });
+      this.extension('instance-type', function(key, value) {
+        return this.bind(key, (this.compiler.resolve('complex-type', key)).extend(value));
+      });
+      this.extension('instance', function(key, value) {
+        return this.bind(key, forge.Model.extend(value));
+      });
+      return this.extension('instance-list', function(key, value) {
+        return this.bind(key, forge.Array.extend({
+          model: value
+        }));
+      });
+    }
   });
 
 

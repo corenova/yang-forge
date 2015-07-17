@@ -54,8 +54,8 @@ module.
 ## Enhance the compiler with ability to import external modules
 
 The `import` function is a key new addition to the `yang-compiler`
-over the underlying `yang-meta-compiler` which deals with infusing
-external modules into current runtime context.
+which deals with infusing external modules into current runtime
+context.
 
 Here we register a few `importers` that the `yang-compiler` will
 natively support.  The users of the `yang-compiler` can override or
@@ -97,14 +97,9 @@ as name, source, map, resolvers, etc.
           @define 'module', (exists.get 'name'), exists
           return exists
 
+        console.log "INFO: importing '#{input.name}'"
         try
-          console.log "INFO: importing '#{input.name}'"
           pkg = (require input.name)
-          hack = @context
-          output = @fork ->
-            @set (pkg.extract 'dependencies', 'extensions', 'methods')
-            @context = hack
-            @compile (pkg.get 'schema.source'), this
         catch e then console.log e
           
         @define 'module', input.name, output if output?
