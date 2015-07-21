@@ -22,7 +22,7 @@
     "url": "https://github.com/saintkepha/yangforge/issues"
   },
   "main": "./yangforge.js",
-  "bin": "bin/yangforge-cli.js",
+  "bin": "bin/yfc",
   "schema": "./yangforge.yang",
   "dependencies": {
     "complex-types": "file:yang_modules/complex-types",
