@@ -21,17 +21,16 @@ forge = require 'yangforge'
 
 module.exports = forge module,
   before: ->
-    DS = require 'data-synth'
-    @extension 'module',    (key, value) -> @bind key, (DS.Module.extend value)
-    @extension 'container', (key, value) -> @bind key, (DS.Object.extend value)
-    @extension 'enum',      (key, value) -> @bind key, (DS.Enumeration.extend value)
-    @extension 'leaf',      (key, value) -> @bind key, (DS.Property.extend value)
-    @extension 'leaf-list', (key, value) -> @bind key, (DS.List.extend value)
+    @extension 'module',    (key, value) -> @bind key, (forge.Module value)
+    @extension 'container', (key, value) -> @bind key, (forge.Object value)
+    @extension 'enum',      (key, value) -> @bind key, (forge.Enumeration value)
+    @extension 'leaf',      (key, value) -> @bind key, (forge.Property value)
+    @extension 'leaf-list', (key, value) -> @bind key, (forge.List value)
 
     # The `list` is handled in a special way
     @extension 'list', (key, value) ->
-      entry = DS.Object.extend -> @merge value.extract 'bindings'
-      @bind key, (DS.List.extend value.unbind()).set type: entry
+      entry = forge.Object (value.extract 'bindings')
+      @bind key, (forge.List value.unbind()).set type: entry
 
     # The following extensions declare externally shared metadata
     # definitions about the module.  They are not attached into
@@ -46,7 +45,9 @@ module.exports = forge module,
     # being compiled to return the contents at the current `uses`
     # node context.  The `augment/refine` statements helps to
     # alter the containing statement with changes to the schema.
-    @extension 'uses',    (key, value) -> @mixin ((@compiler.resolve 'grouping', key) ? DS.Meta).extend value
+    @extension 'uses',    (key, value) ->
+      @mixin (@compiler.resolve 'grouping', key)
+      @mixin value
     @extension 'augment', (key, value) -> @merge value
     @extension 'refine',  (key, value) -> @merge value
     @extension 'type',    (key, value) -> @set 'type', (@compiler.resolve 'type', key)

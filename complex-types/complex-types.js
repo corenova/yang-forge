@@ -26,16 +26,16 @@ models.
         return void 0;
       });
       this.extension('extends', function(key, value) {
-        return this.merge((this.compiler.resolve('complex-type', key)).extend(value));
+        return this.merge((this.compiler.resolve('complex-type', key))(value));
       });
       this.extension('instance-type', function(key, value) {
-        return this.bind(key, (this.compiler.resolve('complex-type', key)).extend(value));
+        return this.bind(key, (this.compiler.resolve('complex-type', key))(value));
       });
       this.extension('instance', function(key, value) {
-        return this.bind(key, forge.Model.extend(value));
+        return this.bind(key, forge.Model(value));
       });
       return this.extension('instance-list', function(key, value) {
-        return this.bind(key, forge.Array.extend({
+        return this.bind(key, forge.Array({
           model: value
         }));
       });

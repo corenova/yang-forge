@@ -18,6 +18,10 @@
       return YangCompiler.__super__.constructor.apply(this, arguments);
     }
 
+    YangCompiler.set({
+      synth: 'compiler'
+    });
+
     YangCompiler.mixin(require('./compiler-mixin'));
 
     YangCompiler.prototype.define = function(type, key, value) {
@@ -107,7 +111,7 @@
           });
         }
       };
-      console.log("INFO: [preprocess:" + this.id + "] scanning input for 'extension' and 'include' statements");
+      console.log("INFO: [preprocess:" + this.id + "] scanning input schema for 'extension' and 'include' statements");
       if (context.exports == null) {
         context.exports = {};
       }
@@ -158,7 +162,7 @@
           }
         }
       }
-      console.log("INFO: [preprocess:" + this.id + "] found extensions: '" + foundExtensions + "'");
+      console.log("INFO: [preprocess:" + this.id + "] found " + foundExtensions.length + " new extensions: '" + foundExtensions + "'");
       return input;
     };
 

@@ -1,10 +1,12 @@
-YangCompiler = require 'yang-compiler'
+Synth = require 'data-synth'
 
-class YangForge extends YangCompiler
+class Forge extends Synth
   @set synth: 'forge', extensions: {}, actions: {}
 
-  @extension: (name, func) -> @set "extensions.#{name}.resolver", func
-  @action: (name, func) -> @set "actions.#{name}", func
+  @extension = (name, func) -> @set "extensions.#{name}.resolver", func
+  @action = (name, func) -> @set "actions.#{name}", func
+
+  @mixin (require 'yang-compiler')
 
   assert = require 'assert'
   path = require 'path'
@@ -16,7 +18,7 @@ class YangForge extends YangCompiler
   # when called without a 'new' keyword, it creates a forgery of its
   # own class definition representing the blueprint for the new module
   constructor: (input={}, hooks={}) ->
-    if @constructor is Object
+    unless Synth.instanceof @constructor
       assert input instanceof (require 'module'),
         "must pass in 'module' when forging a new module definition, i.e. forge(module)"
 
@@ -24,7 +26,7 @@ class YangForge extends YangCompiler
       # is being constructed/compiled, other dependent modules needed
       # for YangForge construction itself (such as yang-v1-extensions)
       # can properly export themselves.
-      module.exports = YangForge unless module.loaded is true
+      module.exports = arguments.callee unless module.loaded is true
 
       console.log "INFO: [forge] processing #{input.id}..."
       try
@@ -39,16 +41,16 @@ class YangForge extends YangCompiler
         throw err
 
       console.log "INFO: [forge] forging #{config.name} (#{config.version}) using schema(s): #{config.schema}"
-      Forgery = (class extends YangForge).merge config
-      Forgery.configure hooks.before
-      Forgery.merge ((new Forgery).compile schema) for schema in schemas
-      Forgery.configure hooks.after
-      return Forgery
 
-    @constructor.copy input, @constructor.extract 'extensions'
+      return super Forge, ->
+        @merge config
+        @configure hooks.before
+        @merge ((new this @extract 'extensions').compile schema) for schema in schemas
+        @configure hooks.after
+
     super
-    
-module.exports = YangForge module,
+
+module.exports = Forge module,
   before: ->
     
   after: ->

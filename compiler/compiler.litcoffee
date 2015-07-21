@@ -16,6 +16,8 @@ First we declare the compiler class as an extension of the
     Meta = (require 'data-synth').Meta
 
     class YangCompiler extends Meta
+      @set synth: 'compiler'
+      
       @mixin (require './compiler-mixin')
 
 As the compiler encounters various YANG statement extensions, the
@@ -85,7 +87,7 @@ found in the parsed output in order to prepare the context for the
 
         extractKeys = (x) -> if x instanceof Object then (Object.keys x) else [x].filter (e) -> e? and !!e
 
-        console.log "INFO: [preprocess:#{@id}] scanning input for 'extension' and 'include' statements"
+        console.log "INFO: [preprocess:#{@id}] scanning input schema for 'extension' and 'include' statements"
         context.exports ?= {}
         foundExtensions = []
         for key, val of input when (/^(sub)*module$/.test key) and val instanceof Object
@@ -114,7 +116,7 @@ found in the parsed output in order to prepare the context for the
                   Meta.copy context, submod?.extract 'exports'
                   Meta.objectify name, submod
                 .reduce ((a, b) -> Meta.copy a, b), {}
-        console.log "INFO: [preprocess:#{@id}] found extensions: '#{foundExtensions}'"
+        console.log "INFO: [preprocess:#{@id}] found #{foundExtensions.length} new extensions: '#{foundExtensions}'"
         return input
 
 The `compile` function is the primary method of the compiler which

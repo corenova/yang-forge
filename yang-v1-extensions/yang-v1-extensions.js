@@ -26,29 +26,25 @@ found inside the main `yangforge` project.
 
   module.exports = forge(module, {
     before: function() {
-      var DS;
-      DS = require('data-synth');
       this.extension('module', function(key, value) {
-        return this.bind(key, DS.Module.extend(value));
+        return this.bind(key, forge.Module(value));
       });
       this.extension('container', function(key, value) {
-        return this.bind(key, DS.Object.extend(value));
+        return this.bind(key, forge.Object(value));
       });
       this.extension('enum', function(key, value) {
-        return this.bind(key, DS.Enumeration.extend(value));
+        return this.bind(key, forge.Enumeration(value));
       });
       this.extension('leaf', function(key, value) {
-        return this.bind(key, DS.Property.extend(value));
+        return this.bind(key, forge.Property(value));
       });
       this.extension('leaf-list', function(key, value) {
-        return this.bind(key, DS.List.extend(value));
+        return this.bind(key, forge.List(value));
       });
       this.extension('list', function(key, value) {
         var entry;
-        entry = DS.Object.extend(function() {
-          return this.merge(value.extract('bindings'));
-        });
-        return this.bind(key, (DS.List.extend(value.unbind())).set({
+        entry = forge.Object(value.extract('bindings'));
+        return this.bind(key, (forge.List(value.unbind())).set({
           type: entry
         }));
       });
@@ -59,8 +55,8 @@ found inside the main `yangforge` project.
         return this.compiler.define('type', key, value);
       });
       this.extension('uses', function(key, value) {
-        var ref;
-        return this.mixin(((ref = this.compiler.resolve('grouping', key)) != null ? ref : DS.Meta).extend(value));
+        this.mixin(this.compiler.resolve('grouping', key));
+        return this.mixin(value);
       });
       this.extension('augment', function(key, value) {
         return this.merge(value);
