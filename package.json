@@ -1,10 +1,11 @@
 {
-  "version": "0.8.4",
+  "version": "0.8.5",
   "name": "yangforge",
   "description": "YANG driven JS application builder",
   "keywords": [
     "datastore",
     "datamodel",
+    "forge",
     "model",
     "yang",
     "restconf",
@@ -24,11 +25,11 @@
   "bin": "bin/yangforge-cli.js",
   "schema": "./yangforge.yang",
   "dependencies": {
-    "complex-types": "file:complex-types",
+    "complex-types": "file:yang_modules/complex-types",
     "data-synth": "^0.5.4",
     "yang-compiler": "file:compiler",
     "yang-parser": "^0.1.0",
-    "yang-v1-extensions": "file:yang-v1-extensions"
+    "yang-v1-extensions": "file:yang_modules/yang-v1-extensions"
   },
   "bundleDependencies": [
     "data-synth",
