@@ -20,7 +20,15 @@ module yangforge {
     description "Initial revision";
     reference "RFC-6020";
   }
-    
+
+  feature cli {
+    description "When enabled, generates command-line-interface for the module";
+  }
+
+  feature restconf {
+    description "When enabled, generates restconf-interface for the module";
+  }
+  
   grouping compiler-rules {
     description
       "The compiler-rules specify parameters used during compile operation.";
@@ -65,6 +73,13 @@ module yangforge {
   }
 
   uses compiler-rules;
+
+  rpc install {
+    if-feature cli;
+    input {
+      leaf-list names { type string; mandatory true; }
+    }
+  }
   
   rpc import {
     input { uses meta-module; }

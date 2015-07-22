@@ -8,7 +8,7 @@
     "prepublish": "coffee -c complex-types.coffee"
   },
   "dependencies": {
-    "yangforge": "file:.."
+    "yangforge": "file:../.."
   },
   "schema": "./complex-types.yang",
   "extensions": {

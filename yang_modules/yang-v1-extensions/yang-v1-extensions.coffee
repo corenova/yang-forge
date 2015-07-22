@@ -17,20 +17,21 @@ is well understood.  For more details, please refer to documentation
 found inside the main `yangforge` project.
 ###
 
-forge = require 'yangforge'
+# normally should be require 'yangforge' but this is internal dependency
+Forge = require 'yangforge'
 
-module.exports = forge module,
+module.exports = Forge module,
   before: ->
-    @extension 'module',    (key, value) -> @bind key, (forge.Module value)
-    @extension 'container', (key, value) -> @bind key, (forge.Object value)
-    @extension 'enum',      (key, value) -> @bind key, (forge.Enumeration value)
-    @extension 'leaf',      (key, value) -> @bind key, (forge.Property value)
-    @extension 'leaf-list', (key, value) -> @bind key, (forge.List value)
+    @extension 'module',    (key, value) -> @bind key, (Forge.Module value)
+    @extension 'container', (key, value) -> @bind key, (Forge.Object value)
+    @extension 'enum',      (key, value) -> @bind key, (Forge.Enumeration value)
+    @extension 'leaf',      (key, value) -> @bind key, (Forge.Property value)
+    @extension 'leaf-list', (key, value) -> @bind key, (Forge.List value)
 
     # The `list` is handled in a special way
     @extension 'list', (key, value) ->
-      entry = forge.Object (value.extract 'bindings')
-      @bind key, (forge.List value.unbind()).set type: entry
+      entry = Forge.Object (value.extract 'bindings')
+      @bind key, (Forge.List value.unbind()).set type: entry
 
     # The following extensions declare externally shared metadata
     # definitions about the module.  They are not attached into

@@ -12,7 +12,6 @@ First we declare the compiler class as an extension of the
 `Meta` class.  For details on `Meta` please refer to
 [Meta class source](http://github.com/saintkepha/data-synth/src/meta.litcoffee).
 
-    assert = require 'assert'
     Meta = (require 'data-synth').Meta
 
     class YangCompiler extends Meta
@@ -55,9 +54,9 @@ ensures syntax correctness and building the JS object tree structure.
       parse: (input, parser=(require 'yang-parser')) ->
         try
           input = (parser.parse input) if typeof input is 'string'
-        catch e then console.log "ERR: [parse] failed to parse: #{input}"
+        catch e then console.error "[parse] failed to parse: #{input}"
           
-        assert input instanceof Object,
+        console.assert input instanceof Object,
           "must pass in proper input to parse"
 
         params = 
@@ -82,12 +81,12 @@ found in the parsed output in order to prepare the context for the
         return @fork (-> @preprocess input, this) unless context?
 
         input = (@parse input) if typeof input is 'string'
-        assert input instanceof Object,
+        console.assert input instanceof Object,
           "must pass in proper input to preprocess"
 
         extractKeys = (x) -> if x instanceof Object then (Object.keys x) else [x].filter (e) -> e? and !!e
 
-        console.log "INFO: [preprocess:#{@id}] scanning input schema for 'extension' and 'include' statements"
+        console.log "[preprocess:#{@id}] scanning input schema for 'extension' and 'include' statements"
         context.exports ?= {}
         foundExtensions = []
         for key, val of input when (/^(sub)*module$/.test key) and val instanceof Object
@@ -108,15 +107,17 @@ found in the parsed output in order to prepare the context for the
               params.include = 
                 (extractKeys params.include)
                 .map (name) =>
-                  console.log "INFO: [preprocess:#{@id}:include] submodule '#{name}'"
+                  console.log "[preprocess:#{@id}:include] submodule '#{name}'"
                   submod = (require name)
-                  console.log "INFO: [preprocess:#{@id}:include] submodule '#{name}' loaded: #{submod?}"
+                  console.log "[preprocess:#{@id}:include] submodule '#{name}' loaded: #{submod?}"
                   # grab export data from submodule and include into context
                   # a bit hackish ATM...
                   Meta.copy context, submod?.extract 'exports'
                   Meta.objectify name, submod
                 .reduce ((a, b) -> Meta.copy a, b), {}
-        console.log "INFO: [preprocess:#{@id}] found #{foundExtensions.length} new extensions: '#{foundExtensions}'"
+        if foundExtensions.length > 0
+          console.log "found #{foundExtensions.length} new extension"+('s' if foundExtensions.length > 1)
+          console.log foundExtensions.join ', '
         return input
 
 The `compile` function is the primary method of the compiler which
@@ -151,21 +152,21 @@ provided input.
         unless context?
           return @fork ->
             @id = id += 1
-            console.log "INFO: [compile] forked a new compile context #{@id}"
+            console.log "[compile] forked a new compile context #{@id}"
             obj = @constructor.get 'exports.extension'
             for key, value of obj
               Meta.copy value, @get "extensions.#{key}"
               @define 'extension', key, value
-            console.log "INFO: [compile:#{@id}] job started with following extensions: #{Object.keys(obj ? {})}"
+            console.log "[compile:#{@id}] job started with following extensions: #{Object.keys(obj ? {})}"
             output = @compile input, this
             output?.merge 'exports', @exports
-            console.log "INFO: [compile:#{@id}] job finished"
+            console.log "[compile:#{@id}] job finished"
             output
 
         input = (input.call this) if input instanceof Function
         input = @preprocess input, context if typeof input is 'string'
 
-        assert input instanceof Object,
+        console.assert input instanceof Object,
           "must pass in proper input to compile"
 
         output = class extends Meta
@@ -183,8 +184,8 @@ provided input.
             continue
 
           ext = @resolve 'extension', key
-          assert ext instanceof Object,
-            "ERROR: cannot compile statement with unknown extension '#{key}'"
+          console.assert ext instanceof Object,
+            "cannot compile statement with unknown extension '#{key}'"
 
           # Here we determine whether there are additional instances
           # of this extension or sub-statements to be proceseed and
@@ -195,7 +196,7 @@ provided input.
               when params instanceof Function then "{ [native code] }"
               when params? then "{ #{Object.keys(params)} }"
               else ""
-            console.log "INFO: [compile:#{id}] #{key} #{arg} #{stuff}"
+            console.log "[compile:#{id}] #{key} #{arg} #{stuff}"
             res = switch key
               when 'extension','include' then params
               else @compile params, context, ext
@@ -204,10 +205,10 @@ provided input.
           else
             output.set key, val
             if ext.argument?
-              console.log "INFO: [compile:#{id}] #{key} #{val.slice 0, 50}..."
+              console.log "[compile:#{id}] #{key} #{val.slice 0, 50}..."
               ext.resolver?.call? output, val, {}
             else
-              console.log "INFO: [compile:#{id}] #{key}"
+              console.log "[compile:#{id}] #{key}"
               ext.resolver?.call? output, key, val
 
         delete output.compiler

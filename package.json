@@ -1,5 +1,5 @@
 {
-  "version": "0.8.5",
+  "version": "0.8.7",
   "name": "yangforge",
   "description": "YANG driven JS application builder",
   "keywords": [
@@ -21,28 +21,35 @@
   "bugs": {
     "url": "https://github.com/saintkepha/yangforge/issues"
   },
-  "main": "./yangforge.js",
+  "main": "lib/yangforge.js",
   "bin": "bin/yfc",
   "schema": "./yangforge.yang",
   "dependencies": {
-    "complex-types": "file:yang_modules/complex-types",
+    "clim": "^1.1.1",
     "data-synth": "^0.5.4",
-    "yang-compiler": "file:compiler",
+    "prettyjson": "^1.1.2",
     "yang-parser": "^0.1.0",
     "yang-v1-extensions": "file:yang_modules/yang-v1-extensions"
   },
+  "optionalDependencies": {
+    "complex-types": "file:yang_modules/complex-types",
+    "opnfv-promise": "file:yang_modules/opnfv-promise"
+  },
   "bundleDependencies": [
+    "clim",
     "data-synth",
-    "yang-compiler",
     "yang-parser",
     "yang-v1-extensions"
   ],
   "devDependencies": {
     "coffee-script": ">=1.7"
   },
+  "engines": {
+    "node": ">=0.10.3"
+  },
   "scripts": {
     "test": "mocha test",
-    "prepublish": "coffee -c *coffee",
+    "prepublish": "mkdir -p lib; coffee -o lib -c src",
     "start": "node lib/yangforge"
   },
   "license": "MIT"
