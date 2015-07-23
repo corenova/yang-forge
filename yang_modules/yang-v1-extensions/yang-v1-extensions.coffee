@@ -51,11 +51,11 @@ module.exports = Forge module,
       @mixin value
     @extension 'augment', (key, value) -> @merge value
     @extension 'refine',  (key, value) -> @merge value
-    @extension 'type',    (key, value) -> @set 'type', (@compiler.resolve 'type', key)
+    @extension 'type',    (key, value) -> @set 'type', (@compiler.resolve 'type', key) ? key
 
     @extension 'rpc', (key, value) ->
-      @set "methods.#{key}", value
-      @bind key, @compiler.get "procedures.#{key}"
+      value.include exec: @compiler.get "procedures.#{key}"
+      @bind key, (-> new value )
 
     @extension 'input',  (key, value) -> @bind 'input', value
     @extension 'output', (key, value) -> @bind 'output', value

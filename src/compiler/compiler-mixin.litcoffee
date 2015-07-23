@@ -24,11 +24,11 @@ a function that returns one of the first two formats.
             try (JSON.parse input) catch
           when input instanceof Object then input
           
-        assert obj instanceof Object, "cannot generate using invalid input data"
+        console.assert obj instanceof Object, "cannot generate using invalid input data"
         return obj if Meta.instanceof obj # if it is already meta class object, just return it
 
         meta = (class extends Meta).merge obj
-        assert typeof (meta.get 'schema') is 'string', "missing text schema to use for generate"
+        console.assert typeof (meta.get 'schema') is 'string', "missing text schema to use for generate"
 
 We then retrieve the **active** meta data (functions) and convert them
 to actual runtime functions as necessary if they were provided as a
@@ -86,7 +86,7 @@ It expects an object as input which provides various properties, such
 as name, source, map, resolvers, etc. 
 
       import: (input={}) ->
-        assert input instanceof Object,
+        console.assert input instanceof Object,
           "cannot call import without proper input object"
         
         exists = switch
@@ -106,7 +106,7 @@ as name, source, map, resolvers, etc.
         return output
         
         # input.source ?= @get "map.#{input.name}"
-        # assert typeof input.source is 'string' and !!input.source,
+        # console.assert typeof input.source is 'string' and !!input.source,
         #   "unable to initiate import without a valid source parameter"
         # input.file ?= input.source.replace /^.*:/, ''
 
@@ -122,7 +122,7 @@ as name, source, map, resolvers, etc.
         #   catch e then console.log e; continue
         #   break if payload?
 
-        # assert payload?, "unable to import requested module using '#{input.source}'"
+        # console.assert payload?, "unable to import requested module using '#{input.source}'"
 
         # TODO: what to do if output name does not match input.name?
         output = @generate payload
@@ -138,14 +138,14 @@ across systems.
 TODO: add exporters support similar to how we can add importers.
 
       export: (input) ->
-        assert input instanceof Object, "invalid input to export module"
-        assert typeof input.name is 'string' and !!input.name,
+        console.assert input instanceof Object, "invalid input to export module"
+        console.assert typeof input.name is 'string' and !!input.name,
           "need to pass in 'name' of the module to export"
         format = input.format ? 'json'
         m = switch
           when (Meta.instanceof input) then input
           else @resolve 'module', input.name
-        assert (Meta.instanceof m),
+        console.assert (Meta.instanceof m),
           "unable to retrieve requested module #{input.name} for export"
 
         tosource = require 'tosource'

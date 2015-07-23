@@ -200,7 +200,10 @@ provided input.
             res = switch key
               when 'extension','include' then params
               else @compile params, context, ext
-            output.set "#{key}.#{arg}", params
+            unless params?
+              output.set key, arg
+            else
+              output.set "#{key}.#{arg}", params
             ext.resolver?.call? output, arg, res
           else
             output.set key, val
@@ -209,7 +212,10 @@ provided input.
               ext.resolver?.call? output, val, {}
             else
               console.log "[compile:#{id}] #{key}"
-              ext.resolver?.call? output, key, val
+              res = switch
+                when val instanceof Object then @compile val, context, ext
+                else val
+              ext.resolver?.call? output, key, res
 
         delete output.compiler
         return output

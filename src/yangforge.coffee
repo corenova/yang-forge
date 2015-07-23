@@ -12,8 +12,10 @@ prettyjson = require 'prettyjson'
 class Forge extends Synth
   @set synth: 'forge', extensions: {}, actions: {}
 
+  @mixin (require './compiler/compiler')
+
   @extension = (name, func) -> @set "extensions.#{name}.resolver", func
-  @action = (name, func) -> @set "actions.#{name}", func
+  @action = (name, func) -> @set "procedures.#{name}", func
   @feature = (name, func) -> @set "features.#{name}", status: off, hook: func
 
   toggleFeature = (name, toggle) ->
@@ -28,11 +30,7 @@ class Forge extends Synth
   @enable  = (names...) -> toggleFeature.call this, name, on  for name in names; this
   @disable = (names...) -> toggleFeature.call this, name, off for name in names; this
 
-  @run = ->
-    console.info "forgery firing up:\n" + @summary()
-    (new this).run()
-
-  @mixin (require './compiler/compiler')
+  @run = (config) -> (new this config).run()
 
   @summary = ->
     summary =
@@ -41,7 +39,11 @@ class Forge extends Synth
     summary.dependencies = Object.keys summary.dependencies if summary.dependencies?
     summary.features = Object.keys summary.features if summary.features?
     summary.exports[k] = Object.keys v for k, v of summary.exports when v instanceof Object
+    if summary.exports.extension?
+      summary.exports.extension = summary.exports.extension.length
     prettyjson.render summary
+
+  #@modules = Synth.computed -> undefined
 
   # this is a factory that instantiates based on compiled output of
   # constructor's meta data
@@ -77,26 +79,47 @@ class Forge extends Synth
       output = super Forge, ->
         @merge config
         @configure hooks.before
-        @merge ((new this @extract 'extensions').compile schema) for schema in schemas
+        @merge ((new this @extract 'extensions', 'procedures').compile schema) for schema in schemas
         @configure hooks.after
       console.log "\n" + output?.summary()
       return output
-
+      
+    # instantiate via new
+    #
+    # XXX - TODO
+    # before we construct, we need to 'normalize' the bindings based on if-feature conditions
+    bindings = @constructor.get 'bindings'
     super
 
-exports = module.exports = Forge module,
+  run: ->
+    for name in (Object.keys @get 'yangforge.interfaces')
+      face = @access "yangforge.interfaces.#{name}"
+      face?.run this
+
+module.exports = Forge module,
   before: ->
+    # handle RPC calls
+    @action 'info', (input, options) ->
+      unless input.length
+        console.info @constructor.summary()
+      else
+        for pkg in input
+          console.info "let's show #{pkg}"
+          
+    @action 'install', (input, options) ->
+      for pkg in input
+        console.info "installing #{pkg}" + (if options.save then " --save" else '')
+        
+    @action 'import', (input) -> @import input
     
   after: ->
     #@mixin (require './yangforge-import')
     #@mixin (require './yangforge-export')
-    @feature 'cli', (toggle) ->
-      if toggle is on
-        @mixin (require './features/cli')
+    @feature 'cli', (toggle) -> switch toggle
+      when on then @bind 'yangforge.interfaces.cli', (require './features/cli')
+      else @unbind 'yangforge.interfaces.cli'
 
-    @feature 'restconf', (toggle) ->
-      if toggle is on
-        @mixin (require './features/restconf')
+    @feature 'restconf', (toggle) -> switch toggle
+      when on then @bind 'yangforge.interfaces.restconf', (require './features/restconf')
+      else @unbind 'yangforge.interfaces.restconf'
 
-    # handle RPC calls
-    @action 'import', (input) -> @import input

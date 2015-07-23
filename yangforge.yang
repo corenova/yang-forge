@@ -74,10 +74,46 @@ module yangforge {
 
   uses compiler-rules;
 
+  container interfaces {
+    config false;
+    description "Provides state information about enabled interfaces for the module";
+  }
+
+  rpc info {
+    if-feature cli;
+    description "show info about one or more packages";
+    input {
+      leaf-list argument { type string; units module; }
+      container options {
+        leaf verbose {
+          description "extra verbosity";
+          type empty;
+          units v;
+        }
+      }
+    }
+  }
+  
   rpc install {
     if-feature cli;
+    description "install one or more packages";
     input {
-      leaf-list names { type string; mandatory true; }
+      leaf-list argument { type string; units name; }
+      container options {
+        leaf save {
+          description "add package into dependencies";
+          type empty;
+          units s;
+        }
+      }
+    }
+  }
+
+  rpc run {
+    if-feature cli;
+    description "execute one or more modules";
+    input {
+      leaf-list argument { type string; units name; }
     }
   }
   
