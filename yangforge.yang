@@ -89,35 +89,18 @@ module yangforge {
       "Provides state information about enabled interfaces for the module";
   }
 
-  container promise {
-    description "a promise configuration hierarchy";
-    container reservation {
-      leaf identifier { type string; }
-      leaf start-time { type date; }
-      leaf end-time { type date; }
-    }
-  }
-
-  container clearpath {
-    description "a demo";
-    leaf hello { type string; }
-    container yangforge-demo {
-      description "hi";
-    }
-  }
-  
   // RPC definitions for CLI
   
   rpc build {
     if-feature cli;
     description "package the application for deployment";
-    status current;
     input {
       leaf-list argument { type string; units name; }
       container options {
         leaf save { type empty; }
       }
     }
+    status planned;
   }
 
   rpc config {
@@ -275,11 +258,6 @@ module yangforge {
     if-feature cli;
     description "sign package to ensure authenticity";
     status planned;
-  }
-
-  rpc test {
-    description "blah";
-    status obsolete;
   }
 
   // RPC definitions for server instance
