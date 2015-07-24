@@ -10,36 +10,63 @@ module.exports = Forge.Interface
     meta = @constructor.extract 'version', 'description'
     program
       .version meta.version
-      .description meta.description
+      .description meta.description.blue
 
     for name, wrapper of (@access 'yangforge').methods
       method = wrapper?()
       continue unless method instanceof Forge.Meta
 
-      cmdstring = "#{name}"
+      clionly = (method.meta 'if-feature') is 'cli'
+
+      status = method.meta 'status'
+      status = 'missing' unless method.exec instanceof Function or status is 'planned'
+
+      command = "#{name}"
       argument = method.access 'input.argument'
       if argument?.meta 'units'
         units = "#{argument.meta 'units'}"
         units += '...' if argument.opts.type is 'array'
-        cmdstring += " [#{units}]"
+        command +=
+          if argument.opts.required then " <#{units}>"
+          else " [#{units}]"
+      cmd = program.command command
 
-      cmd = program
-        .command cmdstring
-        .description method.meta 'description'
+      desc = method.meta 'description'
+      #desc += " [CLI]" if clionly
+      cmd.description switch status
+        when 'planned' then "#{desc} (#{status.cyan})"
+        when 'deprecated' then "#{desc} (#{status.yellow})"
+        when 'obsolete','missing' then "#{desc} (#{status.red})"
+        else desc
 
-      for opt, val of method.get 'input.options'
+      for opt of method.get 'input.options'
         optstring = "--#{opt}"
         option = method.access "input.options.#{opt}"
-        if option?.meta 'units'
+        continue unless option?
+        
+        if option.meta 'units'
           optstring = "-#{option.meta 'units'}, #{optstring}"
-        unless option?.opts.type is 'empty'
-          optstring += " #{option.opts.type}"
-        cmd.option optstring, option.meta 'description'
+        unless option.opts.type is 'empty'
+          optstring +=
+            if option.opts.required then " <#{option.opts.type}>"
+            else " [#{option.opts.type}]"  
+        optdesc = option.meta 'description'
+        if !!option.meta 'default'
+          optdesc += " (default: #{option.meta 'default'})"
+        cmd.option optstring, optdesc, option.meta 'default'
 
-      do (method) =>
+      do (cmd, method, status) =>
         cmd.action =>
+          switch status
+            when 'obsolete', 'missing', 'planned'
+              console.error "requested command is #{status} and cannot be used".yellow
+              cmd.help()
+            when 'deprecated'
+              console.warn "requested command has been #{status} and should no longer be used".yellow
           try method.exec.apply this, arguments
-          catch e then console.error "requested command failed\n#{e}"
+          catch e
+            console.error "#{e}".red
+            cmd.help()
 
     program.parse process.argv
     program.help() unless program.args.length

@@ -22,11 +22,15 @@ module yangforge {
   }
 
   feature cli {
-    description "When enabled, generates command-line-interface for the module";
+    description "When enabled, generates command-line interface for the module";
   }
 
-  feature restconf {
-    description "When enabled, generates restconf-interface for the module";
+  feature express {
+    description "When enabled, generates HTTP/HTTPS web server instance for the module";
+  }
+  
+  feature restjson {
+    description "When enabled, generates REST/JSON web services interface for the module";
   }
   
   grouping compiler-rules {
@@ -72,30 +76,102 @@ module yangforge {
     uses compiler-rules;
   }
 
-  uses compiler-rules;
-
+  container modules {
+    config false;
+    description
+      "Provides state information about available modules contained within
+       yangforge instance";
+  }
+  
   container interfaces {
     config false;
-    description "Provides state information about enabled interfaces for the module";
+    description
+      "Provides state information about enabled interfaces for the module";
   }
 
+  container promise {
+    description "a promise configuration hierarchy";
+    container reservation {
+      leaf identifier { type string; }
+      leaf start-time { type date; }
+      leaf end-time { type date; }
+    }
+  }
+
+  container clearpath {
+    description "a demo";
+    leaf hello { type string; }
+    container yangforge-demo {
+      description "hi";
+    }
+  }
+  
+  // RPC definitions for CLI
+  
+  rpc build {
+    if-feature cli;
+    description "package the application for deployment";
+    status current;
+    input {
+      leaf-list argument { type string; units name; }
+      container options {
+        leaf save { type empty; }
+      }
+    }
+  }
+
+  rpc config {
+    if-feature cli;
+    description "manage application configuration data";
+    input {
+      choice argument {
+        case set {
+          container argument {
+            leaf key { type string; mandatory true; }
+            leaf value { type string; mandatory true; }
+          }
+        }
+        case get {
+          leaf argument { type string; mandatory true; units key; }
+        }
+        case delete {
+          leaf argument { type string; mandatory true; units key; }
+        }
+        case list {
+          leaf argument { type empty; }
+        }
+      }
+    }
+    status planned;
+  }
+  
+  rpc deploy {
+    if-feature cli;
+    description "deploy application into yangforge endpoint";
+    status planned;
+  }
+  
   rpc info {
     if-feature cli;
     description "show info about one or more packages";
     input {
-      leaf-list argument { type string; units module; }
+      leaf-list argument { type string; units name; }
       container options {
         leaf verbose {
-          description "extra verbosity";
+          description "increase verbosity";
           type empty;
           units v;
         }
       }
     }
   }
+
+  rpc init {
+    if-feature cli;
+    description "initialize package configuration";
+  }
   
   rpc install {
-    if-feature cli;
     description "install one or more packages";
     input {
       leaf-list argument { type string; units name; }
@@ -109,21 +185,114 @@ module yangforge {
     }
   }
 
-  rpc run {
+  rpc list {
+    description "list installed packages";
+    input {
+      leaf argument { type empty; }
+      container options {
+        leaf verbose {
+          description "increase verbosity";
+          type empty;
+          units v;
+        }
+      }
+    }
+  }
+
+  rpc publish {
     if-feature cli;
-    description "execute one or more modules";
+    description "publish package to upstream registry";
+    input {
+      container options {
+        leaf registry {
+          description "specify target registry";
+          type string;
+          units r;
+        }
+      }
+    }
+    status planned;
+  }
+  
+  rpc run {
+    description "runs one or more modules";
     input {
       leaf-list argument { type string; units name; }
+      container options {
+        leaf port {
+          description "specify listening port";
+          type number;
+          units p;
+          default 5000;
+        }
+        leaf interface {
+          description "select interface generator to use";
+          type string;
+          units i;
+          default restjson;
+        }
+        leaf compile {
+          description "dynamically compile/run a YANG schema file";
+          type string;
+          units c;
+          mandatory true;
+        }
+      }
+    }
+  }
+
+  rpc schema {
+    if-feature cli;
+    description "process YANG schema files";
+    input {
+      container options {
+        leaf compile {
+          description "compile input file into specified output format";
+          type string;
+          units c;
+        }
+        leaf eval {
+          description "pass a string from the command line as input";
+          type string;
+          units e;
+        }
+        leaf format {
+          description "specify output format (yaml, json)";
+          type string;
+          units f;
+          default yaml;
+        }
+        leaf output {
+          description "set the output directory for compiled schemas";
+          type string;
+          units o;
+        }
+      }
     }
   }
   
+  rpc sign {
+    if-feature cli;
+    description "sign package to ensure authenticity";
+    status planned;
+  }
+
+  rpc test {
+    description "blah";
+    status obsolete;
+  }
+
+  // RPC definitions for server instance
+  
   rpc import {
+    if-feature express;
     input { uses meta-module; }
     output {
       leaf message { type string; }
     }
   }
   rpc export {
+    if-feature express;
     input {
       leaf name { type string; mandatory true; }
       leaf format { type string; default json; }

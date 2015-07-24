@@ -1,5 +1,5 @@
 {
-  "version": "0.8.8",
+  "version": "0.9.0",
   "name": "yangforge",
   "description": "YANG driven JS application builder",
   "keywords": [
@@ -25,9 +25,13 @@
   "bin": "bin/yfc",
   "schema": "./yangforge.yang",
   "dependencies": {
+    "body-parser": "^1.13.2",
     "clim": "^1.1.1",
     "commander": "^2.8.1",
-    "data-synth": "^0.5.5",
+    "data-synth": "^0.6.0",
+    "errorhandler": "^1.4.1",
+    "express": "^4.13.1",
+    "passport": "^0.2.2",
     "prettyjson": "^1.1.2",
     "yang-parser": "^0.1.0",
     "yang-v1-extensions": "file:yang_modules/yang-v1-extensions"

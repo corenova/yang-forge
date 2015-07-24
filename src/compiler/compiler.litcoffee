@@ -65,8 +65,7 @@ ensures syntax correctness and building the JS object tree structure.
           .reduce ((a, b) -> Meta.copy a, b), {}
         params = undefined unless Object.keys(params).length > 0
 
-        # the below distinction checking for '.' is a hack...
-        if ~input.arg.indexOf '.'
+        unless params?
           Meta.objectify "#{normalize input}", input.arg
         else
           Meta.objectify "#{normalize input}.#{input.arg}", params
@@ -150,15 +149,20 @@ provided input.
         # define/resolve from the compiler does not impact any
         # subsequent invocation of the `compile` routine.
         unless context?
+          scope ?= (@constructor.get 'exports.extension')
           return @fork ->
             @id = id += 1
             console.log "[compile] forked a new compile context #{@id}"
-            obj = @constructor.get 'exports.extension'
-            for key, value of obj
+            for key, value of scope
               Meta.copy value, @get "extensions.#{key}"
               @define 'extension', key, value
-            console.log "[compile:#{@id}] job started with following extensions: #{Object.keys(obj ? {})}"
+            console.log "[compile:#{@id}] job started with following extensions: #{Object.keys(scope ? {})}"
             output = @compile input, this
+            output?.extend info: -> v.info?() for k, v of @get 'bindings'
+            # if scope?
+            #   for ext of @exports?.extension when ext of scope
+            #     console.info "deleting #{ext} from exports"
+            #     delete @exports.extension[ext]
             output?.merge 'exports', @exports
             console.log "[compile:#{@id}] job finished"
             output
@@ -204,17 +208,19 @@ provided input.
               output.set key, arg
             else
               output.set "#{key}.#{arg}", params
+            if Meta.instanceof res then res.set 'yang', key
             ext.resolver?.call? output, arg, res
           else
             output.set key, val
             if ext.argument?
-              console.log "[compile:#{id}] #{key} #{val.slice 0, 50}..."
+              console.log "[compile:#{id}] #{key} #{val?.slice 0, 50}..."
               ext.resolver?.call? output, val, {}
             else
               console.log "[compile:#{id}] #{key}"
               res = switch
                 when val instanceof Object then @compile val, context, ext
                 else val
+              if Meta.instanceof res then res.set 'yang', key
               ext.resolver?.call? output, key, res
 
         delete output.compiler
