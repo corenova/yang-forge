@@ -101,7 +101,7 @@ $ yfc schema -e 'module hello-world { description "a test"; leaf hello
 ```
 You can `--compile` a YANG schema **file** for processing:
 ```bash
-$ yfc schema -c examples/example-jukebox.yang
+$ yfc schema -c examples/jukebox.yang
 ```
 
 ### Using the `run` command
@@ -135,9 +135,79 @@ express | generates HTTP/HTTPS web server instance | none
 restjson | generates REST/JSON web services interface | express
 autodoc | generates self-documentation interface | express
 
+When you issue `run` without any target module(s) as argument, it runs the internal `YangForge` module using defaults:
+```bash
+$ yfc run
+express: listening on 5000
+restjson: binding forgery to /restjson
+```
+Once it's running, you can issue HTTP calls:
+```bash
+$ curl localhost:5000/restjson
+```
+```json
+{
+  "yangforge": {
+    "modules": {},
+    "features": {
+      "express": {
+        "name": "express",
+        "description": "Fast, unopionated, minimalist web framework (HTTP/HTTPS)"
+      },
+      "restjson": {
+        "name": "restjson",
+        "description": "REST/JSON web services interface generator",
+        "needs": [
+          "express"
+        ]
+      }
+    }
+  }
+}
+```
+The `restjson` interface dynamically routes nested module/container hierarchy:
+```bash
+$ curl localhost:5000/restjson/yangforge/features/restjson
+```
+```json
+{
+  "name": "restjson",
+  "description": "REST/JSON web services interface generator",
+  "needs": [
+    "express"
+  ]
+}
+```
+You can also dynamically `--compile` a YANG schema **file** and `run` it immediately:
+```bash
+$ yfc run -p 5050 -c examples/jukebox.yang
+express: listening on 5050
+restjson: binding forgery to /restjson
+```
+Once it's running, you can issue HTTP calls:
+```bash
+$ curl localhost:5050/restjson/example-jukebox
+```
+```json
+{
+  "jukebox": {
+    "library": {
+      "artist": []
+    },
+    "player": {},
+    "playlist": []
+  }
+}
+```
 
+## Using YangForge Programmatically (Advanced)
 
-## Key Features
+```coffeescript
+Forge = require 'yangforge'
+module.exports = Forge.new module
+```
+
+### Key Features
 
 * **Parse** YANG schema files and generate runtime JavaScript
   [meta-class](http://github.com/stormstack/meta-class) semantic tree
@@ -163,73 +233,68 @@ supporting the version 1.0 YANG RFC specifications. It serves as a
 good reference for writing new compilers, custom extensions, custom
 importers, among other things.
 
-## Using YangForge Programmatically
-
-```coffeescript
-Forge = require 'yangforge'
-
-forgey = new Forge
-
-yang = new Yang
-
-schema = """
-  module test {
-    description 'hello';
-	leaf works { type string; }
-  }
-  """
-Test = yang.compile schema
-test = new Test
-test.set 'works', 'very well'
-test.get 'works'
-```
-
-## Common Usage Examples
+### Programmatic Usage Examples
 
 The below examples can be executed using CoffeeScript REPL by running
 `coffee` at the command-line from the top-directory of this repo.
 
-* Importing a local YANG schema file (such as importing itself...)
-```coffeescript
-yc = compiler.import source: 'schema:./yang-compiler.yang'
+Using the native YangForge instance:
+```coffeescsript
+Forge = require 'yangforge'
+
+schema = """
+  module hello-world {
+    description "a test";
+    leaf hello { type string; default "world"; }
+  }
+  """
+  
+forgery = new Forge
+HelloWorld = forgery.compile schema
+test = new HelloWorld
+console.log test.get 'hello'
+test.set 'hello', 'there'
+console.log test.get 'works'
 ```
-* Exporting a known YANG module into JSON
+
+Forging a new module for build/publish (at a new package directory):
 ```coffeescript
-json = compiler.export name: 'yang-compiler'
+Forge = require 'yangforge'
+module.exports = Forge.new module,
+  before: ->
+    // series of before-compile operations
+  after: ->
+    // series of after-compile operations
 ```
-* Importing from serialized JSON export
+
+Forging a new interface generator ([cli example](src/features/cli.coffee)):
 ```coffeescript
-A = compiler.import json
-```
-* Instantiating a newly imported module with configurations
-```coffeescript
-hello = new A map: 'foo': 'schema:./yang-compiler.yang'
-```
-* Various operations to get/set different configurations
-```coffeescript
-hello.get()
-hello.get 'map'
-hello.set 'map', bar: 'whatever'
-hello.get 'map.bar'
-hello.set 'map.bar', 'good bye'
-hello.get 'map'
+Forge = require 'yangforge'
+module.exports = Forge.Interface 
+  name: 'some-new-interface'
+  description: 'Some new awesome interface'
+  generator: ->
+    // code logic to dynamically construct a new interface based on passed-in context
+    // this = an instance of Forge
+    console.log this
 ```
 
 There are many other ways of interacting with the module's class
-object as well as the instantiated class. Please refer to the
-`meta-class` for additional information.
+object as well as the instantiated class.  More examples coming soon.
 
 ## Literate CoffeeScript Documentation
 
 The source code is documented in Markdown format. It's code combined
 with documentation all-in-one.
 
-* [YANG Compiler](src/yang-compiler.litcoffee)
-  * [Compiler Mixin](src/yang-compiler-mixin.litcoffee)
-  * [Compiler Schema](./yang-compiler.yang)
-  * [YANG v1.0 Extensions](./yang-v1-extensions.yang)
-* [YANG Meta Compiler](src/yang-meta-compiler.litcoffee)
-* [Meta Class](src/meta-class.litcoffee)
+* [YangForge](src/yangforge.coffee)
+  * [Compiler](src/compiler/compiler.litcoffee)
+  * [Compiler Mixin](src/compiler/compiler-mixin.litcoffee)
+  * [Features](src/features)
+* [YangForge Schema](./yangforge.yang)
+* [Yang v1.0 Extensions](yang_modules/yang-v1-extensions)
+* External Dependencies
+  * [data-synth library](http://github.com/saintkepha/data-synth)
 
 ## License
   [MIT](LICENSE)
