@@ -8,7 +8,7 @@ modeling language as defined in IETF drafts and standards
 ([RFC 6020](http://tools.ietf.org/html/rfc6020)).
 
 It is written primarily using CoffeeScript and runs on
-[node](http://nodejs.org).
+[Node.js](http://nodejs.org).
 
   [![NPM Version][npm-image]][npm-url]
   [![NPM Downloads][downloads-image]][downloads-url]
@@ -48,7 +48,7 @@ $ npm install -g yangforge
 
 ## Common Usage Examples
 
-### Working with `schema`
+### Using the `schema` command
 
 You can `--eval` a YANG schema **string** directly for dynamic parsing:
 ```bash
@@ -64,7 +64,7 @@ module:
         type: string
         default: world
 ```
-You can specify output `--format` (default is YAML as above):
+You can specify explicit output `--format` (default is YAML as above):
 ```bash
 $ yfc schema -e 'module hello-world { description "a test"; leaf hello
 { type string; default "world"; } }' -f json
@@ -87,6 +87,36 @@ $ yfc schema -e 'module hello-world { description "a test"; leaf hello
 You can `--compile` a YANG schema **file** for processing:
 ```bash
 $ yfc schema -c examples/example-jukebox.yang
+```
+
+### Using the `run` command
+
+The real power of `YangForge` is actualized when **yangforged**
+modules are run using via one or more **dynamic interface
+generators**.
+
+#### Built-in interface generators
+
+| name | description | dependency |
+| cli | generates command-line interface | none |
+| express | generates HTTP/HTTPS web server instance | none |
+| restjson | generates REST/JSON web services interface | express |
+| autodoc | generates self-documentation interface | express |
+
+```bash
+$ yfc run -h
+
+  Usage: run [options] [name...]
+
+  runs one or more modules
+
+  Options:
+
+    -h, --help              output usage information
+    -p, --port [number]     specify listening port (default: 5000)
+    -c, --compile <string>  dynamically compile/run a YANG schema file
+    --restjson [boolean]    enables REST/JSON interface (default: true)
+    --autodoc [boolean]     enables auto-generated documentation interface
 ```
 
 ## Key Features
