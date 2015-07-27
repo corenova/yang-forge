@@ -46,7 +46,7 @@ $ npm install -g yangforge
     --no-color     disable color output
 ```
 
-The `yfc` command-line interface is **dynamically auto-generated** according to [yangforge.yang](./yangforge.yang) schema definitions.  Please refer to the schema section covering various `rpc` extension statements and sub-statement definitions for a reference regarding different types of command-line arguments, descriptions, and options processing syntax.  The corresponding **actions** for each of the `rpc` extensions are implemented inside the `YangForge` module forging before hook (here)[src/yangforge.coffee]
+The `yfc` command-line interface is **dynamically-generated** according to [yangforge.yang](./yangforge.yang) schema definitions.  Please refer to the schema section covering various `rpc` extension statements and sub-statement definitions for a reference regarding different types of command-line arguments, descriptions, and options processing syntax.  The corresponding **actions** for each of the `rpc` extensions are implemented inside the `YangForge` module forging before hook (here)[src/yangforge.coffee]
 
 ## Common Usage Examples
 
