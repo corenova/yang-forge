@@ -49,6 +49,21 @@ $ npm install -g yangforge
 ## Common Usage Examples
 
 ### Using the `schema` command
+```bash
+$ yfc schema -h
+
+  Usage: schema [options]
+
+  process YANG schema files
+
+  Options:
+
+    -h, --help              output usage information
+    -c, --compile [string]  compile input file into specified output format
+    -e, --eval [string]     pass a string from the command line as input
+    -f, --format [string]   specify output format (yaml, json) (default: yaml)
+    -o, --output [string]   set the output directory for compiled schemas
+```
 
 You can `--eval` a YANG schema **string** directly for dynamic parsing:
 ```bash
@@ -95,14 +110,6 @@ The real power of `YangForge` is actualized when **yangforged**
 modules are run using via one or more **dynamic interface
 generators**.
 
-#### Built-in interface generators
-
-| name | description | dependency |
-| cli | generates command-line interface | none |
-| express | generates HTTP/HTTPS web server instance | none |
-| restjson | generates REST/JSON web services interface | express |
-| autodoc | generates self-documentation interface | express |
-
 ```bash
 $ yfc run -h
 
@@ -114,10 +121,21 @@ $ yfc run -h
 
     -h, --help              output usage information
     -p, --port [number]     specify listening port (default: 5000)
-    -c, --compile <string>  dynamically compile/run a YANG schema file
+    -c, --compile <file>  dynamically compile/run a YANG schema file
     --restjson [boolean]    enables REST/JSON interface (default: true)
     --autodoc [boolean]     enables auto-generated documentation interface
 ```
+
+#### Built-in interface generators
+
+name | description | dependency
+--- | --- | ---
+cli | generates command-line interface | none
+express | generates HTTP/HTTPS web server instance | none
+restjson | generates REST/JSON web services interface | express
+autodoc | generates self-documentation interface | express
+
+
 
 ## Key Features
 
