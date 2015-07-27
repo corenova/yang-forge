@@ -239,7 +239,7 @@ The below examples can be executed using CoffeeScript REPL by running
 `coffee` at the command-line from the top-directory of this repo.
 
 Using the native YangForge instance:
-```coffeescsript
+```coffeescript
 Forge = require 'yangforge'
 
 schema = """
@@ -257,7 +257,7 @@ test.set 'hello', 'there'
 console.log test.get 'works'
 ```
 
-Forging a new module for build/publish (at a new package directory):
+Forging a new module for build/publish (at a new package directory, see also [complex-types](yang_modules/complex-types)):
 ```coffeescript
 Forge = require 'yangforge'
 module.exports = Forge.new module,
@@ -267,7 +267,7 @@ module.exports = Forge.new module,
     // series of after-compile operations
 ```
 
-Forging a new interface generator ([cli example](src/features/cli.coffee)):
+Forging a new interface generator (see also [cli example](src/features/cli.coffee)):
 ```coffeescript
 Forge = require 'yangforge'
 module.exports = Forge.Interface 
