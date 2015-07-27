@@ -280,7 +280,9 @@ module.exports = Forge.Interface
 ```
 
 There are many other ways of interacting with the module's class
-object as well as the instantiated class.  More examples coming soon.
+object as well as the instantiated class.  
+
+**More examples coming soon!**
 
 ## Literate CoffeeScript Documentation
 
