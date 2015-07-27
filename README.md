@@ -46,6 +46,8 @@ $ npm install -g yangforge
     --no-color     disable color output
 ```
 
+The `yfc` command-line interface is **dynamically auto-generated** according to [yangforge.yang](./yangforge.yang) schema definitions.  Please refer to the schema section covering various `rpc` extension statements and sub-statement definitions for a reference regarding different types of command-line arguments, descriptions, and options processing syntax.  The corresponding **actions** for each of the `rpc` extensions are implemented inside the `YangForge` module forging before hook (here)[src/yangforge.coffee]
+
 ## Common Usage Examples
 
 ### Using the `schema` command
@@ -209,9 +211,7 @@ module.exports = Forge.new module
 
 ### Key Features
 
-* **Parse** YANG schema files and generate runtime JavaScript
-  [meta-class](http://github.com/stormstack/meta-class) semantic tree
-  hierarchy
+* **Parse** YANG schema files and generate runtime JavaScript semantic object tree hierarchy
 * **Import/Export** capabilities to load modules using customizable
   importers based on regular expressions and custom import
   routines. Ability to serialize module meta data into JSON format
@@ -225,9 +225,9 @@ module.exports = Forge.new module
   output
 
 [YangForge](src/yangforge.litcoffee) itself is also a YANG schema
-([yang-compiler.yang](./yangforge.yang)) **compiled** module. It is
+([yangforge.yang](./yangforge.yang)) **compiled** module. It is
 compiled by the [yang-compiler](src/compiler/compiler.litcoffee) and
-natively `include`
+natively includes
 [yang-v1-extensions](yang_modulesyang-v1-extensions) submodule for
 supporting the version 1.0 YANG RFC specifications. It serves as a
 good reference for writing new compilers, custom extensions, custom
