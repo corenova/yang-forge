@@ -105,29 +105,32 @@ class Forge extends Synth
     super
 
   # RUN THIS FORGE
-  @run = (config) ->
+  @run = (config={}) ->
+    for feature of @get 'features'
+      @enable feature if config[feature] is true
+
     # before we construct, we need to 'normalize' the bindings based on if-feature conditions
+    (new this).run config
 
-    (new this config).run()
-
-  run: ->
+  run: (opts) ->
     console.log "forgery firing up..."
     @runners = runners = {}
-    for name of (@get 'yangforge.interfaces')
+    for name of (@get 'yangforge.features')
       continue if runners[name]? # already running
       
-      face = @access "yangforge.interfaces.#{name}"
-      continue unless face?
+      feature = @access "yangforge.features.#{name}"
+      continue unless feature?
 
       # need to make this recursive so deeper needs can be met...
-      results = for wash in (face.meta 'needs') or []
+      results = for wash in (feature.meta 'needs') or []
         unless runners[wash]?
-          console.info "forgery firing up '#{wash}' interface on-behalf of #{name}".green
-          runners[wash] = (@access "yangforge.interfaces.#{name}")?.run this
+          console.info "forgery firing up '#{wash}' feature on-behalf of #{name}".green
+          runners[wash] = (@access "yangforge.features.#{name}")?.run this
         runners[wash]
-      console.log "forgery firing up '#{name}' interface".green
+      console.log "forgery firing up '#{name}' feature".green
       results.unshift this
-      runners[name] = face.run.apply face, results
+      results.push opts
+      runners[name] = feature.run.apply feature, results
 
 module.exports = Forge.new module,
   before: ->
@@ -161,16 +164,16 @@ module.exports = Forge.new module,
         console.info "installing #{pkg}" + (if options.save then " --save" else '')
 
     @action 'list', (options) ->
-      console.info 'Retrieving yang modules...'.grey
       modules = (@get 'modules').map (e) -> e.constructor.info options.verbose
-      console.info prettyjson.render modules
-
-      return unless options.verbose
-
-      console.info "\n"
-      console.info "Retrieving complete npm packages list...".grey
-      child = sys.exec 'npm list', timeout: 5000
-      child.stdout.on 'data', (data) -> console.info data
+      unless options.verbose
+        console.info prettyjson.render modules
+        return
+      child = sys.exec 'npm list --json', timeout: 5000
+      child.stdout.on 'data', (data) ->
+        output = JSON.parse data
+        results = for mod in modules when output.name is mod.name
+          Synth.copy mod, output
+        console.info prettyjson.render results
       child.stderr.on 'data', (data) -> console.warn data.red
       child.on 'close', (code) -> undefined
         
@@ -209,10 +212,7 @@ module.exports = Forge.new module,
         catch e
           console.error "unable to load '#{slave}' module, skipping...\n".red+"#{e}"
 
-      forgery
-        .disable 'cli'
-        .enable options.interface
-        .run options
+      forgery.disable('cli').run options
 
     @action 'test', -> console.log 'blah'
     
@@ -220,19 +220,19 @@ module.exports = Forge.new module,
     #@mixin (require './yangforge-import')
     #@mixin (require './yangforge-export')
     @feature 'cli', (toggle) -> switch toggle
-      when on then @bind 'yangforge.interfaces.cli', (require './features/cli')
-      else @unbind 'yangforge.interfaces.cli'
+      when on then @bind 'yangforge.features.cli', (require './features/cli')
+      else @unbind 'yangforge.features.cli'
 
     @feature 'express', (toggle) -> switch toggle
-      when on then @bind 'yangforge.interfaces.express', (require './features/express')
-      else @unbind 'yangforge.interfaces.express'
+      when on then @bind 'yangforge.features.express', (require './features/express')
+      else @unbind 'yangforge.features.express'
         
     @feature 'restjson', (toggle) -> switch toggle
       when on
         # hard-coded for now...
         @enable 'express'
-        @bind 'yangforge.interfaces.restjson', (require './features/restjson')
-      else @unbind 'yangforge.interfaces.restjson'
+        @bind 'yangforge.features.restjson', (require './features/restjson')
+      else @unbind 'yangforge.features.restjson'
 
     @feature 'debug', (toggle) ->
 

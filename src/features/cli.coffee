@@ -5,12 +5,14 @@ module.exports = Forge.Interface
   description: 'Command Line Interface'
   generator: ->
     program = require 'commander'
+    colors = require 'colors'
 
     # 1. Setup some default execution context
     meta = @constructor.extract 'version', 'description'
     program
       .version meta.version
-      .description meta.description.blue
+      .description meta.description
+      .option '--no-color', 'disable color output'
 
     for name, wrapper of (@access 'yangforge').methods
       method = wrapper?()
@@ -39,21 +41,27 @@ module.exports = Forge.Interface
         when 'obsolete','missing' then "#{desc} (#{status.red})"
         else desc
 
-      for opt of method.get 'input.options'
-        optstring = "--#{opt}"
-        option = method.access "input.options.#{opt}"
+      for optname of method.get 'input.options'
+        optstring = "--#{optname}"
+        option = method.access "input.options.#{optname}"
         continue unless option?
         
         if option.meta 'units'
           optstring = "-#{option.meta 'units'}, #{optstring}"
-        unless option.opts.type is 'empty'
-          optstring +=
+        optstring += switch option.opts.type
+          when 'empty' then ''
+          else
             if option.opts.required then " <#{option.opts.type}>"
             else " [#{option.opts.type}]"  
         optdesc = option.meta 'description'
         if !!option.meta 'default'
           optdesc += " (default: #{option.meta 'default'})"
-        cmd.option optstring, optdesc, option.meta 'default'
+
+        defaultValue = switch option.opts.type
+          when 'boolean' then (option.opts.default is 'true')
+          else option.opts.default
+        console.log "setting option #{optname} with default: #{defaultValue}"
+        cmd.option optstring, optdesc, defaultValue
 
       do (cmd, method, status) =>
         cmd.action =>

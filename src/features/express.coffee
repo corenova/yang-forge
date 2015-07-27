@@ -3,7 +3,7 @@ Forge = require '../yangforge'
 module.exports = Forge.Interface
   name: 'express'
   description: 'Fast, unopionated, minimalist web framework (HTTP/HTTPS)'
-  generator: ->
+  generator: (opts) ->
     express = require 'express'
     app = (->
       bp = require 'body-parser'
@@ -22,8 +22,9 @@ module.exports = Forge.Interface
 
       return this
     ).call express()
-    
-    app.listen 5000
-    #app.listen config.port
+
+    opts.port ?= 5000
+    console.info "express: listening on #{opts.port}".grey
+    app.listen opts.port
     return app
     

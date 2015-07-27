@@ -6,15 +6,14 @@ module.exports = Forge.Interface
   needs: [ 'express' ]
   generator: (app) ->
     console.log "generating REST/JSON interface..."
-    forge = this
     router = (require 'express').Router()
-    router.all '*', (req, res, next) ->
-      req.forge = forge
+    router.all '*', (req, res, next) =>
+      req.forge = this
       next()
 
     router.route '/'
     .all (req, res, next) ->
-      # XXX - verify req.user has permissions to operate on the DataStorm
+      # XXX - verify req.user has permissions to operate on the forgery
       next()
     .get (req, res, next) ->
       res.locals.result = req.forge.serialize()
@@ -32,33 +31,38 @@ module.exports = Forge.Interface
       else req.module = self; next()
 
     router.param 'container', (req,res,next,container) ->
-      parent = req.container ? req.module
-      console.assert parent?,
-        "cannot access without parent containing entity"
-      self = parent.access container
-      req.container = self; next()
-      return
-      
-      unless self instanceof Forge.Object then next 'route'
+      self = req.module.access container
+      unless (self?.meta 'yang') is 'container' then next 'route'
       else req.container = self; next()
 
     router.param 'method', (req,res,next,method) ->
       console.assert req.module?,
         "cannot perform '#{method}' without containing module"
-      req.method = req.module.invoke method, req.query, req.body
-      if req.method? then next() else next 'route'
+      if method of req.module.methods
+        req.method = req.module.invoke method, req.body, req.query
+        next()
+      else next 'route'
 
+    # SUB ROUTER
+    subrouter = (require 'express').Router()
+    subrouter.param 'subcontainer', (req,res,next,subcontainer) ->
+      self = req.container?.access subcontainer
+      req.container = self; next()
+
+    subrouter.route '/'
+    .get (req, res, next) -> res.locals.result = req.container.serialize(); next()
+
+    # nested sub-routes for containers
+    subrouter.use '/:subcontainer', subrouter
+        
     # handle the top-level module endpoint
     router.route '/:module'
     .all (req, res, next) ->
       # XXX - verify req.user has permissions to operate on this module
       next()
     .get (req, res, next) -> res.locals.result = req.module.serialize(); next()
-      
-    # handle sub-module endpoints
-    router.route '/:module/:container'
-    .all (req, res, next) -> next()
-    .get (req, res, next) -> res.locals.result = req.container.serialize(); next()
+
+    router.use '/:module/:container', subrouter
 
     router.route '/:module/:method'
     .all (req, res, next) -> next()
@@ -83,26 +87,11 @@ module.exports = Forge.Interface
 
     # default 'catch-all' error handler
     router.use (err, req, res, next) ->
-      res.status(500).send error: err
+      console.error err
+      res.status(500).send error: JSON.stringify err
 
     # TODO open up a socket.io connection stream for store updates
 
-    console.log "binding forge to /#{forge.meta 'name'}"
-    app.use "/#{forge.meta 'name'}", router
+    console.info "restjson: binding forgery to /restjson".grey
+    app.use "/restjson", router
     return router
-
-    # @include = (module) =>
-    #   return unless Forge.instanceof module
-
-    #   storm = new module
-    #   # need to handle auditor and authorizer
-    #   # need to handle store.initialize type call
-    #   @use (module.get 'name'), (createStormRouter storm)
-
-    #   for submodule in (module.get 'stores')
-    #     substorm = new submodule
-    #     @use (submodule.get 'name'), (createStormRouter substorm)
-
-    
-    
-    

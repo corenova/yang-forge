@@ -83,10 +83,10 @@ module yangforge {
        yangforge instance";
   }
   
-  container interfaces {
+  container features {
     config false;
     description
-      "Provides state information about enabled interfaces for the module";
+      "Provides state information about enabled features for the module";
   }
 
   // RPC definitions for CLI
@@ -208,17 +208,20 @@ module yangforge {
           units p;
           default 5000;
         }
-        leaf interface {
-          description "select interface generator to use";
-          type string;
-          units i;
-          default restjson;
-        }
         leaf compile {
           description "dynamically compile/run a YANG schema file";
           type string;
           units c;
           mandatory true;
+        }
+        leaf restjson {
+          description "enables REST/JSON interface";
+          type boolean;
+          default true;
+        }
+        leaf autodoc {
+          description "enables auto-generated documentation interface";
+          type boolean;
         }
       }
     }
@@ -264,17 +267,21 @@ module yangforge {
   
   rpc import {
     if-feature express;
+    description "import requested module into current runtime execution";
     input { uses meta-module; }
     output {
       leaf message { type string; }
     }
+    status planned;
   }
   rpc export {
     if-feature express;
+    description "export existing target module for remote execution";
     input {
       leaf name { type string; mandatory true; }
       leaf format { type string; default json; }
     }
     output { uses meta-module; }
+    status planned;
   }
 }
