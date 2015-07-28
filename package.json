@@ -43,7 +43,6 @@
   },
   "bundleDependencies": [
     "clim",
-    "data-synth",
     "yang-parser",
     "yang-v1-extensions"
   ],
