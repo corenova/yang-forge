@@ -262,9 +262,9 @@ Forging a new module for build/publish (at a new package directory, see also [co
 Forge = require 'yangforge'
 module.exports = Forge.new module,
   before: ->
-    // series of before-compile operations
+    # series of before-compile operations
   after: ->
-    // series of after-compile operations
+    # series of after-compile operations
 ```
 
 Forging a new interface generator (see also [cli example](src/features/cli.coffee)):
@@ -274,8 +274,8 @@ module.exports = Forge.Interface
   name: 'some-new-interface'
   description: 'Some new awesome interface'
   generator: ->
-    // code logic to dynamically construct a new interface based on passed-in context
-    // this = an instance of Forge
+    # code logic to dynamically construct a new interface based on passed-in context
+    # this = an instance of Forge
     console.log this
 ```
 
