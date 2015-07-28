@@ -1,14 +1,14 @@
 {
-  "version": "0.1.2",
+  "version": "0.1.3",
   "name": "yang-v1-extensions",
   "description": "yangforged yang language v1.0 submodule",
   "license": "MIT",
   "main": "yang-v1-extensions.js",
   "scripts": {
-    "prepublish": "coffee -c *coffee"
+    "prepublish": "coffee -c *.coffee"
   },
   "dependencies": {
-    "yangforge": "file:../.."
+    "yangforge": ">=0.9"
   },
   "schema": "./yang-v1-extensions.yang",
   "extensions": {
