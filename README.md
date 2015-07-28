@@ -46,7 +46,7 @@ $ npm install -g yangforge
     --no-color     disable color output
 ```
 
-The `yfc` command-line interface is **runtime-generated** according to [yangforge.yang](./yangforge.yang) schema definitions.  Please refer to the schema section covering various `rpc` extension statements and sub-statement definitions for a reference regarding different types of command-line arguments, descriptions, and options processing syntax.  The corresponding **actions** for each of the `rpc` extensions are implemented inside the `YangForge` module forging before hook [here](src/yangforge.coffee).
+The `yfc` command-line interface is **runtime-generated** according to [yangforge.yang](./yangforge.yang) schema definitions.  Please refer to the schema section covering various `rpc` extension statements and sub-statement definitions for a reference regarding different types of command-line arguments, descriptions, and options processing syntax.  The corresponding **actions** for each of the `rpc` extensions are implemented inside the `YangForge` module forging before-hook [here](src/yangforge.coffee).
 
 ## Common Usage Examples
 
@@ -109,7 +109,7 @@ $ yfc schema -c examples/jukebox.yang
 ### Using the `run` command
 
 The real power of `YangForge` is actualized when **yangforged**
-modules are run using via one or more **dynamic interface
+modules are run using one or more **dynamic interface
 generators**.
 
 ```bash
@@ -123,7 +123,7 @@ $ yfc run -h
 
     -h, --help              output usage information
     -p, --port [number]     specify listening port (default: 5000)
-    -c, --compile <file>  dynamically compile/run a YANG schema file
+    -c, --compile <file>    dynamically compile/run a YANG schema file
     --restjson [boolean]    enables REST/JSON interface (default: true)
     --autodoc [boolean]     enables auto-generated documentation interface
 ```
