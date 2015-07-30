@@ -51,12 +51,13 @@
     "coffee-script": ">=1.7"
   },
   "engines": {
-    "node": ">=0.10.3"
+    "node": ">=0.10.3",
+    "npm": ">=2.0"
   },
   "scripts": {
     "test": "mocha test",
     "prepublish": "mkdir -p lib; coffee -o lib -c src",
     "start": "node lib/yangforge"
   },
-  "license": "MIT"
+  "license": "Apache 2.0"
 }
