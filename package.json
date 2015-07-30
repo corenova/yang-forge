@@ -1,5 +1,5 @@
 {
-  "version": "0.9.1",
+  "version": "0.9.5",
   "name": "yangforge",
   "description": "YANG driven JS application builder",
   "keywords": [
@@ -37,13 +37,8 @@
     "yang-parser": "^0.1.0",
     "yang-v1-extensions": "file:yang_modules/yang-v1-extensions"
   },
-  "optionalDependencies": {
-    "complex-types": "file:yang_modules/complex-types",
-    "opnfv-promise": "file:yang_modules/opnfv-promise"
-  },
   "bundleDependencies": [
     "clim",
-    "data-synth",
     "yang-parser",
     "yang-v1-extensions"
   ],
