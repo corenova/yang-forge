@@ -39,7 +39,6 @@ compiled (including from external imported modules mapped by prefix).
           when prefix.length > 0
             (@resolve 'module', prefix[0])?.get "#{type}.#{key}"
           else
-            #@get "#{type}.#{key}"
             @exports?[type]?[key]
 
 The `parse` function performs recursive parsing of passed in statement
@@ -174,7 +173,7 @@ provided input.
           "must pass in proper input to compile"
 
         output = class extends Meta
-        output.compiler = context
+        output.scope = context
 
         # Here we go through each of the keys of the input object and
         # validate the extension keywords and resolve these keywords
@@ -223,7 +222,7 @@ provided input.
               if Meta.instanceof res then res.set 'yang', key
               ext.resolver?.call? output, key, res
 
-        delete output.compiler
+        delete output.scope
         return output
 
 Here we return the new `YangCompiler` class for import and use by

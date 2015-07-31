@@ -11,14 +11,13 @@ fs = require 'fs'
 prettyjson = require 'prettyjson'
 
 class Forge extends Synth
-  @set synth: 'forge', extensions: {}, actions: {}
+  @set synth: 'forge', extensions: {}
 
   @mixin (require './compiler/compiler')
 
   @extension = (name, func) -> @set "extensions.#{name}.resolver", func
-  @action = (name, func) -> @set "procedures.#{name}", func
   @feature = (name, func) -> @set "features.#{name}", status: off, hook: func
-
+  
   toggleFeature = (name, toggle) ->
     feature = @get "features.#{name}"
     if feature?
@@ -28,8 +27,10 @@ class Forge extends Synth
     else
       console.error "#{@get 'name'} does not have feature #{name}"
     
-  @enable  = (names...) -> toggleFeature.call this, name, on  for name in names; this
-  @disable = (names...) -> toggleFeature.call this, name, off for name in names; this
+  @enable  = (features...) -> toggleFeature.call this, name, on  for name in features; this
+  @disable = (features...) -> toggleFeature.call this, name, off for name in features; this
+
+  @on = (event, func) -> @set "events.#{event}", func
 
   @info = (verbose=false) ->
     infokeys = [
@@ -50,9 +51,8 @@ class Forge extends Synth
 
   @schema
     extensions: @attr 'object'
-    procedures: @attr 'object'
     modules:    @computed (->
-      @access name for name of @get() when name not in [ 'extensions', 'procedures' ]
+      @access name for name of @get() when name not in [ 'extensions' ]
     ), type: 'array', private: true
 
   # this is a factory that instantiates based on compiled output of
@@ -95,13 +95,14 @@ class Forge extends Synth
         @merge exports
         @configure hooks.before
         for schema in schemas
-          @merge ((new this @extract 'extensions', 'procedures').compile schema, null, exts)
+          @merge ((new this @extract 'extensions').compile schema, null, exts)
         @configure hooks.after
       console.log "\n"
       console.log output?.info false
       return output
       
     # instantiate via new
+    @on event, func for event, func of @constructor.get 'events'
     super
 
   # RUN THIS FORGE
@@ -131,6 +132,7 @@ class Forge extends Synth
       results.unshift this
       results.push opts
       runners[name] = feature.run.apply feature, results
+    @emit 'running', runners
 
 module.exports = Forge.new module,
   before: ->
@@ -217,6 +219,12 @@ module.exports = Forge.new module,
     @action 'test', -> console.log 'blah'
     
   after: ->
+
+    @on 'yangforge:build', (input, output, done) ->
+      console.info "should build: #{input.get 'argument'}"
+      done()
+
+    
     #@mixin (require './yangforge-import')
     #@mixin (require './yangforge-export')
     @feature 'cli', (toggle) -> switch toggle

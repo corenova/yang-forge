@@ -299,7 +299,7 @@ with documentation all-in-one.
   * [data-synth library](http://github.com/saintkepha/data-synth)
 
 ## License
-  [MIT](LICENSE)
+  [Apache 2.0](LICENSE)
 
 [npm-image]: https://img.shields.io/npm/v/yangforge.svg
 [npm-url]: https://npmjs.org/package/yangforge

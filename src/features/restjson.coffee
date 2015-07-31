@@ -93,5 +93,7 @@ module.exports = Forge.Interface
     # TODO open up a socket.io connection stream for store updates
 
     console.info "restjson: binding forgery to /restjson".grey
+    # should attach bp.json strict: true here
+    # app.use bp.json string: true
     app.use "/restjson", router
     return router
