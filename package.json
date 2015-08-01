@@ -15,13 +15,13 @@
   ],
   "preferGlobal": true,
   "author": "Peter Lee <peter@intercloud.net>",
-  "homepage": "https://github.com/opnfv/yangforge",
+  "homepage": "https://github.com/clearpath-networks/yangforge",
   "repository": {
     "type": "git",
-    "url": "http://github.com/opnfv/yangforge"
+    "url": "http://github.com/clearpath-networks/yangforge"
   },
   "bugs": {
-    "url": "https://github.com/opnfv/yangforge/issues"
+    "url": "https://github.com/clearpath-networks/yangforge/issues"
   },
   "main": "lib/yangforge.js",
   "bin": {
@@ -33,7 +33,7 @@
     "clim": "^1.1.1",
     "colors": "^1.1.2",
     "commander": "^2.8.1",
-    "data-synth": "^0.6.1",
+    "data-synth": "^0.6.3",
     "errorhandler": "^1.4.1",
     "express": "^4.13.1",
     "passport": "^0.2.2",

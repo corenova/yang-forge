@@ -11,7 +11,7 @@ fs = require 'fs'
 prettyjson = require 'prettyjson'
 
 class Forge extends Synth
-  @set synth: 'forge', extensions: {}
+  @set synth: 'forge', extensions: {}, events: []
 
   @mixin (require './compiler/compiler')
 
@@ -30,7 +30,7 @@ class Forge extends Synth
   @enable  = (features...) -> toggleFeature.call this, name, on  for name in features; this
   @disable = (features...) -> toggleFeature.call this, name, off for name in features; this
 
-  @on = (event, func) -> @set "events.#{event}", func
+  @on = (event, func) -> @merge 'events', [ key: event, value: func ]
 
   @info = (verbose=false) ->
     infokeys = [
@@ -102,8 +102,15 @@ class Forge extends Synth
       return output
       
     # instantiate via new
-    @on event, func for event, func of @constructor.get 'events'
     super
+    @events = (@constructor.get 'events')
+    .map (event) =>
+      [ target, action ] = event.key.split ':'
+      unless action?
+        @on event.key, event.value
+      else
+        (@access target)?.on action, event.value
+    .filter (e) -> e? 
 
   # RUN THIS FORGE
   @run = (config={}) ->
@@ -135,12 +142,18 @@ class Forge extends Synth
     @emit 'running', runners
 
 module.exports = Forge.new module,
-  before: ->
+  before: -> console.log "forgery initiating schema compilations..."
+  after: ->
+    @on 'yangforge:build', (input, output, done) ->
+      console.info "should build: #{input.get 'argument'}"
+      done()
+
+    @on 'yangforge:build', (input, output, done) ->
+      done "this is an example for a failed listener"
+
     # handle RPC calls
 
-    @action 'build', -> console.info "hello building the world"
-
-    @action 'init', ->
+    @on 'yangforge:init', ->
       console.info "initializing yangforge environment...".grey
       child = sys.spawn 'npm', [ 'init' ], stdio: 'inherit'
       # child.stdout.on 'data', (data) ->
@@ -152,79 +165,84 @@ module.exports = Forge.new module,
           when 'EACCES' then console.error "npm not executable. try chmod or run as root".red
         process.exit 1
 
-    @action 'info', (input, options) ->
-      unless input.length
-        console.info prettyjson.render (@constructor.info options.verbose)
+    @on 'yangforge:info', (input, output, done) ->
+      names = input.get 'argument'
+      options = input.get 'options'
+      unless names.length
+        console.info prettyjson.render (@container.constructor.info options.verbose)
       else
-        res = for name in input
+        res = for name in names
           try (require name).info options.verbose
-          catch e then console.error "unable to extract info from '#{name}' module\n".red+"#{e}"
+          catch
+            try (require( path.resolve name)).info options.verbose
+            catch e then console.error "unable to extract info from '#{name}' module\n".red+"#{e}"
         console.info prettyjson.render res
+      done()
           
-    @action 'install', (input, options) ->
-      for pkg in input
+    @on 'yangforge:install', (input, output, done) ->
+      packages = input.get 'argument'
+      options = input.get 'options'
+      for pkg in packages
         console.info "installing #{pkg}" + (if options.save then " --save" else '')
+      done()
 
-    @action 'list', (options) ->
-      modules = (@get 'modules').map (e) -> e.constructor.info options.verbose
+    @on 'yangforge:list', (input, output, done) ->
+      options = input.get 'options'
+      modules = (@container.get 'modules').map (e) -> e.constructor.info options.verbose
       unless options.verbose
         console.info prettyjson.render modules
-        return
+        return done()
       child = sys.exec 'npm list --json', timeout: 5000
       child.stdout.on 'data', (data) ->
-        output = JSON.parse data
-        results = for mod in modules when output.name is mod.name
-          Synth.copy mod, output
+        result = JSON.parse data
+        results = for mod in modules when result.name is mod.name
+          Synth.copy mod, result
         console.info prettyjson.render results
       child.stderr.on 'data', (data) -> console.warn data.red
-      child.on 'close', (code) -> undefined
+      child.on 'close', (code) -> done()
         
-    @action 'import', (input) -> @import input
+    @on 'yangforge:import', (input, output, done) -> @container.import input
 
-    @action 'schema', (options) ->
-      output = switch
+    @on 'yangforge:schema', (input, output, done) ->
+      options = input.get 'options'
+      result = switch
         when options.eval 
-          x = @compile options.eval
+          x = @container.compile options.eval
           x?.extract 'module'
         when options.compile
-          x = @compile (fs.readFileSync options.compile, 'utf-8')
+          x = @container.compile (fs.readFileSync options.compile, 'utf-8')
           x?.extract 'module'
 
-      console.assert !!output, "unable to process input"
-
-      output = switch
-        when /^json$/i.test options.format then JSON.stringify output, null, 2
-        else prettyjson.render output
-
-      console.info output if output?
+      console.assert !!result, "unable to process input"
+      result = switch
+        when /^json$/i.test options.format then JSON.stringify result, null, 2
+        else prettyjson.render result
+      console.info result if result?
+      done()
 
     # RUN
     # 1. grabs yangforge constructor and merges other modules into itself
     # 2. disables 'cli' and enables the selected interface
     # 3. run with passed in options
-    @action 'run', (input, options) ->
-      forgery = @constructor
+    @on 'yangforge:run', (input, output, done, origin) ->
+      names = input.get 'argument'
+      options = input.get 'options'
+      forgery = @container.constructor
+      console.log forgery
       if options.compile
-        try forgery.merge @compile (fs.readFileSync options.compile, 'utf-8')
+        try forgery.merge @container.compile (fs.readFileSync options.compile, 'utf-8')
         catch e
           console.error "unable to run native YANG schema file: #{options.compile}\n".red
           throw e
       else
-        try forgery.merge (require slave) for slave in input
-        catch e
-          console.error "unable to load '#{slave}' module, skipping...\n".red+"#{e}"
-
+        slaves = for name in names
+          try require name
+          catch then require (path.resolve name)
+        forgery.mixin slave for slave in slaves
+      while arg = process.argv.shift()
+        break if arg is '--'
       forgery.disable('cli').run options
 
-    @action 'test', -> console.log 'blah'
-    
-  after: ->
-
-    @on 'yangforge:build', (input, output, done) ->
-      console.info "should build: #{input.get 'argument'}"
-      done()
-
-    
     #@mixin (require './yangforge-import')
     #@mixin (require './yangforge-export')
     @feature 'cli', (toggle) -> switch toggle

@@ -12,5 +12,11 @@
     "ping"
   ],
   "author": "Peter Lee <peter@intercloud.net>",
-  "license": "MIT"
+  "license": "MIT",
+  "scripts": {
+    "prepublish": "coffee -c *coffee"
+  },
+  "dependencies": {
+    "yangforge": "^0.9.6"
+  }
 }

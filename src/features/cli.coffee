@@ -45,7 +45,7 @@ module.exports = Forge.Interface
         if option.meta.units?
           optstring = "-#{option.meta.units}, #{optstring}"
         optstring += switch option.meta.type
-          when 'empty' then ''
+          when 'boolean' then ''
           else
             if option.meta.required then " <#{option.meta.type}>"
             else " [#{option.meta.type}]"  
@@ -59,7 +59,8 @@ module.exports = Forge.Interface
         console.log "setting option #{key} with default: #{defaultValue}"
         cmd.option optstring, optdesc, defaultValue
 
-      do (cmd, Action, status) ->
+      module = @access 'yangforge'
+      do (cmd, Action, status, module) ->
         cmd.action ->
           switch status
             when 'obsolete', 'planned'
@@ -75,14 +76,16 @@ module.exports = Forge.Interface
               else
                 [ args..., opt ] = arguments
                 [ args, opt ]
-            action = new Action input: argument: argument, options: options
-            action
-              .invoke app, "yangforge:#{options._name}"
+            data = input: argument: argument, options: options
+            (new Action data, module).invoke program
               .then (res) ->
                 console.log "action complete"
+                console.log res
+              .catch (err) ->
+                console.error "#{err}".red
+                cmd.help()
           catch e
             console.error "#{e}".red
-            throw e
             cmd.help()
 
     program.parse process.argv

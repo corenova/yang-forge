@@ -36,11 +36,10 @@ module.exports = Forge.new module,
           return info
         
     @extension 'container', (key, value) -> @bind key, Forge.Object value
-    @extension 'enum',      (key, value) -> @bind key, Forge.Enumeration value
+    @extension 'enum',      (key, value) -> #@set key, value.reduce()
     @extension 'leaf',      (key, value) ->
       @bind key, Forge.Property value, ->
-        @set
-          required: (@get 'mandatory') ? false
+        @set required: (@get 'mandatory') ? false
 
     @extension 'leaf-list', (key, value) -> @bind key, Forge.List value
 
@@ -67,13 +66,15 @@ module.exports = Forge.new module,
       @mixin value
     @extension 'augment', (key, value) -> @merge value
     @extension 'refine',  (key, value) -> @merge value
-    @extension 'type',    (key, value) -> @set 'type', (@scope.resolve 'type', key) ? key
+    @extension 'type',    (key, value) ->
+      @set 'type', (@scope.resolve 'type', key) ? key
+      @merge value
 
     @extension 'config',    (key, value) -> @set 'config', key is 'true'
     @extension 'mandatory', (key, value) -> @set 'mandatory', key is 'true'
     @extension 'require-instance', (key, value) -> @set 'require-instance', key is 'true'
 
-    @extension 'rpc',    (key, value) -> @set "rpc.#{key}", Forge.Action value
+    @extension 'rpc',    (key, value) -> @set "rpc.#{key}", Forge.Action value, -> @set name: key
     @extension 'input',  (key, value) -> @bind 'input', value
     @extension 'output', (key, value) -> @bind 'output', value
 
