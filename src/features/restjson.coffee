@@ -15,11 +15,20 @@ module.exports = Forge.Interface
     .all (req, res, next) ->
       # XXX - verify req.user has permissions to operate on the forgery
       next()
-    .get (req, res, next) ->
-      res.locals.result = req.forge.serialize()
+    .options (req, res, next) ->
+      res.locals.result =
+        metadata: req.forge.constructor.info()
+        modules: (for module in (req.forge.get 'modules')
+          metadata: module.constructor.info()
+          rpc: (for name, rpc of (module.meta 'rpc')
+            name: name
+            description: rpc.get 'description'
+          ).reduce ((a,b) -> a[b.name] = b.description; a), {}
+        ).reduce ((a,b) -> a[b.metadata.name] = b; a), {}
       next()
+    .get  (req, res, next) -> res.locals.result = req.forge.serialize(); next()
     .post (req, res, next) ->
-      # XXX - Enable creation of a new collection into the target forge
+      # XXX - Enable creation of a new module into the target forge endpoint
       next()
     .copy (req, res, next) ->
       # XXX - generate JSON serialized copy of this forge
@@ -30,18 +39,48 @@ module.exports = Forge.Interface
       unless (self?.meta 'yang') is 'module' then next 'route'
       else req.module = self; next()
 
+    router.param 'method', (req,res,next,method) ->
+      console.assert req.module?,
+        "cannot perform '#{method}' without containing module"
+      req.rpc = req.module.meta "rpc.#{method}"
+      if req.rpc? then next() else next 'route'
+
     router.param 'container', (req,res,next,container) ->
       self = req.module.access container
       unless (self?.meta 'yang') is 'container' then next 'route'
       else req.container = self; next()
 
-    router.param 'method', (req,res,next,method) ->
-      console.assert req.module?,
-        "cannot perform '#{method}' without containing module"
-      if method of req.module.methods
-        req.method = req.module.invoke method, req.body, req.query
-        next()
-      else next 'route'
+    # handle the top-level module endpoint
+    router.route '/:module'
+    .all (req, res, next) ->
+      # XXX - verify req.user has permissions to operate on this module
+      next()
+    .options (req, res, next) ->
+      res.locals.result =
+        metadata: req.module.constructor.info()
+        rpc: (for name, rpc of (req.module.meta 'rpc')
+          name: name
+          description: rpc.get 'description'
+        ).reduce ((a,b) -> a[b.name] = b.description; a), {}
+      next()
+    .get (req, res, next) -> res.locals.result = req.module.serialize(); next()
+
+    router.route '/:module/:method'
+    .all (req, res, next) -> next()
+    .options (req, res, next) ->
+      res.locals.result =
+        metadata: req.rpc.extract 'name', 'description', 'status'
+        input:  req.rpc.reduce().input?.meta
+        output: req.rpc.reduce().output?.meta
+      next()
+    .post (req, res, next) ->
+      console.info "restjson: invoking rpc method '#{req.rpc.get 'name'}'".grey
+      action = new req.rpc input: req.body, req.module
+      action.invoke req.query
+      .then  (result) -> res.locals.result = (action.get 'output'); next()
+      .catch (err) ->
+        console.error err
+        next error
 
     # SUB ROUTER
     subrouter = (require 'express').Router()
@@ -55,22 +94,7 @@ module.exports = Forge.Interface
     # nested sub-routes for containers
     subrouter.use '/:subcontainer', subrouter
         
-    # handle the top-level module endpoint
-    router.route '/:module'
-    .all (req, res, next) ->
-      # XXX - verify req.user has permissions to operate on this module
-      next()
-    .get (req, res, next) -> res.locals.result = req.module.serialize(); next()
-
     router.use '/:module/:container', subrouter
-
-    router.route '/:module/:method'
-    .all (req, res, next) -> next()
-    .post (req, res, next) ->
-      req.method.then (
-        (response) -> res.locals.result = response; next()
-        (error)    -> next error
-      )
 
     # always send back contents of 'result' if available
     router.use (req, res, next) ->
@@ -93,5 +117,7 @@ module.exports = Forge.Interface
     # TODO open up a socket.io connection stream for store updates
 
     console.info "restjson: binding forgery to /restjson".grey
+    # should attach bp.json strict: true here
+    # app.use bp.json string: true
     app.use "/restjson", router
     return router

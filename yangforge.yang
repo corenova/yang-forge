@@ -98,9 +98,10 @@ module yangforge {
       leaf-list argument { type string; units name; }
       container options {
         leaf save { type empty; }
+        leaf force { type boolean; }
       }
     }
-    status planned;
+    status current;
   }
 
   rpc config {
