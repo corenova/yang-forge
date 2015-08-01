@@ -1,5 +1,5 @@
 {
-  "version": "0.9.2",
+  "version": "0.9.6",
   "name": "yangforge",
   "description": "YANG driven JS application builder",
   "keywords": [
@@ -8,28 +8,32 @@
     "forge",
     "model",
     "yang",
+    "restjson",
     "restconf",
-    "yang-json"
+    "yang-json",
+    "yang-yaml"
   ],
   "preferGlobal": true,
   "author": "Peter Lee <peter@intercloud.net>",
-  "homepage": "https://github.com/saintkepha/yangforge",
+  "homepage": "https://github.com/clearpath-networks/yangforge",
   "repository": {
     "type": "git",
-    "url": "http://github.com/saintkepha/yangforge"
+    "url": "http://github.com/clearpath-networks/yangforge"
   },
   "bugs": {
-    "url": "https://github.com/saintkepha/yangforge/issues"
+    "url": "https://github.com/clearpath-networks/yangforge/issues"
   },
   "main": "lib/yangforge.js",
-  "bin": "bin/yfc",
+  "bin": {
+    "yfc": "./bin/yfc"
+  },
   "schema": "./yangforge.yang",
   "dependencies": {
     "body-parser": "^1.13.2",
     "clim": "^1.1.1",
     "colors": "^1.1.2",
     "commander": "^2.8.1",
-    "data-synth": "^0.6.0",
+    "data-synth": "^0.6.3",
     "errorhandler": "^1.4.1",
     "express": "^4.13.1",
     "passport": "^0.2.2",
@@ -37,13 +41,11 @@
     "yang-parser": "^0.1.0",
     "yang-v1-extensions": "file:yang_modules/yang-v1-extensions"
   },
-  "optionalDependencies": {
-    "complex-types": "file:yang_modules/complex-types",
-    "opnfv-promise": "file:yang_modules/opnfv-promise"
-  },
   "bundleDependencies": [
     "clim",
-    "data-synth",
+    "colors",
+    "commander",
+    "prettyjson",
     "yang-parser",
     "yang-v1-extensions"
   ],
@@ -59,5 +61,5 @@
     "prepublish": "mkdir -p lib; coffee -o lib -c src",
     "start": "node lib/yangforge"
   },
-  "license": "MIT"
+  "license": "Apache-2.0"
 }

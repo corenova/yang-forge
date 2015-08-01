@@ -36,11 +36,10 @@ module.exports = Forge.new module,
           return info
         
     @extension 'container', (key, value) -> @bind key, Forge.Object value
-    @extension 'enum',      (key, value) -> @bind key, Forge.Enumeration value
+    @extension 'enum',      (key, value) -> #@set key, value.reduce()
     @extension 'leaf',      (key, value) ->
       @bind key, Forge.Property value, ->
-        @set
-          required: (@get 'mandatory') ? false
+        @set required: (@get 'mandatory') ? false
 
     @extension 'leaf-list', (key, value) -> @bind key, Forge.List value
 
@@ -53,8 +52,8 @@ module.exports = Forge.new module,
     # definitions about the module.  They are not attached into
     # the generated module's configuration tree but instead
     # defined in the metadata section of the module only.
-    @extension 'grouping', (key, value) -> @compiler.define 'grouping', key, value
-    @extension 'typedef',  (key, value) -> @compiler.define 'type', key, value
+    @extension 'grouping', (key, value) -> @scope.define 'grouping', key, value
+    @extension 'typedef',  (key, value) -> @scope.define 'type', key, value
 
     # The following extensions makes alterations to the
     # configuration tree.  The `uses` statement references a
@@ -63,25 +62,23 @@ module.exports = Forge.new module,
     # node context.  The `augment/refine` statements helps to
     # alter the containing statement with changes to the schema.
     @extension 'uses',    (key, value) ->
-      @mixin (@compiler.resolve 'grouping', key)
+      @mixin (@scope.resolve 'grouping', key)
       @mixin value
     @extension 'augment', (key, value) -> @merge value
     @extension 'refine',  (key, value) -> @merge value
-    @extension 'type',    (key, value) -> @set 'type', (@compiler.resolve 'type', key) ? key
+    @extension 'type',    (key, value) ->
+      @set 'type', (@scope.resolve 'type', key) ? key
+      @merge value
 
     @extension 'config',    (key, value) -> @set 'config', key is 'true'
     @extension 'mandatory', (key, value) -> @set 'mandatory', key is 'true'
     @extension 'require-instance', (key, value) -> @set 'require-instance', key is 'true'
 
-    @extension 'rpc', (key, value) ->
-      value ?= class extends Forge.Meta
-      value.include exec: @compiler.get "procedures.#{key}"
-      @bind key, (-> new value )
-
+    @extension 'rpc',    (key, value) -> @set "rpc.#{key}", Forge.Action value, -> @set name: key
     @extension 'input',  (key, value) -> @bind 'input', value
     @extension 'output', (key, value) -> @bind 'output', value
 
-    @extension 'notification', (key, value) -> @compiler.define 'notification', key, value
+    @extension 'notification', (key, value) -> @set "notification.#{key}", value
 
     # The `belongs-to` statement is only used in the context of a
     # `submodule` definition which is processed as a sub-compile stage
@@ -91,12 +88,12 @@ module.exports = Forge.new module,
     # available within that context will be made *eventually available* to
     # the included submodule.
     @extension 'belongs-to', (key, value) ->
-      @compiler.define 'module', (value.get 'prefix'), (@compiler.resolve 'module', key)
+      @scope.define 'module', (value.get 'prefix'), (@scope.resolve 'module', key)
 
     # The following `import` resolver utilizes the `import` functionality
     # introduced via the
     # [YangCompilerMixin](./yang-compiler-mixin.litcoffee) module.
     @extension 'import', (key, value) ->
-      mod = @compiler.import name: key
+      mod = @scope.import name: key
       prefix = (value.get 'prefix') ? (mod.get 'prefix')
-      @compiler.define 'module', prefix, mod
+      @scope.define 'module', prefix, mod

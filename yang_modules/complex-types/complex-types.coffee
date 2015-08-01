@@ -14,10 +14,10 @@ Forge = require 'yangforge'
 
 module.exports = Forge.new module,
   before: ->
-    @extension 'complex-type',  (key, value) -> @compiler.define 'complext-type', key, value
+    @extension 'complex-type',  (key, value) -> @scope.define 'complext-type', key, value
     @extension 'abstract',      (key, value) -> undefined
-    @extension 'extends',       (key, value) -> @merge (@compiler.resolve 'complex-type', key) value
-    @extension 'instance-type', (key, value) -> @bind key, (@compiler.resolve 'complex-type', key) value
+    @extension 'extends',       (key, value) -> @merge (@scope.resolve 'complex-type', key) value
+    @extension 'instance-type', (key, value) -> @bind key, (@scope.resolve 'complex-type', key) value
     @extension 'instance',      (key, value) -> @bind key, Forge.Model value
     @extension 'instance-list', (key, value) -> @bind key, Forge.Array model: value
 

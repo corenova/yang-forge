@@ -1,0 +1,22 @@
+{
+  "name": "ping",
+  "version": "1.0.0",
+  "description": "an example ping yangforged module",
+  "main": "index.js",
+  "schema": "ping.yang",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "yangforge",
+    "ping"
+  ],
+  "author": "Peter Lee <peter@intercloud.net>",
+  "license": "MIT",
+  "scripts": {
+    "prepublish": "coffee -c *coffee"
+  },
+  "dependencies": {
+    "yangforge": "^0.9.6"
+  }
+}
