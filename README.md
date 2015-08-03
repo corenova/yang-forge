@@ -7,8 +7,16 @@ schema-driven application lifecycle management.
 modeling language as defined in IETF drafts and standards
 ([RFC 6020](http://tools.ietf.org/html/rfc6020)).
 
-It is written primarily using CoffeeScript and runs on
-[Node.js](http://nodejs.org).
+Basically, the framework enables YANG schema language to *become* a
+**programming** language.
+
+It is written primarily using [CoffeeScript](http://coffeescript.org)
+and runs on [Node.js](http://nodejs.org).
+
+This software is sponsored and contributed by
+[ClearPath Networks](http://www.clearpathnet.com) on behalf of the
+[OPNFV (Open Platform for Network Functions Virtualization)](http://opnfv.org)
+community.
 
   [![NPM Version][npm-image]][npm-url]
   [![NPM Downloads][downloads-image]][downloads-url]
@@ -46,7 +54,14 @@ $ npm install -g yangforge
     --no-color     disable color output
 ```
 
-The `yfc` command-line interface is **runtime-generated** according to [yangforge.yang](./yangforge.yang) schema definitions.  Please refer to the schema section covering various `rpc` extension statements and sub-statement definitions for a reference regarding different types of command-line arguments, descriptions, and options processing syntax.  The corresponding **actions** for each of the `rpc` extensions are implemented inside the `YangForge` module forging before-hook [here](src/yangforge.coffee).
+The `yfc` command-line interface is **runtime-generated** according to
+[yangforge.yang](./yangforge.yang) schema definitions.  Please refer
+to the schema section covering various `rpc` extension statements and
+sub-statement definitions for a reference regarding different types of
+command-line arguments, descriptions, and options processing syntax.
+The corresponding **actions** for each of the `rpc` extensions are
+implemented inside the `YangForge` module forging before-hook
+[here](src/yangforge.coffee).
 
 ## Common Usage Examples
 
@@ -142,7 +157,8 @@ documentation on each interface feature.
 
 #### Running `YangForge` natively
 
-When you issue `run` without any target module(s) as argument, it runs the internal `YangForge` module using defaults:
+When you issue `run` without any target module(s) as argument, it runs
+the internal `YangForge` module using defaults:
 ```bash
 $ yfc run
 express: listening on 5000
@@ -356,7 +372,8 @@ test.set 'hello', 'there'
 console.log test.get 'works'
 ```
 
-Forging a new module for build/publish (at a new package directory, see also [complex-types](yang_modules/complex-types)):
+Forging a new module for build/publish (at a new package directory,
+see also [complex-types](yang_modules/complex-types)):
 ```coffeescript
 Forge = require 'yangforge'
 module.exports = Forge.new module,
@@ -366,7 +383,8 @@ module.exports = Forge.new module,
     # series of after-compile operations
 ```
 
-Forging a new interface generator (see also [cli example](src/features/cli.coffee)):
+Forging a new interface generator (see also
+[cli example](src/features/cli.coffee)):
 ```coffeescript
 Forge = require 'yangforge'
 module.exports = Forge.Interface 
@@ -379,7 +397,7 @@ module.exports = Forge.Interface
 ```
 
 There are many other ways of interacting with the module's class
-object as well as the instantiated class.  
+object as well as the instantiated class.
 
 **More examples coming soon!**
 

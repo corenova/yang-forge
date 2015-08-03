@@ -1,5 +1,5 @@
 {
-  "version": "0.9.6",
+  "version": "0.9.7",
   "name": "yangforge",
   "description": "YANG driven JS application builder",
   "keywords": [
@@ -15,13 +15,13 @@
   ],
   "preferGlobal": true,
   "author": "Peter Lee <peter@intercloud.net>",
-  "homepage": "https://github.com/clearpath-networks/yangforge",
+  "homepage": "https://github.com/opnfv/yangforge",
   "repository": {
     "type": "git",
-    "url": "http://github.com/clearpath-networks/yangforge"
+    "url": "http://github.com/opnfv/yangforge"
   },
   "bugs": {
-    "url": "https://github.com/clearpath-networks/yangforge/issues"
+    "url": "https://github.com/opnfv/yangforge/issues"
   },
   "main": "lib/yangforge.js",
   "bin": {
