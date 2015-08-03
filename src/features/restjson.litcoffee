@@ -22,8 +22,7 @@ instances.
           req.forge = this
           next()
 
-### Top-level REST/JSON routing facilities
-
+**Top-level REST/JSON routing facilities**
 * Every request will be processed for authorization
 * OPTIONS - provides info on available modules and other associated metadata
 
@@ -66,7 +65,7 @@ instances.
           unless (self?.meta 'yang') is 'container' then next 'route'
           else req.container = self; next()
 
-### /:module routing endpoint
+**/:module routing endpoint**
 
         router.route '/:module'
         .all (req, res, next) ->
@@ -82,7 +81,7 @@ instances.
           next()
         .get (req, res, next) -> res.locals.result = req.module.serialize(); next()
 
-### /:module/:method routing endpoint
+**/:module/:method routing endpoint**
 
         router.route '/:module/:method'
         .all (req, res, next) -> next()
@@ -101,7 +100,7 @@ instances.
             console.error err
             next error
 
-### /:module/* configuration tree routing endpoint
+**/:module/* configuration tree routing endpoint**
 
         subrouter = (require 'express').Router()
         subrouter.param 'subcontainer', (req,res,next,subcontainer) ->
@@ -116,7 +115,7 @@ instances.
 
         router.use '/:module/:container', subrouter
 
-### Default routing middleware handlers 
+**Default routing middleware handlers**
 
         # always send back contents of 'result' if available
         router.use (req, res, next) ->
