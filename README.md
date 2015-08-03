@@ -13,10 +13,10 @@ Basically, the framework enables YANG schema language to *become* a
 It is written primarily using [CoffeeScript](http://coffeescript.org)
 and runs on [Node.js](http://nodejs.org).
 
-This software is sponsored and contributed by
+This software is **sponsored** by
 [ClearPath Networks](http://www.clearpathnet.com) on behalf of the
-[OPNFV (Open Platform for Network Functions Virtualization)](http://opnfv.org)
-community.
+[OPNFV](http://opnfv.org) (Open Platform for Network Functions
+Virtualization) community.
 
   [![NPM Version][npm-image]][npm-url]
   [![NPM Downloads][downloads-image]][downloads-url]
