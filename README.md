@@ -140,6 +140,8 @@ name | description | dependency
 You can click on the *name* entry above for reference
 documentation on each interface feature.
 
+#### Running `YangForge` natively
+
 When you issue `run` without any target module(s) as argument, it runs the internal `YangForge` module using defaults:
 ```bash
 $ yfc run
@@ -183,6 +185,9 @@ $ curl localhost:5000/restjson/yangforge/features/restjson
   ]
 }
 ```
+
+#### Running dynamically *compiled* schema instance
+
 You can also dynamically `--compile` a YANG schema **file** and `run` it immediately:
 ```bash
 $ yfc run -p 5050 -c examples/jukebox.yang
@@ -202,6 +207,97 @@ $ curl localhost:5050/restjson/example-jukebox
     "player": {},
     "playlist": []
   }
+}
+```
+
+#### Running a *yangforged* module
+
+The example `ping` module for the below demo is available [here](examples/ping).
+
+You can also run a separate *forged* module as follows:
+```bash
+$ yfc run examples/ping
+express: listening on 5000
+restjson: binding forgery to /restjson
+```
+Once it's running, you can issue HTTP OPTIONS call to discover
+capabilities of the [ping](examples/ping) module:
+```bash
+$ curl -X OPTIONS localhost:5000/restjson/ping
+```
+```json
+{
+  "metadata": {
+    "name": "ping",
+    "prefix": "ping",
+    "namespace": "urn:opendaylight:ping",
+    "revision": {
+      "2013-09-11": {
+        "description": "TCP ping module"
+      }
+    }
+  },
+  "rpc": {
+    "send-echo": "Send TCP ECHO request"
+  }
+}
+```
+You can also specifically get more info on an available RPC call:
+```bash
+$ curl -X OPTIONS localhost:5000/restjson/ping/send-echo
+```
+The below output provides additional information on what the expected
+`input/output` schema for invoking the RPC call.
+```json
+{
+  "metadata": {
+    "name": "send-echo",
+    "description": "Send TCP ECHO request"
+  },
+  "input": {
+    "leaf": {
+      "destination": {
+        "type": "inet:ipv4-address"
+      }
+    },
+    "yang": "input"
+  },
+  "output": {
+    "leaf": {
+      "echo-result": {
+        "type": {
+          "enumeration": {
+            "enum": {
+              "reachable": {
+                "value": "0",
+                "description": "Received reply"
+              },
+              "unreachable": {
+                "value": "1",
+                "description": "No reply during timeout"
+              },
+              "error": {
+                "value": "2",
+                "description": "Error happened"
+              }
+            }
+          }
+        },
+        "description": "Result types"
+      }
+    },
+    "yang": "output"
+  }
+}
+```
+You can then try out the available RPC call as follows:
+```bash
+$ curl -X POST localhost:5000/restjson/ping/send-echo -H
+'Content-Type: application/json' -d '{ "destination": "8.8.8.8" }'
+```
+```json
+{
+  "echo-result": "reachable"
 }
 ```
 

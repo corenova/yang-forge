@@ -110,7 +110,6 @@ instances.
 
         # nested sub-routes for containers
         subrouter.use '/:subcontainer', subrouter
-
         router.use '/:module/:container', subrouter
 
 **Default routing middleware handlers**
