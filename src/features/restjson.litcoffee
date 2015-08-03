@@ -23,8 +23,6 @@ instances.
           next()
 
 **Top-level REST/JSON routing facilities**
-* Every request will be processed for authorization
-* OPTIONS - provides info on available modules and other associated metadata
 
         router.route '/'
         .all (req, res, next) ->
@@ -127,7 +125,8 @@ instances.
         # default log successful transaction
         router.use (req, res, next) ->
           console.log "METHOD results..."
-          #req.forge.log?.info query:req.params.id,result:res.locals.result, 'METHOD results for %s', req.record?.name
+          #req.forge.log?.info query:req.params.id,result:res.locals.result,
+          # 'METHOD results for %s', req.record?.name
           next()
 
         # default 'catch-all' error handler
