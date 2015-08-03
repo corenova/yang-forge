@@ -343,8 +343,12 @@ module.exports = Forge.new module
 ([yangforge.yang](./yangforge.yang)) **compiled** module. It is
 compiled by the [yang-compiler](src/compiler/compiler.litcoffee) and
 natively includes
-[yang-v1-extensions](yang_modulesyang-v1-extensions) submodule for
-supporting the version 1.0 YANG RFC specifications. It serves as a
+[yang-v1-extensions](yang_modules/yang-v1-extensions) submodule for
+supporting the YANG version 1.0
+([RFC 6020](http://tools.ietf.org/html/rfc6020)) specifications.
+Please reference the
+[yang-v1-extensions](yang_modules/yang-v1-extensions) module for
+up-to-date info on YANG 1.0 language coverage status. It serves as a
 good reference for writing new compilers, custom extensions, custom
 importers, among other things.
 
