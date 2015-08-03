@@ -132,10 +132,13 @@ $ yfc run -h
 
 name | description | dependency
 --- | --- | ---
-cli | generates command-line interface | none
-express | generates HTTP/HTTPS web server instance | none
-restjson | generates REST/JSON web services interface | express
-autodoc | generates self-documentation interface | express
+[cli](src/features/cli.litcoffee) | generates command-line interface | none
+[express](src/features/express.litcoffee) | generates HTTP/HTTPS web server instance | none
+[restjson](src/features/restjson.litcoffee) | generates REST/JSON web services interface | express
+[autodoc](src/features/autodoc.litcoffee) | generates self-documentation interface | express
+
+You can click on the *name* entry above for reference
+documentation on each interface feature.
 
 When you issue `run` without any target module(s) as argument, it runs the internal `YangForge` module using defaults:
 ```bash

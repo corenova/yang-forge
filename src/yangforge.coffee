@@ -11,7 +11,7 @@ fs = require 'fs'
 prettyjson = require 'prettyjson'
 
 class Forge extends Synth
-  @set synth: 'forge', extensions: {}, events: []
+  @set synth: 'forge', extensions: {}
 
   @mixin (require './compiler/compiler')
 
@@ -29,8 +29,6 @@ class Forge extends Synth
     
   @enable  = (features...) -> toggleFeature.call this, name, on  for name in features; this
   @disable = (features...) -> toggleFeature.call this, name, off for name in features; this
-
-  @on = (event, func) -> @merge 'events', [ key: event, value: func ]
 
   @info = (verbose=false) ->
     infokeys = [
@@ -103,14 +101,6 @@ class Forge extends Synth
       
     # instantiate via new
     super
-    @events = (@constructor.get 'events')
-    .map (event) =>
-      [ target, action ] = event.key.split ':'
-      unless action?
-        @on event.key, event.value
-      else
-        (@access target)?.on action, event.value
-    .filter (e) -> e? 
 
   # RUN THIS FORGE
   @run = (config={}) ->
@@ -228,7 +218,6 @@ module.exports = Forge.new module,
       names = input.get 'argument'
       options = input.get 'options'
       forgery = @container.constructor
-      console.log forgery
       if options.compile
         try forgery.merge @container.compile (fs.readFileSync options.compile, 'utf-8')
         catch e
