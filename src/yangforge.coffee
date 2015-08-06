@@ -15,7 +15,14 @@ class Forge extends Synth
 
   @mixin (require './compiler/compiler')
 
-  @extension = (name, func) -> @set "extensions.#{name}.resolver", func
+  @extension = (name, config) -> switch
+    when config instanceof Function
+      @set "extensions.#{name}.resolver", config
+    when config instanceof Object
+      @merge "extensions.#{name}", config
+    else
+      config.warn "attempting to define extension '#{name}' with invalid configuration"
+      
   @feature = (name, func) -> @set "features.#{name}", status: off, hook: func
   
   toggleFeature = (name, toggle) ->
@@ -62,15 +69,32 @@ class Forge extends Synth
   @new: -> this.apply this, arguments
   
   constructor: (input={}, hooks={}) ->
-    unless Forge.instanceof @constructor
+    unless Forge.synthesized @constructor
       console.assert input instanceof (require 'module'),
-        "must pass in 'module' when forging a new module definition, i.e. forge(module)"
+        "must pass in 'module' when forging a new module definition, i.e. forge.new(module)"
 
       # this is a special hack to ensure that while YangForge itself
       # is being constructed/compiled, other dependent modules needed
       # for YangForge construction itself (such as yang-v1-extensions)
       # can properly export themselves.
-      input.exports = arguments.callee unless input.loaded is true
+      # input.exports = arguments.callee unless input.loaded is true
+      # console.log "input\n"
+      # console.log id: input.id, parent: id: input.parent.id, loaded: input.parent.loaded, grand: id: input.parent.parent?.id, loaded: input.parent.parent?.loaded
+      # console.log "module\n"
+      # console.log id: module.id, parent: id: module.parent.id, loaded: module.parent.loaded, grand: id: module.parent.parent?.id, loaded: module.parent.parent?.loaded
+      if module.id is input.id
+        unless module.loaded is true
+          console.log "FORGERY NOT YET LOADED..."
+          if input.parent.parent?.loaded is true
+            # optimization to return the grandparent of the module (which will be an instance of a constructed Forgery)
+            grand = input.parent.parent.exports
+            return if Forge.synthesized grand then grand else arguments.callee
+
+          console.log "[constructor] forgery initiating SELF-CONSTRUCTION"
+          module.exports = arguments.callee
+        else
+          console.log "FORGERY ALREADY LOADED... (shouldn't be called?)"
+          return module.exports
 
       console.log "[constructor] processing #{input.id}..."
       try
@@ -95,7 +119,7 @@ class Forge extends Synth
         for schema in schemas
           @merge ((new this @extract 'extensions').compile schema, null, exts)
         @configure hooks.after
-      console.log "\n"
+      console.log "forging complete...."
       console.log output?.info false
       return output
       
@@ -134,12 +158,14 @@ class Forge extends Synth
 module.exports = Forge.new module,
   before: -> console.log "forgery initiating schema compilations..."
   after: ->
-    @on 'yangforge:build', (input, output, done) ->
+    console.log "forgery AFTER compile event registrations..."
+    
+    @on 'yangforge:build', (input, output, next) ->
       console.info "should build: #{input.get 'argument'}"
-      done()
+      next()
 
-    @on 'yangforge:build', (input, output, done) ->
-      done "this is an example for a failed listener"
+    @on 'yangforge:build', (input, output, next) ->
+      next "this is an example for a failed listener"
 
     # handle RPC calls
 
@@ -155,7 +181,7 @@ module.exports = Forge.new module,
           when 'EACCES' then console.error "npm not executable. try chmod or run as root".red
         process.exit 1
 
-    @on 'yangforge:info', (input, output, done) ->
+    @on 'yangforge:info', (input, output, next) ->
       names = input.get 'argument'
       options = input.get 'options'
       unless names.length
@@ -167,21 +193,21 @@ module.exports = Forge.new module,
             try (require( path.resolve name)).info options.verbose
             catch e then console.error "unable to extract info from '#{name}' module\n".red+"#{e}"
         console.info prettyjson.render res
-      done()
+      next()
           
-    @on 'yangforge:install', (input, output, done) ->
+    @on 'yangforge:install', (input, output, next) ->
       packages = input.get 'argument'
       options = input.get 'options'
       for pkg in packages
         console.info "installing #{pkg}" + (if options.save then " --save" else '')
-      done()
+      next()
 
-    @on 'yangforge:list', (input, output, done) ->
+    @on 'yangforge:list', (input, output, next) ->
       options = input.get 'options'
       modules = (@container.get 'modules').map (e) -> e.constructor.info options.verbose
       unless options.verbose
         console.info prettyjson.render modules
-        return done()
+        return next()
       child = sys.exec 'npm list --json', timeout: 5000
       child.stdout.on 'data', (data) ->
         result = JSON.parse data
@@ -189,11 +215,11 @@ module.exports = Forge.new module,
           Synth.copy mod, result
         console.info prettyjson.render results
       child.stderr.on 'data', (data) -> console.warn data.red
-      child.on 'close', (code) -> done()
+      child.on 'close', (code) -> next()
         
-    @on 'yangforge:import', (input, output, done) -> @container.import input
+    @on 'yangforge:import', (input, output, next) -> @container.import input
 
-    @on 'yangforge:schema', (input, output, done) ->
+    @on 'yangforge:schema', (input, output, next) ->
       options = input.get 'options'
       result = switch
         when options.eval 
@@ -208,13 +234,13 @@ module.exports = Forge.new module,
         when /^json$/i.test options.format then JSON.stringify result, null, 2
         else prettyjson.render result
       console.info result if result?
-      done()
+      next()
 
     # RUN
     # 1. grabs yangforge constructor and merges other modules into itself
     # 2. disables 'cli' and enables the selected interface
     # 3. run with passed in options
-    @on 'yangforge:run', (input, output, done, origin) ->
+    @on 'yangforge:run', (input, output, next, origin) ->
       names = input.get 'argument'
       options = input.get 'options'
       forgery = @container.constructor

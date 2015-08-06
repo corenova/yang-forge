@@ -99,6 +99,12 @@ arguments.
                 console.error "#{e}".red
                 cmd.help()
 
+        program
+          .command '*'
+          .description 'specify a target module to run command-line interface'
+          .action ->
+            console.info arguments
+
         program.parse process.argv
         program.help() unless program.args.length
         return program

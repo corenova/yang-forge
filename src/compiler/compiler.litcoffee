@@ -17,8 +17,6 @@ First we declare the compiler class as an extension of the
     class YangCompiler extends Meta
       @set synth: 'compiler'
       
-      @mixin (require './compiler-mixin')
-
 As the compiler encounters various YANG statement extensions, the
 `resolver` routines invoked will take different actions, including
 `define` of a new meta attribute to be associated with the module as
@@ -37,7 +35,7 @@ compiled (including from external imported modules mapped by prefix).
         [ prefix..., key ] = key.split ':'
         switch
           when prefix.length > 0
-            (@resolve 'module', prefix[0])?.get "#{type}.#{key}"
+            (@resolve 'module', prefix[0])?.get "exports.#{type}.#{key}"
           else
             @exports?[type]?[key]
 
@@ -104,19 +102,42 @@ found in the parsed output in order to prepare the context for the
             if params.include?
               params.include = 
                 (extractKeys params.include)
-                .map (name) =>
-                  console.log "[preprocess:#{@id}:include] submodule '#{name}'"
-                  submod = (require name)
-                  console.log "[preprocess:#{@id}:include] submodule '#{name}' loaded: #{submod?}"
-                  # grab export data from submodule and include into context
-                  # a bit hackish ATM...
-                  Meta.copy context, submod?.extract 'exports'
-                  Meta.objectify name, submod
+                .map (name) => @include name, context
                 .reduce ((a, b) -> Meta.copy a, b), {}
+            if params.import?
+              params.import =
+                (@import name, opts, context for name, opts of params.import)
+                .reduce ((a, b) -> Meta.copy a, b), {}
+            
         if foundExtensions.length > 0
           console.log "found #{foundExtensions.length} new extension"+('s' if foundExtensions.length > 1)
           console.log foundExtensions.join ', '
         return input
+
+      include: (name, context=this) ->
+        console.log "[include] submodule '#{name}' loading..."
+        m = require name
+        Meta.copy context, m?.extract 'exports'
+        console.log "[include] submodule '#{name}' loaded into context" 
+        Meta.objectify name, m
+
+      import: (name, opts, context=this) ->
+        console.log "[import] module '#{name}' loading..."
+        try m = require name
+        catch e then console.log e; return
+        console.log "hello"
+        console.log m
+        console.log "bye"
+        rev = opts['revision-date']
+        if rev? and not (m.get "revision.#{rev}")?
+          console.warn "[import] requested #{rev} not availabe in '#{name}'"
+          console.log m.get 'revision'
+          return
+        exts = m.get 'exports.extension'
+        for key, val of exts when val.override is true
+          context.refine 'extension', key, val
+        console.log "[import] module '#{name}' loaded into context"
+        Meta.objectify opts.prefix ? name, m
 
 The `compile` function is the primary method of the compiler which
 takes in YANG schema input and produces JS output representing the
@@ -201,7 +222,7 @@ provided input.
               else ""
             console.log "[compile:#{id}] #{key} #{arg} #{stuff}"
             res = switch key
-              when 'extension','include' then params
+              when 'extension','include','import' then params
               else @compile params, context, ext
             unless params?
               output.set key, arg

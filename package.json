@@ -1,8 +1,10 @@
 {
-  "version": "0.9.7",
+  "version": "0.9.8",
   "name": "yangforge",
   "description": "YANG driven JS application builder",
   "keywords": [
+    "build",
+    "config",
     "datastore",
     "datamodel",
     "forge",
@@ -10,8 +12,12 @@
     "yang",
     "restjson",
     "restconf",
+    "rpc",
+    "parse",
+    "translate",
     "yang-json",
-    "yang-yaml"
+    "yang-yaml",
+    "yfc"
   ],
   "preferGlobal": true,
   "author": "Peter Lee <peter@intercloud.net>",
@@ -33,13 +39,16 @@
     "clim": "^1.1.1",
     "colors": "^1.1.2",
     "commander": "^2.8.1",
-    "data-synth": "^0.6.5",
+    "data-synth": "^0.6.7",
     "errorhandler": "^1.4.1",
     "express": "^4.13.1",
     "passport": "^0.2.2",
     "prettyjson": "^1.1.2",
     "yang-parser": "^0.1.0",
     "yang-v1-extensions": "file:yang_modules/yang-v1-extensions"
+  },
+  "optionalDependencies": {
+    "complex-types": "file:yang_modules/complex-types"
   },
   "bundleDependencies": [
     "clim",

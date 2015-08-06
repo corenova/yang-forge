@@ -61,11 +61,7 @@ module.exports = Forge.new module,
     # being compiled to return the contents at the current `uses`
     # node context.  The `augment/refine` statements helps to
     # alter the containing statement with changes to the schema.
-    @extension 'uses',    (key, value) ->
-      @mixin (@scope.resolve 'grouping', key)
-      @mixin value
-    @extension 'augment', (key, value) -> @merge value
-    @extension 'refine',  (key, value) -> @merge value
+    @extension 'uses',    (key, value) -> @mixin (@scope.resolve 'grouping', key), value
     @extension 'type',    (key, value) ->
       @set 'type', (@scope.resolve 'type', key) ? key
       @merge value
@@ -90,10 +86,9 @@ module.exports = Forge.new module,
     @extension 'belongs-to', (key, value) ->
       @scope.define 'module', (value.get 'prefix'), (@scope.resolve 'module', key)
 
-    # The following `import` resolver utilizes the `import` functionality
-    # introduced via the
-    # [YangCompilerMixin](./yang-compiler-mixin.litcoffee) module.
-    @extension 'import', (key, value) ->
-      mod = @scope.import name: key
-      prefix = (value.get 'prefix') ? (mod.get 'prefix')
-      @scope.define 'module', prefix, mod
+    @extension 'include', (key, value) -> @mixin value
+    @extension 'import',  (key, value) -> @scope.define 'module', key, value
+
+    # XXX - need further review
+    @extension 'augment', (key, value) -> @merge value
+    @extension 'refine',  (key, value) -> @merge value

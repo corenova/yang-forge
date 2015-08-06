@@ -31,6 +31,7 @@ module yangforge {
   
   feature restjson {
     description "When enabled, generates REST/JSON web services interface for the module";
+    if-feature express;
   }
   
   grouping compiler-rules {

@@ -19,10 +19,17 @@ module.exports = Forge.new module,
     @extension 'extends',       (key, value) -> @merge (@scope.resolve 'complex-type', key) value
     @extension 'instance-type', (key, value) -> @bind key, (@scope.resolve 'complex-type', key) value
     @extension 'instance',      (key, value) -> @bind key, Forge.Model value
-    @extension 'instance-list', (key, value) -> @bind key, Forge.Array model: value
+    @extension 'instance-list', (key, value) -> @bind key, Forge.List model: value
 
-###
+    # complex-type provides special handling for YANG 1.0
+    # leaf/leaf-list extensions when used with 'type instance-identifier'
+
+    @extension 'leaf', override: true, resolver: (key, value) ->
       @bind key, switch
-        when (DS.Meta.instanceof (value.get? 'type')) then DS.BelongsTo.extend value
-        else DS.Property.extend value
-###
+        when Forge.Model.synthesized (value?.get? 'type') then Forge.BelongsTo value
+        else Forge.Property value
+
+    @extension 'leaf-list', override: true, resolver: (key, value) ->
+      @bind key, switch
+        when Forge.Model.synthesized (value?.get? 'type') then Forge.HasMany value
+        else Forge.List value
