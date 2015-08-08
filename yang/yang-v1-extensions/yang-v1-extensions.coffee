@@ -63,7 +63,7 @@ module.exports = Forge.new module,
     # alter the containing statement with changes to the schema.
     @extension 'uses',    (key, value) -> @mixin (@scope.resolve 'grouping', key), value
     @extension 'type',    (key, value) ->
-      @set 'type', (@scope.resolve 'type', key) ? key
+      @set 'type', (@scope.resolve 'type', key, false) ? key
       @merge value
 
     @extension 'config',    (key, value) -> @set 'config', key is 'true'
@@ -83,11 +83,10 @@ module.exports = Forge.new module,
     # the governing `compile` process which means that the metadata
     # available within that context will be made *eventually available* to
     # the included submodule.
-    @extension 'belongs-to', (key, value) ->
-      @scope.define 'module', (value.get 'prefix'), (@scope.resolve 'module', key)
+    @extension 'belongs-to', (key, value) -> @scope[value.get 'prefix'] = @scope
 
     @extension 'include', (key, value) -> @mixin value
-    @extension 'import',  (key, value) -> @scope.define 'module', key, value
+    @extension 'import',  (key, value) -> @scope[key] = value?.extract? 'exports'
 
     # XXX - need further review
     @extension 'augment', (key, value) -> @merge value

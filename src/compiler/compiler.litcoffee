@@ -24,20 +24,33 @@ well as `resolve` to retrieve meta attribute about the module being
 compiled (including from external imported modules mapped by prefix).
 
       define: (type, key, value) ->
-        exists = @resolve type, key
-        unless exists?
-          #@set "#{type}.#{key}", value
-          @exports ?= {}
-          Meta.copy @exports, Meta.objectify "#{type}.#{key}", value
-        undefined
-
-      resolve: (type, key) ->
-        [ prefix..., key ] = key.split ':'
+        exists = @resolve type, key, false
         switch
-          when prefix.length > 0
-            (@resolve 'module', prefix[0])?.get "exports.#{type}.#{key}"
-          else
-            @exports?[type]?[key]
+          when not exists?
+            [ prefix..., key ] = key.split ':'
+            base =
+              (if prefix.length > 0
+                @[prefix[0]] ?= {}
+                @[prefix[0]].exports ?= {}
+                @[prefix[0]].exports
+              else
+                @exports ?= {}
+                @exports)
+            #@set "#{type}.#{key}", value
+            Meta.copy base, Meta.objectify "#{type}.#{key}", value
+          when Meta.instanceof exists
+            exists.merge value
+          when exists.constructor is Object
+            Meta.copy exists, value
+        return undefined
+
+      resolve: (type, key, warn=true) ->
+        [ prefix..., key ] = key.split ':'
+        base = if prefix.length > 0 then @[prefix[0]]?.exports else @exports
+        match = base?[type]?[key]
+        if not match? and warn
+          console.log "[resolve] unable to find #{type}:#{key}"
+        return match
 
 The `parse` function performs recursive parsing of passed in statement
 and sub-statements and usually invoked in the context of the
@@ -59,7 +72,7 @@ ensures syntax correctness and building the JS object tree structure.
         params = 
           (@parse stmt for stmt in input.substmts)
           .filter (e) -> e?
-          .reduce ((a, b) -> Meta.copy a, b), {}
+          .reduce ((a, b) -> Meta.copy a, b, true), {}
         params = undefined unless Object.keys(params).length > 0
 
         unless params?
@@ -100,11 +113,14 @@ found in the parsed output in order to prepare the context for the
                   Meta.objectify name, extension
                 .reduce ((a, b) -> Meta.copy a, b), {}
             if params.include?
-              params.include = 
-                (extractKeys params.include)
-                .map (name) => @include name, context
+              unless params.include instanceof Object
+                params.include = (Meta.objectify params.include, undefined)
+              params.include =
+                (@include name, context for name of params.include)
                 .reduce ((a, b) -> Meta.copy a, b), {}
             if params.import?
+              unless params.import instanceof Object
+                params.import = (Meta.objectify params.import, undefined)
               params.import =
                 (@import name, opts, context for name, opts of params.import)
                 .reduce ((a, b) -> Meta.copy a, b), {}
@@ -114,20 +130,49 @@ found in the parsed output in order to prepare the context for the
           console.log foundExtensions.join ', '
         return input
 
+      path = require 'path'
+      fs = require 'fs'
+
+      searchPath: (name) ->
+        pkgdir = (@constructor.get 'pkgdir') ? '.'
+        return [
+          "module:@yang/#{name}"
+          "module:#{name}"
+          "module:#{path.resolve name}"
+          "schema:" + path.resolve pkgdir, "yang/#{name}.yang"
+          "schema:" + path.resolve pkgdir, "yang/#{name}"
+          "schema:" + path.resolve "yang/#{name}.yang"
+          "schema:" + path.resolve "yang/#{name}"
+        ]
+
+      load: (name, context=this) ->
+        origin = (@constructor.get 'origin') ? global
+        errors = []
+        for target in (context.searchPath name)
+          [ type, arg... ] = target.split ':'
+          arg = arg.join ':'
+          console.log "[load] try '#{target}'..."
+          try m = switch type
+            when 'module'
+              try (origin.require arg) catch e then errors.push e; require arg
+            when 'schema'
+              @compile (fs.readFileSync arg, 'utf-8'), null, context.exports.extension
+          catch e then errors.push e; continue
+          break if m?
+        console.assert m?,
+          "unable to load (sub)module '#{name}' into compile context:\n" + errors.join "\n"
+        return m
+
       include: (name, context=this) ->
         console.log "[include] submodule '#{name}' loading..."
-        m = require name
-        Meta.copy context, m?.extract 'exports'
+        m = @load name, context
+        Meta.copy context, m.extract 'exports'
         console.log "[include] submodule '#{name}' loaded into context" 
         Meta.objectify name, m
 
       import: (name, opts, context=this) ->
         console.log "[import] module '#{name}' loading..."
-        try m = require name
-        catch e then console.log e; return
-        console.log "hello"
-        console.log m
-        console.log "bye"
+        m = @load name, context
         rev = opts['revision-date']
         if rev? and not (m.get "revision.#{rev}")?
           console.warn "[import] requested #{rev} not availabe in '#{name}'"
@@ -135,7 +180,9 @@ found in the parsed output in order to prepare the context for the
           return
         exts = m.get 'exports.extension'
         for key, val of exts when val.override is true
-          context.refine 'extension', key, val
+          delete val.override # don't need this to carry over
+          console.log "[import] override '#{key}' extension with deviations"
+          context.define 'extension', key, val
         console.log "[import] module '#{name}' loaded into context"
         Meta.objectify opts.prefix ? name, m
 
@@ -202,7 +249,11 @@ provided input.
         #
         # TODO: need to also assert on cardinality of each
         # sub-statements
-        for key, val of input when not scope? or key of scope
+        for key, val of input
+          [ prf..., kw ] = key.split ':'
+          unless not scope? or kw of scope
+            throw "invalid '#{kw}' extension found during compile operation"
+
           if key is 'extension'
             output.set key, val
             continue

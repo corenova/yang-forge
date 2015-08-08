@@ -1,6 +1,6 @@
 {
-  "version": "0.1.2",
-  "name": "complex-types",
+  "version": "0.1.3",
+  "name": "@yang/complex-types",
   "description": "yangforged complex-types module",
   "license": "MIT",
   "main": "complex-types.js",
@@ -32,6 +32,7 @@
       "status": "0..1"
     },
     "instance": {
+      "augment": "0..n",
       "choice": "0..n",
       "config": "0..1",
       "container": "0..n",
@@ -50,6 +51,7 @@
       "when": "0..1"
     },
     "instance-list": {
+      "augment": "0..n",
       "choice": "0..n",
       "config": "0..1",
       "container": "0..n",
@@ -69,24 +71,29 @@
       "when": "0..1"
     },
     "module": {
+      "override": true,
       "complex-type": "0..n",
       "instance": "0..n",
       "instance-list": "0..n"
     },
     "submodule": {
+      "override": true,
       "complex-type": "0..n",
       "instance": "0..n",
       "instance-list": "0..n"
     },
     "container": {
+      "override": true,
       "instance": "0..n",
       "instance-list": "0..n"
     },
     "grouping": {
+      "override": true,
       "instance": "0..n",
       "instance-list": "0..n"
     },
     "type": {
+      "override": true,
       "instance-type": "0..1"
     }
   }
