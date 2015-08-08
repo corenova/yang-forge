@@ -314,8 +314,10 @@
       "yang-version": "0..1"
     },
     "type": {
+      "base": "0..1",
       "bit": "0..n",
       "enum": "0..n",
+      "fraction-digits": "0..1",
       "length": "0..1",
       "path": "0..1",
       "pattern": "0..1",

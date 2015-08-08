@@ -225,12 +225,13 @@ module.exports = Forge.new module,
 
     @on 'yangforge:schema', (input, output, next) ->
       options = input.get 'options'
+      forge = @seek synth: 'forge'
       result = switch
         when options.eval 
-          x = @parent.compile options.eval
+          x = forge.compile options.eval
           x?.extract 'module'
         when options.compile
-          x = @parent.compile (fs.readFileSync options.compile, 'utf-8')
+          x = forge.compile (fs.readFileSync options.compile, 'utf-8')
           x?.extract 'module'
 
       console.assert !!result, "unable to process input"
@@ -247,16 +248,17 @@ module.exports = Forge.new module,
     @on 'yangforge:run', (input, output, next, origin) ->
       names = input.get 'argument'
       options = input.get 'options'
-      forgery = @parent.constructor
+      forge = @seek synth: 'forge'
+      forgery = forge.constructor
       if options.compile
-        try forgery.merge @parent.compile (fs.readFileSync options.compile, 'utf-8')
+        try forgery.merge forge.compile (fs.readFileSync options.compile, 'utf-8')
         catch e
           console.error "unable to run native YANG schema file: #{options.compile}\n".red
           throw e
       else
         slaves = for name in names
-          try require name
-          catch then require (path.resolve name)
+          try forge.load name
+          catch e then console.warn "unable to load '#{name}' due to #{e}"
         forgery.mixin slave for slave in slaves
       while arg = process.argv.shift()
         break if arg is '--'

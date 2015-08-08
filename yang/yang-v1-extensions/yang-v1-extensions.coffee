@@ -86,10 +86,7 @@ module.exports = Forge.new module,
     @extension 'belongs-to', (key, value) -> @scope[value.get 'prefix'] = @scope
 
     @extension 'include', (key, value) -> @mixin value
-    @extension 'import',  (key, value) ->
-      console.log "IMPORTING #{key}..."
-      console.log value if key is 'mgmt'
-      @scope[key] = value?.extract? 'exports'
+    @extension 'import',  (key, value) -> @scope[key] = value?.extract? 'exports'
 
     # XXX - need further review
     @extension 'augment', (key, value) -> @merge value

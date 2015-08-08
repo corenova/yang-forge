@@ -14,16 +14,15 @@ Forge = require 'yangforge'
 module.exports = Forge.new module,
   before: ->
     @extension 'complex-type',  (key, value) ->
-      console.warn "DEFINING COMPLEX-TYPE for #{key}"
-      @scope.define 'complex-type', key, Forge.Model value, -> @set modelName: key
+      @scope.define 'complex-type', key, Forge.Model value, -> @set modelName: key, temp: false
       
     @extension 'abstract',      (key, value) -> undefined
     @extension 'extends',       (key, value) -> @merge (@scope.resolve 'complex-type', key)
     @extension 'instance-type', (key, value) ->
       ct = (@scope.resolve 'complex-type', key, false)
       unless ct?
-        console.warn "TEMPORARY COMPLEX-TYPE for #{key}"
-        ct = Forge.Model undefined
+        console.log "creating temporary complex-type for: #{key}"
+        ct = Forge.Model temp: true
         @scope.define 'complex-type', key, ct
       @set model: ct
 
