@@ -84,12 +84,15 @@ class Forge extends Synth
       # console.log id: module.id, parent: id: module.parent.id, loaded: module.parent.loaded, grand: id: module.parent.parent?.id, loaded: module.parent.parent?.loaded
       if module.id is input.id
         unless module.loaded is true
-          console.log "FORGERY NOT YET LOADED..."
           if input.parent.parent?.loaded is true
-            # optimization to return the grandparent of the module (which will be an instance of a constructed Forgery)
-            grand = input.parent.parent.exports
-            return if Forge.synthesized grand then grand else arguments.callee
-
+            console.log "[constructor] searching ancestors for a synthesized forgery..."
+            forge = Forge::seek?.call input.parent.parent,
+              loaded: true
+              exports: (v) -> Forge.synthesized v
+            if forge?
+              console.log "[constructor] found a forgery!"
+            return forge?.exports ? arguments.callee
+          
           console.log "[constructor] forgery initiating SELF-CONSTRUCTION"
           module.exports = arguments.callee
         else
@@ -100,6 +103,8 @@ class Forge extends Synth
       try
         pkgdir = (path.dirname input.filename).replace /\/lib$/, ''
         config = input.require (path.resolve pkgdir, './package.json')
+        config.pkgdir = pkgdir
+        config.origin = input
         
         # XXX - need to improve ways that schema files are loaded
         schemas =
@@ -184,14 +189,13 @@ module.exports = Forge.new module,
     @on 'yangforge:info', (input, output, next) ->
       names = input.get 'argument'
       options = input.get 'options'
+      forge = @seek synth: 'forge'
       unless names.length
-        console.info prettyjson.render (@container.constructor.info options.verbose)
+        console.info prettyjson.render (forge.constructor.info options.verbose)
       else
         res = for name in names
-          try (require name).info options.verbose
-          catch
-            try (require( path.resolve name)).info options.verbose
-            catch e then console.error "unable to extract info from '#{name}' module\n".red+"#{e}"
+          try (forge.load name).info options.verbose
+          catch e then console.error "unable to extract info from '#{name}' module\n".red+"#{e}"
         console.info prettyjson.render res
       next()
           
@@ -204,7 +208,7 @@ module.exports = Forge.new module,
 
     @on 'yangforge:list', (input, output, next) ->
       options = input.get 'options'
-      modules = (@container.get 'modules').map (e) -> e.constructor.info options.verbose
+      modules = (@parent.get 'modules').map (e) -> e.constructor.info options.verbose
       unless options.verbose
         console.info prettyjson.render modules
         return next()
@@ -217,16 +221,16 @@ module.exports = Forge.new module,
       child.stderr.on 'data', (data) -> console.warn data.red
       child.on 'close', (code) -> next()
         
-    @on 'yangforge:import', (input, output, next) -> @container.import input
+    @on 'yangforge:import', (input, output, next) -> @parent.import input
 
     @on 'yangforge:schema', (input, output, next) ->
       options = input.get 'options'
       result = switch
         when options.eval 
-          x = @container.compile options.eval
+          x = @parent.compile options.eval
           x?.extract 'module'
         when options.compile
-          x = @container.compile (fs.readFileSync options.compile, 'utf-8')
+          x = @parent.compile (fs.readFileSync options.compile, 'utf-8')
           x?.extract 'module'
 
       console.assert !!result, "unable to process input"
@@ -243,9 +247,9 @@ module.exports = Forge.new module,
     @on 'yangforge:run', (input, output, next, origin) ->
       names = input.get 'argument'
       options = input.get 'options'
-      forgery = @container.constructor
+      forgery = @parent.constructor
       if options.compile
-        try forgery.merge @container.compile (fs.readFileSync options.compile, 'utf-8')
+        try forgery.merge @parent.compile (fs.readFileSync options.compile, 'utf-8')
         catch e
           console.error "unable to run native YANG schema file: #{options.compile}\n".red
           throw e
