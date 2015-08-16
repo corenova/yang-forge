@@ -145,6 +145,7 @@ found in the parsed output in order to prepare the context for the
           "schema:" + path.resolve "yang/#{name}.yang"
           "schema:" + path.resolve "yang/#{name}"
           "schema:" + path.resolve "#{name}"
+          "schema:" + path.resolve "#{name}.yang"
         ].filter (e) -> switch (path.extname name)
           when '.yang' then /^schema/.test e
           else true

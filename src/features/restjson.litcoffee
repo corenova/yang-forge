@@ -36,7 +36,7 @@ instances.
               metadata: module.constructor.info()
               rpc: (for name, rpc of (module.meta 'exports.rpc')
                 name: name
-                description: (rpc.get 'description') ? '(empty)'
+                description: (rpc?.get 'description') ? '(empty)'
               ).reduce ((a,b) -> a[b.name] = b.description; a), {}
             ).reduce ((a,b) -> a[b.metadata.name] = b; a), {}
           next()
@@ -74,7 +74,7 @@ instances.
             metadata: req.module.constructor.info()
             rpc: (for name, rpc of (req.module.meta 'exports.rpc')
               name: name
-              description: rpc.get 'description'
+              description: (rpc?.get 'description') ? '(empty)'
             ).reduce ((a,b) -> a[b.name] = b.description; a), {}
           next()
         .get (req, res, next) -> res.locals.result = req.module.serialize(); next()

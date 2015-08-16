@@ -34,7 +34,7 @@ module.exports = Forge.new module,
     @extension 'notification', (key, value) -> @scope.define 'notification', key, value
 
     @extension 'module', (key, value) ->
-      @set exports: @scope.exports
+      @set name: key, exports: @scope.exports
       @extend info: -> (@get "bindings.#{key}").info()
       @include serialize: -> Forge.objectify (@get 'name'), (@access (@get 'name')).serialize()
       @bind 'name', key
@@ -51,7 +51,7 @@ module.exports = Forge.new module,
           return info
           
     @extension 'submodule', (key, value) ->
-      @set exports: @scope.exports
+      @set name: key, exports: @scope.exports
       @mixin value
 
     @extension 'import',  (key, value) -> @scope[key] = value?.extract? 'exports'
