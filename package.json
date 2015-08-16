@@ -1,5 +1,5 @@
 {
-  "version": "0.9.10",
+  "version": "0.9.11",
   "name": "yangforge",
   "description": "YANG driven JS application builder",
   "keywords": [
@@ -40,16 +40,17 @@
     "clim": "^1.1.1",
     "colors": "^1.1.2",
     "commander": "^2.8.1",
-    "data-synth": "^0.6.13",
+    "data-synth": "^0.6.17",
     "errorhandler": "^1.4.1",
     "express": "^4.13.1",
     "passport": "^0.2.2",
     "prettyjson": "^1.1.2",
+    "promise": "^7.0.4",
     "yang-parser": "^0.1.0",
-    "@yang/yang-v1-extensions": "file:yang/yang-v1-extensions"
+    "yang-v1-extensions": "file:yang/yang-v1-extensions"
   },
   "optionalDependencies": {
-    "@yang/complex-types": "file:yang/complex-types"
+    "complex-types": "file:yang/complex-types"
   },
   "bundleDependencies": [
     "clim",
@@ -57,8 +58,8 @@
     "commander",
     "prettyjson",
     "yang-parser",
-    "@yang/complex-types",
-    "@yang/yang-v1-extensions"
+    "complex-types",
+    "yang-v1-extensions"
   ],
   "devDependencies": {
     "coffee-script": ">=1.7"

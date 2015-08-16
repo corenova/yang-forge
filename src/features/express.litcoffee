@@ -15,7 +15,7 @@ for higher-order features to utilize it for associating additional routing endpo
     module.exports = Forge.Interface
       name: 'express'
       description: 'Fast, unopionated, minimalist web framework (HTTP/HTTPS)'
-      generator: (opts) ->
+      generator: (port=5000) ->
         express = require 'express'
         app = (->
           bp = require 'body-parser'
@@ -35,8 +35,7 @@ for higher-order features to utilize it for associating additional routing endpo
           return this
         ).call express()
 
-        opts.port ?= 5000
-        console.info "express: listening on #{opts.port}".grey
-        app.listen opts.port
+        console.info "express: listening on #{port}".grey
+        app.listen port
         return app
 

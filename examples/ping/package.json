@@ -17,6 +17,6 @@
     "prepublish": "coffee -c *coffee"
   },
   "dependencies": {
-    "yangforge": "^0.9.6"
+    "yangforge": "^0.9.11"
   }
 }

@@ -26,21 +26,20 @@ arguments.
           .description meta.description
           .option '--no-color', 'disable color output'
 
-        for name, Action of (@access 'yangforge').meta 'rpc'
-          continue unless Forge.Meta.instanceof Action
+        for action, meta of (@meta 'exports.rpc')
+          continue unless Forge.Meta.instanceof meta
 
-          rpc = Action.reduce()
-          clionly = (rpc.meta['if-feature']) is 'cli'
+          rpc = meta.reduce()
+          continue unless (rpc.meta['if-feature']?.hasOwnProperty 'cli')
 
-          command = "#{name}"
-          argument = rpc.input?.argument
-
-          if argument?.meta.units?
-            units = "#{argument.meta.units}"
-            units += '...' if argument.meta.synth is 'list'
+          command = "#{action}"
+          args = rpc.input?.arguments
+          if args?.meta.config is true
+            argstring = args.meta.description ? args.meta.type
+            argstring += '...' unless args.meta['max-elements'] is '1'
             command +=
-              if argument.meta.required then " <#{units}>"
-              else " [#{units}]"
+              if args.meta.required then " <#{argstring}>"
+              else " [#{argstring}]"
           cmd = program.command command
 
           status = rpc.meta.status
@@ -67,11 +66,11 @@ arguments.
             defaultValue = switch option.meta.type
               when 'boolean' then (option.meta.default is 'true')
               else option.meta.default
-            console.log "setting option #{key} with default: #{defaultValue}"
+            if defaultValue? and !!defaultValue
+              console.log "setting option #{key} with default: #{defaultValue}"
             cmd.option optstring, optdesc, defaultValue
 
-          module = @access 'yangforge'
-          do (cmd, Action, status, module) ->
+          do (cmd, action, status) ->
             cmd.action ->
               switch status
                 when 'obsolete', 'planned'
@@ -87,8 +86,7 @@ arguments.
                   else
                     [ args..., opt ] = arguments
                     [ args, opt ]
-                data = input: argument: argument, options: options
-                (new Action data, module).invoke program
+                app.invoke action, input: arguments: argument, options: options
                   .then (res) ->
                     console.log "action complete"
                     console.log res

@@ -2,7 +2,7 @@ Forge = require 'yangforge'
 module.exports = Forge.new module,
   after: ->
     sys = require 'child_process'
-    @on 'ping:send-echo', (input, output, done, origin) ->
+    @on 'send-echo', (input, output, done, origin) ->
       destination = input.get 'destination'
       unless destination?
         console.error "cannot issue ping without destination address"

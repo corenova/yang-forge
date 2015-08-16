@@ -22,9 +22,24 @@ Forge = require 'yangforge'
 
 module.exports = Forge.new module,
   before: ->
+    # The following extensions declare externally shared metadata
+    # definitions about the module.  They are not attached into
+    # the generated module's configuration tree but instead
+    # defined in the metadata section of the module only.
+    @extension 'identity', (key, value) -> @scope.define 'identity', key, value
+    @extension 'feature',  (key, value) -> @scope.define 'feature', key, value
+    @extension 'grouping', (key, value) -> @scope.define 'grouping', key, value
+    @extension 'typedef',  (key, value) -> @scope.define 'type', key, value
+    @extension 'rpc',      (key, value) -> @scope.define 'rpc', key, value
+    @extension 'notification', (key, value) -> @scope.define 'notification', key, value
+
     @extension 'module', (key, value) ->
+      @set exports: @scope.exports
+      @extend info: -> (@get "bindings.#{key}").info()
+      @include serialize: -> Forge.objectify (@get 'name'), (@access (@get 'name')).serialize()
+      @bind 'name', key
       @bind key, Forge.Store value, ->
-        @set 'name', key
+        @set name: key
         @info = (verbose=false) ->
           keys = [ 'name', 'prefix', 'namespace', 'description', 'revision', 'organization', 'contact' ]
           keys.push 'include', 'import' if verbose
@@ -34,9 +49,25 @@ module.exports = Forge.new module,
           info.import =
             (@extract.apply data, keys for k, data of info.import) if info.import?
           return info
-        
+          
+    @extension 'submodule', (key, value) ->
+      @set exports: @scope.exports
+      @mixin value
+
+    @extension 'import',  (key, value) -> @scope[key] = value?.extract? 'exports'
+    @extension 'include', (key, value) -> @mixin value
+    
+    # The `belongs-to` statement is only used in the context of a
+    # `submodule` definition which is processed as a sub-compile stage
+    # within the containing `module` defintion.  Therefore, when this
+    # statement is encountered, it would be processed within the context of
+    # the governing `compile` process which means that the metadata
+    # available within that context will be made *eventually available* to
+    # the included submodule.
+    @extension 'belongs-to', (key, value) -> @scope[value.get 'prefix'] = @scope
+
     @extension 'container', (key, value) -> @bind key, Forge.Object value
-    @extension 'enum',      (key, value) -> #@set key, value.reduce()
+    @extension 'enum',      (key, value) -> null
     @extension 'leaf',      (key, value) ->
       @bind key, Forge.Property value, ->
         @set required: (@get 'mandatory') ? false
@@ -48,21 +79,21 @@ module.exports = Forge.new module,
       entry = Forge.Object (value.extract 'bindings')
       @bind key, (Forge.List value.unbind()).set type: entry
 
-    # The following extensions declare externally shared metadata
-    # definitions about the module.  They are not attached into
-    # the generated module's configuration tree but instead
-    # defined in the metadata section of the module only.
-    @extension 'grouping', (key, value) -> @scope.define 'grouping', key, value
-    @extension 'typedef',  (key, value) -> @scope.define 'type', key, value
-
     # The following extensions makes alterations to the
     # configuration tree.  The `uses` statement references a
     # `grouping` node available within the context of the schema
     # being compiled to return the contents at the current `uses`
     # node context.  The `augment/refine` statements helps to
     # alter the containing statement with changes to the schema.
-    @extension 'uses',    (key, value) -> @mixin (@scope.resolve 'grouping', key), value
-    @extension 'type',    (key, value) ->
+    @extension 'uses', (key, value) ->
+      @mixin (@scope.resolve 'grouping', key), value
+      for k, v  of value?.get? 'refine'
+        orig = @unbind k ? Forge.Meta
+        @bind k, (class extends orig).merge v
+    @extension 'augment', (key, value) -> @bind key, value
+    @extension 'refine',  (key, value) -> @merge "refine.#{key}", value
+
+    @extension 'type', (key, value) ->
       @set 'type', (@scope.resolve 'type', key, false) ? key
       @merge value
 
@@ -70,24 +101,6 @@ module.exports = Forge.new module,
     @extension 'mandatory', (key, value) -> @set 'mandatory', key is 'true'
     @extension 'require-instance', (key, value) -> @set 'require-instance', key is 'true'
 
-    @extension 'rpc',    (key, value) -> @set "rpc.#{key}", Forge.Action value, -> @set name: key
     @extension 'input',  (key, value) -> @bind 'input', value
     @extension 'output', (key, value) -> @bind 'output', value
 
-    @extension 'notification', (key, value) -> @set "notification.#{key}", value
-
-    # The `belongs-to` statement is only used in the context of a
-    # `submodule` definition which is processed as a sub-compile stage
-    # within the containing `module` defintion.  Therefore, when this
-    # statement is encountered, it would be processed within the context of
-    # the governing `compile` process which means that the metadata
-    # available within that context will be made *eventually available* to
-    # the included submodule.
-    @extension 'belongs-to', (key, value) -> @scope[value.get 'prefix'] = @scope
-
-    @extension 'include', (key, value) -> @mixin value
-    @extension 'import',  (key, value) -> @scope[key] = value?.extract? 'exports'
-
-    # XXX - need further review
-    @extension 'augment', (key, value) -> @merge value
-    @extension 'refine',  (key, value) -> @merge value

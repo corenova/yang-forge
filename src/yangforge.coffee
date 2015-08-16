@@ -9,9 +9,10 @@ path = require 'path'
 sys = require 'child_process'
 fs = require 'fs'
 prettyjson = require 'prettyjson'
+Promise = require 'promise'
 
 class Forge extends Synth
-  @set synth: 'forge', extensions: {}
+  @set synth: 'forge', extensions: {}, events: []
 
   @mixin (require './compiler/compiler')
 
@@ -22,31 +23,24 @@ class Forge extends Synth
       @merge "extensions.#{name}", config
     else
       config.warn "attempting to define extension '#{name}' with invalid configuration"
-      
-  @feature = (name, func) -> @set "features.#{name}", status: off, hook: func
-  
-  toggleFeature = (name, toggle) ->
-    feature = @get "features.#{name}"
-    if feature?
-      console.log "setting #{@get 'name'} feature #{name} to #{toggle}"
-      feature.status = toggle
-      @configure feature.hook, toggle
+
+  @on = (event, func) ->
+    [ target, action ] = event.split ':'
+    unless action?
+      @merge events: [ key: target, value: func ]
     else
-      console.error "#{@get 'name'} does not have feature #{name}"
-    
-  @enable  = (features...) -> toggleFeature.call this, name, on  for name in features; this
-  @disable = (features...) -> toggleFeature.call this, name, off for name in features; this
+      (@get "bindings.#{target}")?.merge 'events', [ key: action, value: func ]
 
   @info = (verbose=false) ->
     infokeys = [
       'name', 'description', 'version', 'schema', 'license', 'author', 'homepage',
-      'keywords', 'dependencies', 'features', 'exports'
+      'keywords', 'dependencies', 'exports'
     ]
     if verbose
       infokeys.push 'module', 'optionalDependencies', 'repository', 'bugs'
     info = @extract.apply this, infokeys
+    info.schema = (@get "bindings.#{@get "bindings.name"}")?.info verbose
     info.dependencies = Object.keys info.dependencies if info.dependencies?
-    info.features = Object.keys info.features if info.features?
     info.exports[k] = Object.keys v for k, v of info.exports when v instanceof Object
     if not verbose and info.exports.extension? and info.exports.extension.length > 10
       info.exports.extension = info.exports.extension.length
@@ -56,9 +50,10 @@ class Forge extends Synth
 
   @schema
     extensions: @attr 'object'
-    modules:    @computed (->
-      @access name for name of @get() when name not in [ 'extensions' ]
-    ), type: 'array', private: true
+    events:     @computed (-> return @events ), type: 'array', private: true
+    features:   @list Forge.Interface, key: 'name', private: true
+    modules:    @list Forge.Meta, key: 'name', private: true
+    methods:    @computed (-> return Object.keys(@meta 'exports.rpc') ), type: 'array', private: true
 
   # this is a factory that instantiates based on compiled output of
   # constructor's meta data
@@ -77,11 +72,6 @@ class Forge extends Synth
       # is being constructed/compiled, other dependent modules needed
       # for YangForge construction itself (such as yang-v1-extensions)
       # can properly export themselves.
-      # input.exports = arguments.callee unless input.loaded is true
-      # console.log "input\n"
-      # console.log id: input.id, parent: id: input.parent.id, loaded: input.parent.loaded, grand: id: input.parent.parent?.id, loaded: input.parent.parent?.loaded
-      # console.log "module\n"
-      # console.log id: module.id, parent: id: module.parent.id, loaded: module.parent.loaded, grand: id: module.parent.parent?.id, loaded: module.parent.parent?.loaded
       if module.id is input.id
         unless module.loaded is true
           if input.parent.parent?.loaded is true
@@ -105,24 +95,17 @@ class Forge extends Synth
         config = input.require (path.resolve pkgdir, './package.json')
         config.pkgdir = pkgdir
         config.origin = input
-        
-        # XXX - need to improve ways that schema files are loaded
-        schemas =
-          (if config.schema instanceof Array then config.schema else [ config.schema ])
-          .filter (e) -> e? and !!e
-          .map (schema) -> fs.readFileSync (path.resolve pkgdir, schema), 'utf-8'
+        schema = fs.readFileSync (path.resolve pkgdir, config.schema), 'utf-8'
       catch err
         console.error "[constructor] Unable to discover YANG schema for the target module, missing 'schema' in package.json?"
         throw err
 
-      console.log "forging #{config.name} (#{config.version}) using schema(s): #{config.schema}"
+      console.log "forging #{config.name} (#{config.version}) using schema: #{config.schema}"
       exts = this.get 'exports.extension' if Forge.instanceof this
       output = super Forge, ->
         @merge config
-        @merge exports
         @configure hooks.before
-        for schema in schemas
-          @merge ((new this @extract 'extensions').compile schema, null, exts)
+        @merge ((new this @extract 'extensions').compile schema, null, exts)
         @configure hooks.after
       console.log "forging complete...."
       console.log output?.info false
@@ -130,51 +113,67 @@ class Forge extends Synth
       
     # instantiate via new
     super
+    @events = (@constructor.get 'events')
+    .map (event) => name: event.key, listener: @on event.key, event.value
 
-  # RUN THIS FORGE
-  @run = (config={}) ->
-    for feature of @get 'features'
-      @enable feature if config[feature] is true
-
-    # before we construct, we need to 'normalize' the bindings based on if-feature conditions
-    (new this).run config
-
-  run: (opts) ->
-    console.log "forgery firing up..."
-    @runners = runners = {}
-    for name of (@get 'yangforge.features')
-      continue if runners[name]? # already running
+  # RUN THIS FORGE (convenience function for programmatic run)
+  @run = (features...) ->
+    options = features
+      .map (e) -> Forge.Meta.objectify e, on
+      .reduce ((a, b) -> Forge.Meta.copy a, b, true), {}
       
-      feature = @access "yangforge.features.#{name}"
-      continue unless feature?
+    # before we construct, we need to 'normalize' the bindings based on if-feature conditions
+    (new this).invoke 'run', input: options: options
 
-      # need to make this recursive so deeper needs can be met...
-      results = for wash in (feature.meta 'needs') or []
-        unless runners[wash]?
-          console.info "forgery firing up '#{wash}' feature on-behalf of #{name}".green
-          runners[wash] = (@access "yangforge.features.#{name}")?.run this
-        runners[wash]
-      console.log "forgery firing up '#{name}' feature".green
-      results.unshift this
-      results.push opts
-      runners[name] = feature.run.apply feature, results
-    @emit 'running', runners
+  invoke: (event, data, scope=this) ->
+    unless event?
+      return Promise.reject "cannot invoke without specifying action"
+      
+    listeners = @listeners event
+    console.log "invoking '#{event}' for handling by #{listeners.length} listeners"
+
+    rpc = @meta "exports.rpc.#{event}"
+    action = new rpc data
+    promises =
+      for listener in listeners
+        do (listener) ->
+          new Promise (resolve, reject) ->
+            listener.apply scope, [
+              (action.access 'input')
+              (action.access 'output')
+              (err) -> if err? then reject err else resolve action
+            ]
+    unless promises.length > 0
+      promises.push Promise.reject "missing listeners for '#{event}' event"
+
+    return Promise.all promises
+      .then (res) ->
+        console.log "promise all returned with"
+        console.log res
+        for item in res
+          console.log "got back #{item} from listener"
+        return action
 
 module.exports = Forge.new module,
   before: -> console.log "forgery initiating schema compilations..."
   after: ->
-    console.log "forgery AFTER compile event registrations..."
-    
-    @on 'yangforge:build', (input, output, next) ->
-      console.info "should build: #{input.get 'argument'}"
+    console.log "forgery invoking after hook..."
+
+    # update yangforge.runtime bindings
+    @rebind 'yangforge.runtime.features', (prev) =>
+      @computed (-> (@seek synth: 'forge').get 'features' ), type: 'array'
+
+    @rebind 'yangforge.runtime.modules', (prev) =>
+      @computed (-> (@seek synth: 'forge').get 'modules' ), type: 'array'
+
+    @on 'build', (input, output, next) ->
+      console.info "should build: #{input.get 'arguments'}"
       next()
 
-    @on 'yangforge:build', (input, output, next) ->
+    @on 'build', (input, output, next) ->
       next "this is an example for a failed listener"
 
-    # handle RPC calls
-
-    @on 'yangforge:init', ->
+    @on 'init', ->
       console.info "initializing yangforge environment...".grey
       child = sys.spawn 'npm', [ 'init' ], stdio: 'inherit'
       # child.stdout.on 'data', (data) ->
@@ -186,29 +185,28 @@ module.exports = Forge.new module,
           when 'EACCES' then console.error "npm not executable. try chmod or run as root".red
         process.exit 1
 
-    @on 'yangforge:info', (input, output, next) ->
-      names = input.get 'argument'
+    @on 'info', (input, output, next) ->
+      names = input.get 'arguments'
       options = input.get 'options'
-      forge = @seek synth: 'forge'
       unless names.length
-        console.info prettyjson.render (forge.constructor.info options.verbose)
+        console.info prettyjson.render (@constructor.info options.verbose)
       else
         res = for name in names
-          try (forge.load name).info options.verbose
+          try (@load name).info options.verbose
           catch e then console.error "unable to extract info from '#{name}' module\n".red+"#{e}"
         console.info prettyjson.render res
       next()
-          
-    @on 'yangforge:install', (input, output, next) ->
-      packages = input.get 'argument'
+
+    @on 'install', (input, output, next) ->
+      packages = input.get 'arguments'
       options = input.get 'options'
       for pkg in packages
         console.info "installing #{pkg}" + (if options.save then " --save" else '')
       next()
 
-    @on 'yangforge:list', (input, output, next) ->
+    @on 'list', (input, output, next) ->
       options = input.get 'options'
-      modules = (@parent.get 'modules').map (e) -> e.constructor.info options.verbose
+      modules = (@get 'modules').map (e) -> e.constructor.info options.verbose
       unless options.verbose
         console.info prettyjson.render modules
         return next()
@@ -220,18 +218,17 @@ module.exports = Forge.new module,
         console.info prettyjson.render results
       child.stderr.on 'data', (data) -> console.warn data.red
       child.on 'close', (code) -> next()
-        
-    @on 'yangforge:import', (input, output, next) -> @parent.import input
 
-    @on 'yangforge:schema', (input, output, next) ->
+    @on 'import', (input, output, next) -> @import input
+
+    @on 'schema', (input, output, next) ->
       options = input.get 'options'
-      forge = @seek synth: 'forge'
       result = switch
         when options.eval 
-          x = forge.compile options.eval
+          x = @compile options.eval
           x?.extract 'module'
         when options.compile
-          x = forge.compile (fs.readFileSync options.compile, 'utf-8')
+          x = @compile (fs.readFileSync options.compile, 'utf-8')
           x?.extract 'module'
 
       console.assert !!result, "unable to process input"
@@ -241,45 +238,48 @@ module.exports = Forge.new module,
       console.info result if result?
       next()
 
-    # RUN
-    # 1. grabs yangforge constructor and merges other modules into itself
-    # 2. disables 'cli' and enables the selected interface
-    # 3. run with passed in options
-    @on 'yangforge:run', (input, output, next, origin) ->
-      names = input.get 'argument'
-      options = input.get 'options'
-      forge = @seek synth: 'forge'
-      forgery = forge.constructor
-      if options.compile
-        try forgery.merge forge.compile (fs.readFileSync options.compile, 'utf-8')
-        catch e
-          console.error "unable to run native YANG schema file: #{options.compile}\n".red
-          throw e
+    @on 'run', (input, output, next) ->
+      targets = input.get 'arguments'
+      features = input.get 'options'
+
+      console.log "forgery run with #{targets}..."
+      console.log features
+
+      if features.cli is true
+        features = cli: on
       else
-        slaves = for name in names
-          try forge.load name
-          catch e then console.warn "unable to load '#{name}' due to #{e}"
-        forgery.mixin slave for slave in slaves
-      while arg = process.argv.shift()
-        break if arg is '--'
-      forgery.disable('cli').run options
+        @set 'features.cli', off
+        process.argv = [] # hack for now...
+      
+      for target in targets
+        try (@access 'modules').push new (@load target) null, this
+        catch e then console.warn "unable to load target '#{target}' due to #{e}"
 
-    #@mixin (require './yangforge-import')
-    #@mixin (require './yangforge-export')
-    @feature 'cli', (toggle) -> switch toggle
-      when on then @bind 'yangforge.features.cli', (require './features/cli')
-      else @unbind 'yangforge.features.cli'
+      for feature, arg of features
+        continue unless arg? and arg
+        try (@access 'features').push new (@load "features/#{feature}") null, this
+        catch e then console.warn "unable to load feature '#{feature}' due to #{e}"
 
-    @feature 'express', (toggle) -> switch toggle
-      when on then @bind 'yangforge.features.express', (require './features/express')
-      else @unbind 'yangforge.features.express'
-        
-    @feature 'restjson', (toggle) -> switch toggle
-      when on
-        # hard-coded for now...
-        @enable 'express'
-        @bind 'yangforge.features.restjson', (require './features/restjson')
-      else @unbind 'yangforge.features.restjson'
+      # run passed in features
+      console.log "forgery firing up..."
+      for feature in @get 'features' when feature instanceof Forge.Meta
+        do (feature) =>
+          name = feature.meta 'name'
+          deps = for dep in (feature.meta 'needs') or []
+            console.log "forgery firing up '#{dep}' feature on-behalf of #{name}".green
+            (@get "features.#{dep}")?.run this, features[dep]
+          needs = deps.length
+          deps.unshift this
+          deps.push features[name]
+          console.log "forgery firing up '#{name}' feature with #{needs} dependents".green
+          feature.run.apply feature, deps
 
-    @feature 'debug', (toggle) ->
-
+      # console.log "forgery fired up!"
+      # console.warn @get 'features'
+      # console.warn @get 'modules'
+      next()
+      
+    @on 'enable', (input, output, next) ->
+      for key in input.get 'features'
+        (@resolve 'feature', key)?.enable()
+      next()
