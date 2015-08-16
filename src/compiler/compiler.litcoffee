@@ -139,7 +139,7 @@ found in the parsed output in order to prepare the context for the
           "module:@yang/#{name}"
           "module:#{name}"
           "module:#{path.resolve name}"
-          "module:#{path.resolve 'lib', name}"
+          "module:" + path.resolve pkgdir, "lib/#{name}"
           "schema:" + path.resolve pkgdir, "yang/#{name}.yang"
           "schema:" + path.resolve pkgdir, "yang/#{name}"
           "schema:" + path.resolve "yang/#{name}.yang"
