@@ -1,6 +1,6 @@
 {
   "version": "0.1.3",
-  "name": "@yang/complex-types",
+  "name": "complex-types",
   "description": "yangforged complex-types module",
   "license": "MIT",
   "main": "complex-types.js",

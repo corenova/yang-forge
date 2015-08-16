@@ -139,40 +139,47 @@ found in the parsed output in order to prepare the context for the
           "module:@yang/#{name}"
           "module:#{name}"
           "module:#{path.resolve name}"
+          "module:#{path.resolve 'lib', name}"
           "schema:" + path.resolve pkgdir, "yang/#{name}.yang"
           "schema:" + path.resolve pkgdir, "yang/#{name}"
           "schema:" + path.resolve "yang/#{name}.yang"
           "schema:" + path.resolve "yang/#{name}"
-        ]
+          "schema:" + path.resolve "#{name}"
+        ].filter (e) -> switch (path.extname name)
+          when '.yang' then /^schema/.test e
+          else true
 
-      load: (name, context=this) ->
+      load: (target, context=this) ->
         origin = (@constructor.get 'origin') ? global
         errors = []
-        for target in (context.searchPath name)
-          [ type, arg... ] = target.split ':'
+        console.log "[load] processing '#{target}'..."
+        for loadPath in (context.searchPath target)
+          [ type, arg... ] = loadPath.split ':'
           arg = arg.join ':'
-          console.log "[load] try '#{target}'..."
+          console.log "[load] try '#{loadPath}'..."
           try m = switch type
             when 'module'
               try (origin.require arg) catch e then errors.push e; require arg
             when 'schema'
-              @compile (fs.readFileSync arg, 'utf-8'), null, context.exports.extension
+              @compile (fs.readFileSync arg, 'utf-8'), null, context.exports?.extension
           catch e then errors.push e; continue
           break if m?
         console.assert m?,
-          "unable to load (sub)module '#{name}' into compile context:\n" + errors.join "\n"
+          "unable to load (sub)module '#{target}' into compile context:\n" + errors.join "\n"
         return m
 
-      include: (name, context=this) ->
-        console.log "[include] submodule '#{name}' loading..."
-        m = @load name, context
+      include: (target, context=this) ->
+        console.log "[include] loading '#{target}'..."
+        m = @load target, context
+        name = m.get 'name'
         Meta.copy context, m.extract 'exports'
         console.log "[include] submodule '#{name}' loaded into context" 
         Meta.objectify name, m
 
-      import: (name, opts, context=this) ->
-        console.log "[import] module '#{name}' loading..."
-        m = @load name, context
+      import: (target, opts, context=this) ->
+        console.log "[import] loading '#{target}'..."
+        m = @load target, context
+        name = m.get 'name'
         rev = opts['revision-date']
         if rev? and not (m.get "revision.#{rev}")?
           console.warn "[import] requested #{rev} not availabe in '#{name}'"
@@ -225,12 +232,10 @@ provided input.
               @define 'extension', key, value
             console.log "[compile:#{@id}] job started with following extensions: #{Object.keys(scope ? {})}"
             output = @compile input, this
-            output?.extend info: -> v.info?() for k, v of @get 'bindings'
             # if scope?
             #   for ext of @exports?.extension when ext of scope
             #     console.info "deleting #{ext} from exports"
             #     delete @exports.extension[ext]
-            output?.merge 'exports', @exports
             console.log "[compile:#{@id}] job finished"
             output
 
@@ -246,9 +251,6 @@ provided input.
         # Here we go through each of the keys of the input object and
         # validate the extension keywords and resolve these keywords
         # if resolvers are associated with these extension keywords.
-        #
-        # TODO: need to also assert on cardinality of each
-        # sub-statements
         for key, val of input
           [ prf..., kw ] = key.split ':'
           unless not scope? or kw of scope
@@ -261,6 +263,7 @@ provided input.
           ext = @resolve 'extension', key
           console.assert ext instanceof Object,
             "cannot compile statement with unknown extension '#{key}'"
+          constraint = scope?[kw]
 
           # Here we determine whether there are additional instances
           # of this extension or sub-statements to be proceseed and
@@ -275,14 +278,17 @@ provided input.
             res = switch key
               when 'extension','include','import' then params
               else @compile params, context, ext
-            unless params?
+            if not params? and constraint in [ '0..1', '1' ]
               output.set key, arg
             else
               output.set "#{key}.#{arg}", params
             if Meta.instanceof res then res.set 'yang', key
             ext.resolver?.call? output, arg, res
           else
-            output.set key, val
+            if constraint? and constraint in [ '0..1', '1' ]
+              output.set key, val
+            else
+              output.set "#{key}.#{val}", undefined
             if ext.argument?
               console.log "[compile:#{id}] #{key} #{val?.slice 0, 50}..."
               ext.resolver?.call? output, val, {}

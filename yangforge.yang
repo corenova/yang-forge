@@ -2,7 +2,6 @@ module yangforge {
   prefix yf;
 
   include yang-v1-extensions;
-  //import complex-types { prefix ct; }
 
   organization
     "ClearPath Networks NFV R&D Group";
@@ -77,54 +76,84 @@ module yangforge {
     uses compiler-rules;
   }
 
-  container modules {
-    config false;
+  grouping cli-command {
     description
-      "Provides state information about available modules contained within
-       yangforge instance";
-  }
-  
-  container features {
-    config false;
-    description
-      "Provides state information about enabled features for the module";
+      "The cli-command schema provides general schema format for defining CLI interface RPC input format";
+    leaf-list arguments {
+      description "The arguments should be 'refined' by uses to override config to true if used";
+      type string;
+      config false;
+    }
+    container options {
+      description "Placeholder to be 'augmented' during uses to add additional leaf nodes";
+    }
   }
 
+  grouping unique-element {
+    leaf id { type uuid; default auto; }
+    leaf name { type string; mandatory true; }
+    leaf description { type string; }
+    leaf status { type boolean; default false; }
+  }
+  
+  container runtime {
+    config false;
+    list modules {
+      description
+        "Provides state information about available modules for the current runtime context";
+      uses unique-element;
+      key "name";
+    }
+    list features {
+      description
+        "Provides state information about available features for the current runtime context";
+      uses unique-element;
+      key "name";
+    }
+  }
+  
   // RPC definitions for CLI
   
   rpc build {
     if-feature cli;
     description "package the application for deployment";
     input {
-      leaf-list argument { type string; units name; }
-      container options {
-        leaf save { type empty; }
-        leaf force { type boolean; }
+      uses cli-command {
+        refine arguments {
+          config true;
+          description "name";
+        }
+        augment options {
+          leaf save { type empty; }
+          leaf force { type boolean; }
+        }
       }
     }
-    status current;
+    status planned;
   }
 
   rpc config {
     if-feature cli;
     description "manage application configuration data";
     input {
-      choice argument {
-        case set {
-          container argument {
-            leaf key { type string; mandatory true; }
-            leaf value { type string; mandatory true; }
-          }
-        }
-        case get {
-          leaf argument { type string; mandatory true; units key; }
-        }
-        case delete {
-          leaf argument { type string; mandatory true; units key; }
-        }
-        case list {
-          leaf argument { type empty; }
-        }
+      uses cli-command {
+        // choice argument {
+        //   case set {
+        //     container argument {
+        //       leaf key { type string; mandatory true; }
+        //       leaf value { type string; mandatory true; }
+        //     }
+        //   }
+        //   case get {
+        //     leaf argument { type string; mandatory true; units key; }
+        //   }
+        //   case delete {
+        //     leaf argument { type string; mandatory true; units key; }
+        //   }
+        //   case list {
+        //     leaf argument { type empty; }
+        //   }
+        // }
       }
     }
     status planned;
@@ -140,12 +169,17 @@ module yangforge {
     if-feature cli;
     description "show info about one or more packages";
     input {
-      leaf-list argument { type string; units name; }
-      container options {
-        leaf verbose {
-          description "increase verbosity";
-          type empty;
-          units v;
+      uses cli-command {
+        refine arguments {
+          config true;
+          description "name";
+        }
+        augment options {
+          leaf verbose {
+            description "increase verbosity";
+            type empty;
+            units v;
+          }
         }
       }
     }
@@ -157,28 +191,40 @@ module yangforge {
   }
   
   rpc install {
+    if-feature cli;
     description "install one or more packages";
     input {
-      leaf-list argument { type string; units name; }
-      container options {
-        leaf save {
-          description "add package into dependencies";
-          type empty;
-          units s;
+      uses cli-command {
+        refine arguments {
+          config true;
+          description "package";
+        }
+        augment options {
+          leaf save {
+            description "add package into dependencies";
+            type empty;
+            units s;
+          }
         }
       }
     }
   }
 
   rpc list {
+    if-feature cli;
     description "list installed packages";
     input {
-      leaf argument { type empty; }
-      container options {
-        leaf verbose {
-          description "increase verbosity";
-          type empty;
-          units v;
+      uses cli-command {
+        refine arguments {
+          config true;
+          description "package";
+        } 
+        augment options {
+          leaf verbose {
+            description "increase verbosity";
+            type empty;
+            units v;
+          }
         }
       }
     }
@@ -188,11 +234,13 @@ module yangforge {
     if-feature cli;
     description "publish package to upstream registry";
     input {
-      container options {
-        leaf registry {
-          description "specify target registry";
-          type string;
-          units r;
+      uses cli-command {
+        augment options {
+          leaf registry {
+            description "specify target registry";
+            type string;
+            units r;
+          }
         }
       }
     }
@@ -200,30 +248,34 @@ module yangforge {
   }
   
   rpc run {
-    description "runs one or more modules";
+    if-feature cli;
+    description "runs one or more modules and/or schemas";
     input {
-      leaf-list argument { type string; units name; }
-      container options {
-        leaf port {
-          description "specify listening port";
-          type number;
-          units p;
-          default 5000;
+      uses cli-command {
+        refine arguments {
+          config true;
+          description "module";
         }
-        leaf compile {
-          description "dynamically compile/run a YANG schema file";
-          type string;
-          units c;
-          mandatory true;
-        }
-        leaf restjson {
-          description "enables REST/JSON interface";
-          type boolean;
-          default true;
-        }
-        leaf autodoc {
-          description "enables auto-generated documentation interface";
-          type boolean;
+        augment options {
+          leaf cli {
+            description "enables commmand-line-interface";
+            type boolean;
+          }
+          leaf express {
+            description "enables express web server on a specified port";
+            type number;
+            default 5000;
+          }
+          leaf restjson {
+            description "enables REST/JSON interface";
+            type boolean;
+            default true;
+          }
+          leaf autodoc {
+            description "enables auto-generated documentation interface";
+            type boolean;
+            default false;
+          }
         }
       }
     }
@@ -233,27 +285,29 @@ module yangforge {
     if-feature cli;
     description "process YANG schema files";
     input {
-      container options {
-        leaf compile {
-          description "compile input file into specified output format";
-          type string;
-          units c;
-        }
-        leaf eval {
-          description "pass a string from the command line as input";
-          type string;
-          units e;
-        }
-        leaf format {
-          description "specify output format (yaml, json)";
-          type string;
-          units f;
-          default yaml;
-        }
-        leaf output {
-          description "set the output directory for compiled schemas";
-          type string;
-          units o;
+      uses cli-command {
+        augment options {
+          leaf compile {
+            description "compile input file into specified output format";
+            type string;
+            units c;
+          }
+          leaf eval {
+            description "pass a string from the command line as input";
+            type string;
+            units e;
+          }
+          leaf format {
+            description "specify output format (yaml, json)";
+            type string;
+            units f;
+            default yaml;
+          }
+          leaf output {
+            description "set the output directory for compiled schemas";
+            type string;
+            units o;
+          }
         }
       }
     }
@@ -266,6 +320,16 @@ module yangforge {
   }
 
   // RPC definitions for server instance
+
+  rpc enable {
+    description "enables passed-in set of feature(s) for the current runtime";
+    input {
+      leaf-list features { type string; }
+    }
+    output {
+      list features { uses unique-element; key "id"; }
+    }
+  }
   
   rpc import {
     if-feature express;

@@ -32,10 +32,11 @@ instances.
           res.locals.result =
             metadata: req.forge.constructor.info()
             modules: (for module in (req.forge.get 'modules')
+              module = req.forge.access "modules.#{module.name}"
               metadata: module.constructor.info()
-              rpc: (for name, rpc of (module.meta 'rpc')
+              rpc: (for name, rpc of (module.meta 'exports.rpc')
                 name: name
-                description: rpc.get 'description'
+                description: (rpc.get 'description') ? '(empty)'
               ).reduce ((a,b) -> a[b.name] = b.description; a), {}
             ).reduce ((a,b) -> a[b.metadata.name] = b; a), {}
           next()
@@ -48,18 +49,17 @@ instances.
           next()
 
         router.param 'module', (req,res,next,module) ->
-          self = req.forge.access module
-          unless (self?.meta 'yang') is 'module' then next 'route'
-          else req.module = self; next()
+          req.module = req.forge.access "modules.#{module}"
+          if req.module? then next() else next 'route'
 
         router.param 'method', (req,res,next,method) ->
           console.assert req.module?,
             "cannot perform '#{method}' without containing module"
-          req.rpc = req.module.meta "rpc.#{method}"
-          if req.rpc? then next() else next 'route'
+          req.rpc = name: method, meta: req.module.meta "exports.rpc.#{method}"
+          if req.rpc.meta? then next() else next 'route'
 
         router.param 'container', (req,res,next,container) ->
-          self = req.module.access container
+          self = req.module.access "#{req.module.get 'name'}.#{container}"
           unless (self?.meta 'yang') is 'container' then next 'route'
           else req.container = self; next()
 
@@ -72,7 +72,7 @@ instances.
         .options (req, res, next) ->
           res.locals.result =
             metadata: req.module.constructor.info()
-            rpc: (for name, rpc of (req.module.meta 'rpc')
+            rpc: (for name, rpc of (req.module.meta 'exports.rpc')
               name: name
               description: rpc.get 'description'
             ).reduce ((a,b) -> a[b.name] = b.description; a), {}
@@ -85,18 +85,15 @@ instances.
         .all (req, res, next) -> next()
         .options (req, res, next) ->
           res.locals.result =
-            metadata: req.rpc.extract 'name', 'description', 'status'
-            input:  req.rpc.reduce().input?.meta
-            output: req.rpc.reduce().output?.meta
+            metadata: req.rpc.meta.extract 'name', 'description', 'status'
+            input:  req.rpc.meta.reduce().input?.meta
+            output: req.rpc.meta.reduce().output?.meta
           next()
         .post (req, res, next) ->
-          console.info "restjson: invoking rpc method '#{req.rpc.get 'name'}'".grey
-          action = new req.rpc input: req.body, req.module
-          action.invoke req.query
-          .then  (result) -> res.locals.result = (action.get 'output'); next()
-          .catch (err) ->
-            console.error err
-            next error
+          console.info "restjson: invoking rpc method '#{req.rpc.name}'".grey
+          req.module.invoke req.rpc.name, input: req.body, req.module
+            .then  (result) -> res.locals.result = (result.get 'output'); next()
+            .catch (err) -> next err
 
 **/:module/* configuration tree routing endpoint**
 

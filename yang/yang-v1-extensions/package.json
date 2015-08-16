@@ -1,6 +1,6 @@
 {
-  "version": "0.1.4",
-  "name": "@yang/yang-v1-extensions",
+  "version": "0.1.5",
+  "name": "yang-v1-extensions",
   "description": "yangforged yang language v1.0 submodule",
   "license": "MIT",
   "main": "yang-v1-extensions.js",
@@ -333,10 +333,10 @@
       "reference": "0..1"
     },
     "uses": {
-      "augment": "0..1",
+      "augment": "0..n",
       "description": "0..1",
       "if-feature": "0..n",
-      "refine": "0..1",
+      "refine": "0..n",
       "reference": "0..1",
       "status": "0..1",
       "when": "0..1"
