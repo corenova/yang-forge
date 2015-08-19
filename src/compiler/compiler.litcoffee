@@ -160,13 +160,14 @@ found in the parsed output in order to prepare the context for the
           console.log "[load] try '#{loadPath}'..."
           try m = switch type
             when 'module'
-              try (origin.require arg) catch e then errors.push e; require arg
+              try (origin.require arg) catch e then errors.push Meta.objectify loadPath, e; require arg
             when 'schema'
               @compile (fs.readFileSync arg, 'utf-8'), null, context.exports?.extension
-          catch e then errors.push e; continue
+          catch e then errors.push Meta.objectify loadPath, e; continue
           break if m?
-        console.assert m?,
-          "unable to load (sub)module '#{target}' into compile context:\n" + errors.join "\n"
+        unless m?
+          console.error errors
+          throw new Error "unable to load (sub)module '#{target}' into compile context"
         return m
 
       include: (target, context=this) ->

@@ -86,10 +86,11 @@ arguments.
                   else
                     [ args..., opt ] = arguments
                     [ args, opt ]
-                app.invoke action, input: arguments: argument, options: options
+                app.invoke action, arguments: argument, options: options
                   .then (res) ->
                     console.log "action complete"
-                    console.log res
+                    if res? and res.serialize?
+                      console.info res.serialize()
                   .catch (err) ->
                     console.error "#{err}".red
                     cmd.help()

@@ -183,6 +183,9 @@ module yangforge {
         }
       }
     }
+    output {
+      leaf-list result { type object; }
+    }
   }
 
   rpc init {
@@ -331,15 +334,24 @@ module yangforge {
     }
   }
   
-  rpc import {
+  rpc infuse {
     if-feature express;
-    description "import requested module into current runtime execution";
-    input { uses meta-module; }
+    description "absorb requested module(s) into current runtime execution";
+    input {
+      list targets {
+        leaf source { type string; }
+        container data {
+          description "initial configuration data for the source module";
+        }
+      }
+    }
     output {
       leaf message { type string; }
+      leaf-list modules { type object; }
     }
-    status planned;
+    status current;
   }
+  
   rpc export {
     if-feature express;
     description "export existing target module for remote execution";
