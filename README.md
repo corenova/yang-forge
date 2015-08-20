@@ -18,6 +18,9 @@ This software is **sponsored** by
 [OPNFV](http://opnfv.org) (Open Platform for Network Functions
 Virtualization) community.
 
+Please note that this project is under **active development**. Be sure
+to check back often as new updates are being pushed regularly.
+
   [![NPM Version][npm-image]][npm-url]
   [![NPM Downloads][downloads-image]][downloads-url]
 
@@ -157,48 +160,9 @@ name | description | dependency
 You can click on the *name* entry above for reference
 documentation on each interface feature.
 
-#### Running `YangForge` natively
+#### Running a dynamically *compiled* schema instance
 
-When you issue `run` without any target module(s) as argument, it runs
-the internal `YangForge` module using defaults:
-```bash
-$ yfc run
-express: listening on 5000
-restjson: binding forgery to /restjson
-```
-Once it's running, you can issue HTTP calls:
-```bash
-$ curl localhost:5000/restjson
-```
-```json
-{
-  "yangforge": {
-    "runtime": {
-      "features": [
-        {
-          "cli": false
-        },
-        {
-          "name": "express",
-          "description": "Fast, unopionated, minimalist web framework (HTTP/HTTPS)"
-        },
-        {
-          "name": "restjson",
-          "description": "REST/JSON web services interface generator",
-          "needs": [
-            "express"
-          ]
-        }
-      ],
-      "modules": []
-    }
-  }
-}
-```
-
-#### Running dynamically *compiled* schema instance
-
-You can also dynamically `run` a YANG schema **file** and instantiate it immediately:
+You can `run` a YANG schema **file** and instantiate it immediately:
 ```bash
 $ yfc run examples/jukebox.yang
 express: listening on 5000
@@ -238,7 +202,7 @@ $ curl localhost:5000/restjson/example-jukebox/jukebox
 
 #### Running a *yangforged* module
 
-You can also run a separate *forged* module as follows:
+You can run a *forged* module (packaged with code behaviors) as follows:
 ```bash
 $ yfc run examples/ping
 express: listening on 5000
@@ -246,36 +210,29 @@ restjson: binding forgery to /restjson
 ```
 The example `ping` module for this section is available [here](examples/ping).
 
-Once it's running, you can issue HTTP OPTIONS call to discover
+Once it's running, you can issue HTTP REPORT call to discover
 capabilities of the [ping](examples/ping) module:
 ```bash
-$ curl -X OPTIONS localhost:5000/restjson/ping
+$ curl -X REPORT localhost:5000/restjson/ping
 ```
 ```json
 {
-  "metadata": {
+  "name": "ping",
+  "schema": {
+    "prefix": "ping",
+    "namespace": "urn:opendaylight:ping",
+    "revision": {
+      "2013-09-11": {
+        "description": "TCP ping module"
+      }
+    }
+  },
+  "package": {
     "name": "ping",
     "description": "an example ping yangforged module",
     "version": "1.0.0",
-    "schema": {
-      "name": "ping",
-      "prefix": "ping",
-      "namespace": "urn:opendaylight:ping",
-      "revision": {
-        "2013-09-11": {
-          "description": "TCP ping module"
-        }
-      }
-    },
     "license": "MIT",
     "author": "Peter Lee <peter@intercloud.net>",
-    "keywords": [
-      "yangforge",
-      "ping"
-    ],
-    "dependencies": [
-      "yangforge"
-    ],
     "exports": {
       "extension": 63,
       "rpc": [
@@ -283,56 +240,54 @@ $ curl -X OPTIONS localhost:5000/restjson/ping
       ]
     }
   },
-  "rpc": {
+  "operations": {
     "send-echo": "Send TCP ECHO request"
   }
 }
 ```
-You can also specifically get more info on an available RPC call:
+You can get usage info on an available RPC call with OPTIONS:
 ```bash
 $ curl -X OPTIONS localhost:5000/restjson/ping/send-echo
 ```
-The below output provides additional information on what the expected
+The below output provides details on the expected
 `input/output` schema for invoking the RPC call.
 ```json
 {
-  "metadata": {
-    "name": "send-echo",
-    "description": "Send TCP ECHO request"
-  },
-  "input": {
-    "leaf": {
+  "POST": {
+    "input": {
       "destination": {
-        "type": "inet:ipv4-address"
+        "type": "inet:ipv4-address",
+        "config": true,
+        "required": false,
+        "unique": false,
+        "private": false
       }
     },
-    "yang": "input"
-  },
-  "output": {
-    "leaf": {
+    "output": {
       "echo-result": {
-        "type": {
-          "enumeration": {
-            "enum": {
-              "reachable": {
-                "value": "0",
-                "description": "Received reply"
-              },
-              "unreachable": {
-                "value": "1",
-                "description": "No reply during timeout"
-              },
-              "error": {
-                "value": "2",
-                "description": "Error happened"
-              }
-            }
+        "config": true,
+        "required": false,
+        "unique": false,
+        "private": false,
+        "type": "enumeration",
+        "enum": {
+          "reachable": {
+            "value": "0",
+            "description": "Received reply"
+          },
+          "unreachable": {
+            "value": "1",
+            "description": "No reply during timeout"
+          },
+          "error": {
+            "value": "2",
+            "description": "Error happened"
           }
         },
         "description": "Result types"
       }
     },
-    "yang": "output"
+    "description": "Send TCP ECHO request"
   }
 }
 ```
@@ -348,77 +303,65 @@ $ curl -X POST localhost:5000/restjson/ping/send-echo -H 'Content-Type: applicat
 
 #### Running *arbitrary* mix of modules
 
-The `run` command allows you to pass in as many modules you want to
+The `run` command allows you to pass in as many modules as you want to
 instantiate. The following example will also *listen* on a different
 port.
 ```bash
-$ yfc run examples/jukebox.yang examples/ping
+$ yfc run --express 5050 examples/jukebox.yang examples/ping
+express: listening on 5050
+restjson: binding forgery to /restjson
+```
+**Coming Soon:**
+Currently, the `run` command expects target schema(s) and module(s) to
+be available in the local system. With the *planned* introduction of
+various lifecycle management facilities (e.g. build, deploy, install,
+publish) the `run` command will be extended to also perform automatic
+`install` of the target schema/module by querying the `yangforge`
+public registry (https://yangforge.intercloud.net).
+
+#### Running `YangForge` natively as a stand-alone instance
+
+When you issue `run` without any target module(s) as argument, it runs
+the internal `YangForge` module using defaults:
+
+```bash
+$ yfc run
 express: listening on 5000
 restjson: binding forgery to /restjson
 ```
 
-Once it's running, you can check out all of the capabilites of the
-current runtime *yangforge* instance:
+Once it's running, you can inquire about its capabilities by issuing
+HTTP REPORT call (similar output available via CLI using `yfc info`):
+
 ```bash
-$ curl -X OPTIONS localhost:5000/restjson
+$ curl -X REPORT localhost:5000/restjson
 ```
 ```json
 {
-  "metadata": {
+  "name": "yangforge",
+  "schema": {
+    "prefix": "yf",
+    "description": "This module provides YANG v1 language based schema compilations.",
+    "revision": {
+      "2015-05-04": {
+        "description": "Initial revision",
+        "reference": "RFC-6020"
+      }
+    },
+    "organization": "ClearPath Networks NFV R&D Group",
+    "contact": "Web:  <http://www.clearpathnet.com>\nCode: <http://github.com/clearpath-networks/yangforge>\n\nAuthor: Peter K. Lee <mailto:plee@clearpathnet.com>"
+  },
+  "package": {
     "name": "yangforge",
     "description": "YANG driven JS application builder",
-    "version": "0.9.11",
-    "schema": {
-      "name": "yangforge",
-      "prefix": "yf",
-      "description": "This module provides YANG v1 language based schema compilations.",
-      "revision": {
-        "2015-05-04": {
-          "description": "Initial revision",
-          "reference": "RFC-6020"
-        }
-      },
-      "organization": "ClearPath Networks NFV R&D Group",
-      "contact": "Web:  <http://www.clearpathnet.com>\nCode: <http://github.com/clearpath-networks/yangforge>\n\nAuthor: Peter K. Lee <mailto:plee@clearpathnet.com>"
-    },
+    "version": "0.9.14",
     "license": "Apache-2.0",
-    "author": {
-      "name": "Peter Lee",
-      "email": "peter@intercloud.net"
-    },
+    "author": "Peter Lee <peter@intercloud.net>",
     "homepage": "https://github.com/opnfv/yangforge",
-    "keywords": [
-      "build",
-      "config",
-      "datastore",
-      "datamodel",
-      "forge",
-      "model",
-      "yang",
-      "restjson",
-      "restconf",
-      "rpc",
-      "parse",
-      "translate",
-      "yang-json",
-      "yang-yaml",
-      "yfc"
-    ],
-    "dependencies": [
-      "body-parser",
-      "clim",
-      "colors",
-      "commander",
-      "data-synth",
-      "errorhandler",
-      "express",
-      "passport",
-      "prettyjson",
-      "promise",
-      "yang-parser",
-      "yang-v1-extensions",
-      "complex-types"
-    ],
+    "repository": {
+      "type": "git",
+      "url": "http://github.com/opnfv/yangforge"
+    },
     "exports": {
       "extension": 63,
       "feature": [
@@ -445,69 +388,50 @@ $ curl -X OPTIONS localhost:5000/restjson
         "schema",
         "sign",
         "enable",
-        "import",
+		"disable",
+        "infuse",
+        "defuse",
         "export"
       ]
     }
   },
-  "modules": {
-    "example-jukebox": {
-      "metadata": {
-        "name": "example-jukebox",
-        "prefix": "jbox",
-        "namespace": "http://example.com/ns/example-jukebox",
-        "description": "Example Jukebox Data Model Module",
-        "revision": {
-          "2015-04-04": {
-            "description": "Initial version.",
-            "reference": "example.com document 1-4673"
-          }
-        },
-        "organization": "Example, Inc.",
-        "contact": "support at example.com"
-      },
-      "rpc": {
-        "play": "Control function for the jukebox player"
-      }
-    },
-    "ping": {
-      "metadata": {
-        "name": "ping",
-        "description": "an example ping yangforged module",
-        "version": "1.0.0",
-        "schema": {
-          "name": "ping",
-          "prefix": "ping",
-          "namespace": "urn:opendaylight:ping",
-          "revision": {
-            "2013-09-11": {
-              "description": "TCP ping module"
-            }
-          }
-        },
-        "license": "MIT",
-        "author": "Peter Lee <peter@intercloud.net>",
-        "keywords": [
-          "yangforge",
-          "ping"
-        ],
-        "dependencies": [
-          "yangforge"
-        ],
-        "exports": {
-          "extension": 63,
-          "rpc": [
-            "send-echo"
-          ]
-        }
-      },
-      "rpc": {
-        "send-echo": "Send TCP ECHO request"
-      }
-    }
+  "operations": {
+    "build": "package the application for deployment",
+    "config": "manage application configuration data",
+    "deploy": "deploy application into yangforge endpoint",
+    "info": "show info about one or more packages",
+    "init": "initialize package configuration",
+    "install": "install one or more packages",
+    "list": "list installed packages",
+    "publish": "publish package to upstream registry",
+    "run": "runs one or more modules and/or schemas",
+    "schema": "process YANG schema files",
+    "sign": "sign package to ensure authenticity",
+    "enable": "enables passed-in set of feature(s) for the current runtime",
+    "disable": "disables passed-in set of feature(s) for the current runtime",
+    "infuse": "absorb requested target module(s) into current runtime",
+    "defuse": "discard requested target module(s) from current runtime",
+    "export": "export existing target module for remote execution"
   }
 }
 ```
+
+There are now a handful of *new operations* available in the context
+of the `express/restjson` interface that was previously hidden in the
+`cli` interface.
+
+The `enable/disable` operations allow runtime control of various
+features to be toggled on/off. Additionally, by utilizing
+`infuse/defuse` operations, you can **dynamically** load/unload
+modules into the runtime context. This capability allows the
+`yangforge` instance to operate as an agent which can run any
+*arbitrary* schema/module instance on-demand. With the *planned*
+introduction of lifecycle management features, it will be possible to
+swap-in new modules from the public registry without requring any
+restart of the `yangforge` running instance.
+
+The `run` command internally utilizes the `infuse` operation to
+instantiate the initial running process.
 
 ## Using YangForge Programmatically (Advanced)
 
@@ -608,6 +532,9 @@ with documentation all-in-one.
   * [Features](src/features)
 * [YangForge Schema](./yangforge.yang)
 * [Yang v1.0 Extensions](yang/yang-v1-extensions)
+* Optional Built-in Modules
+  * [complex-types](yang/complex-types)
+  * [ietf-inet-types](yang/ietf-inet-types)
 * External Dependencies
   * [data-synth library](http://github.com/saintkepha/data-synth)
 

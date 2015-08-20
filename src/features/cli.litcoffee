@@ -80,16 +80,12 @@ arguments.
                   console.warn "requested command has been #{status} and should no longer be used".yellow
 
               try
-                [ argument, options ] = switch arguments.length
-                  when 2 then arguments
-                  when 1 then [ undefined, arguments[0] ]
-                  else
-                    [ args..., opt ] = arguments
-                    [ args, opt ]
-                app.invoke action, input: arguments: argument, options: options
+                [ args..., opts ] = arguments
+                app.invoke action, arguments: ([].concat args...), options: opts
                   .then (res) ->
-                    console.log "action complete"
-                    console.log res
+                    console.log "action '#{action}' completed"
+                    if res? and res.serialize?
+                      console.info res.serialize()
                   .catch (err) ->
                     console.error "#{err}".red
                     cmd.help()

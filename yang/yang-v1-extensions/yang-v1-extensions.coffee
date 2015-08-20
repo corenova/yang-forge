@@ -35,13 +35,11 @@ module.exports = Forge.new module,
 
     @extension 'module', (key, value) ->
       @set name: key, exports: @scope.exports
-      @extend info: -> (@get "bindings.#{key}").info()
       @include serialize: -> Forge.objectify (@get 'name'), (@access (@get 'name')).serialize()
       @bind 'name', key
-      @bind key, Forge.Store value, ->
-        @set name: key
+      @bind key, Forge.Model value, ->
         @info = (verbose=false) ->
-          keys = [ 'name', 'prefix', 'namespace', 'description', 'revision', 'organization', 'contact' ]
+          keys = [ 'prefix', 'namespace', 'description', 'revision', 'organization', 'contact' ]
           keys.push 'include', 'import' if verbose
           info = @extract.apply this, keys
           info.include =
@@ -54,30 +52,20 @@ module.exports = Forge.new module,
       @set name: key, exports: @scope.exports
       @mixin value
 
-    @extension 'import',  (key, value) -> @scope[key] = value?.extract? 'exports'
-    @extension 'include', (key, value) -> @mixin value
-    
-    # The `belongs-to` statement is only used in the context of a
-    # `submodule` definition which is processed as a sub-compile stage
-    # within the containing `module` defintion.  Therefore, when this
-    # statement is encountered, it would be processed within the context of
-    # the governing `compile` process which means that the metadata
-    # available within that context will be made *eventually available* to
-    # the included submodule.
+    @extension 'import',     (key, value) -> @scope[key] = value?.extract? 'exports'
+    @extension 'include',    (key, value) -> @mixin value
     @extension 'belongs-to', (key, value) -> @scope[value.get 'prefix'] = @scope
 
     @extension 'container', (key, value) -> @bind key, Forge.Object value
+    @extension 'list',      (key, value) ->
+      entry = Forge.Object (value.extract 'bindings')
+      @bind key, (Forge.List value.unbind()).set type: entry
+    @extension 'leaf-list', (key, value) -> @bind key, Forge.List value
+      
     @extension 'enum',      (key, value) -> null
     @extension 'leaf',      (key, value) ->
       @bind key, Forge.Property value, ->
         @set required: (@get 'mandatory') ? false
-
-    @extension 'leaf-list', (key, value) -> @bind key, Forge.List value
-
-    # The `list` is handled in a special way
-    @extension 'list', (key, value) ->
-      entry = Forge.Object (value.extract 'bindings')
-      @bind key, (Forge.List value.unbind()).set type: entry
 
     # The following extensions makes alterations to the
     # configuration tree.  The `uses` statement references a
