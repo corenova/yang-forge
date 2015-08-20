@@ -166,7 +166,7 @@ found in the parsed output in order to prepare the context for the
           catch e then errors.push Meta.objectify loadPath, e; continue
           break if m?
         unless m?
-          console.error errors
+          console.log errors
           throw new Error "unable to load (sub)module '#{target}' into compile context"
         return m
 

@@ -333,10 +333,20 @@ module yangforge {
       list features { uses unique-element; key "id"; }
     }
   }
-  
+
+  rpc disable {
+    description "disables passed-in set of feature(s) for the current runtime";
+    input {
+      leaf-list features { type string; }
+    }
+    output {
+      list features { uses unique-element; key "id"; }
+    }
+  }
+
   rpc infuse {
-    if-feature express;
-    description "absorb requested module(s) into current runtime execution";
+    if-feature restjson;
+    description "absorb requested target module(s) into current runtime";
     input {
       list targets {
         leaf source { type string; }
@@ -349,7 +359,17 @@ module yangforge {
       leaf message { type string; }
       leaf-list modules { type object; }
     }
-    status current;
+  }
+
+  rpc defuse {
+    if-feature restjson;
+    description "discard requested target module(s) from current runtime";
+    input {
+      leaf-list names { type string; }
+    }
+    output {
+      leaf message { type string; }
+    }
   }
   
   rpc export {

@@ -47,11 +47,24 @@ instances.
           next()
         .options (req, res, next) ->
           res.send
-            REPORT: 'get detailed information about this resource'
-            GET: 'get serialized output for this resource'
-            COPY: 'get a copy of this resource for cloning it elsewhere'
+            REPORT:
+              description: 'get detailed information about this resource'
+            GET:
+              description: 'get serialized output for this resource'
+            PUT:
+              description: 'update configuration for this resource'
+            COPY:
+              description: 'get a copy of this resource for cloning it elsewhere'
         .report (req, res, next) -> res.locals.result = req.module.report(); next()
         .get    (req, res, next) -> res.locals.result = req.module.serialize(); next()
+        .put    (req, res, next) ->
+          (req.module.set req.body).save()
+          .then (result) ->
+            res.locals.result = result.serialize();
+            next()
+          .catch (err) ->
+            req.module.rollback()
+            next err
         .copy   (req, res, next) ->
           # XXX - generate JSON serialized copy of this forge
           next()

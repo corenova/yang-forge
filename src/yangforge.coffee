@@ -142,7 +142,6 @@ class Forge extends Synth
       res.operations = methods.reduce ((a,b) ->
         a[b.name] = (b.meta?.get 'description') ? '(empty)'; a
       ), {}
-      
     return res
 
   # RUN THIS FORGE (convenience function for programmatic run)
@@ -153,30 +152,15 @@ class Forge extends Synth
       
     # before we construct, we need to 'normalize' the bindings based on if-feature conditions
     (new this).invoke 'run', options: options
+    .catch (e) -> console.error e
 
-  invoke: (action, data, scope=this) ->
-    action = @access "methods.#{action}" if typeof action is 'string'
-    unless action?
-      return Promise.reject "cannot invoke without specifying action"
-
-    listeners = @listeners action.name
-    console.log "invoking '#{action.name}' for handling by #{listeners.length} listeners"
-    unless listeners.length > 0
-      return Promise.reject "missing listeners for '#{action.name}'"
-
-    action = new action.meta input: data 
-    promises = listeners.map (listener) ->
-      new Promise (resolve, reject) ->
-        listener.apply scope, [
-          (action.access 'input')
-          (action.access 'output')
-          (err) -> if err? then reject err else resolve action
-        ]
-    return Promise.all promises
-      .then (res) ->
-        for item in res
-          console.log "got back #{item} from listener"
-        return action.access 'output'
+  invoke: (rpc, data) ->
+    method = @access "methods.#{rpc}"
+    unless method?
+      return Promise.reject "cannot invoke without available '#{rpc}' operation"
+    schema = new method.meta input: data
+    super method.name, (schema.access 'input'), (schema.access 'output'), (e) -> throw e if e?; true
+      .then (res) -> return schema.access 'output'
 
 module.exports = Forge.new module,
   before: -> console.log "forgery initiating schema compilations..."
@@ -269,6 +253,11 @@ module.exports = Forge.new module,
       output.set 'message', 'request processed successfully'
       output.set 'modules', modules
       console.log "<infuse> completed"
+      next()
+
+    @on 'defuse', (input, output, next) ->
+      (@access 'modules').remove input.get 'names'
+      output.set 'message', 'OK'
       next()
 
     @on 'run', (input, output, next) ->
