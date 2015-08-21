@@ -13,7 +13,7 @@ Basically, the framework enables YANG schema language to *become* a
 It is written primarily using [CoffeeScript](http://coffeescript.org)
 and runs on [Node.js](http://nodejs.org).
 
-This software is *sponsored* by
+This software is **sponsored** by
 [ClearPath Networks](http://www.clearpathnet.com) on behalf of the
 [OPNFV](http://opnfv.org) (Open Platform for Network Functions
 Virtualization) community.
@@ -160,9 +160,9 @@ name | description | dependency
 You can click on the *name* entry above for reference
 documentation on each interface feature.
 
-#### Running dynamically *compiled* schema instance
+#### Running a dynamically *compiled* schema instance
 
-You can dynamically `run` a YANG schema **file** and instantiate it immediately:
+You can `run` a YANG schema **file** and instantiate it immediately:
 ```bash
 $ yfc run examples/jukebox.yang
 express: listening on 5000
@@ -202,7 +202,7 @@ $ curl localhost:5000/restjson/example-jukebox/jukebox
 
 #### Running a *yangforged* module
 
-You can also run a separate *forged* module as follows:
+You can run a *forged* module (packaged with code behaviors) as follows:
 ```bash
 $ yfc run examples/ping
 express: listening on 5000
@@ -245,18 +245,18 @@ $ curl -X REPORT localhost:5000/restjson/ping
   }
 }
 ```
-You can also specifically get more info on an available RPC call usage info with OPTIONS:
+You can get usage info on an available RPC call with OPTIONS:
 ```bash
 $ curl -X OPTIONS localhost:5000/restjson/ping/send-echo
 ```
-The below output provides additional information on what the expected
+The below output provides details on the expected
 `input/output` schema for invoking the RPC call.
 ```json
 {
   "POST": {
     "input": {
       "destination": {
-        "type": "inet:ipv4-address"
+        "type": "inet:ipv4-address",
         "config": true,
         "required": false,
         "unique": false,
@@ -303,7 +303,7 @@ $ curl -X POST localhost:5000/restjson/ping/send-echo -H 'Content-Type: applicat
 
 #### Running *arbitrary* mix of modules
 
-The `run` command allows you to pass in as many modules you want to
+The `run` command allows you to pass in as many modules as you want to
 instantiate. The following example will also *listen* on a different
 port.
 ```bash
@@ -311,7 +311,7 @@ $ yfc run --express 5050 examples/jukebox.yang examples/ping
 express: listening on 5050
 restjson: binding forgery to /restjson
 ```
-**Coming Soon**
+**Coming Soon:**
 Currently, the `run` command expects target schema(s) and module(s) to
 be available in the local system. With the *planned* introduction of
 various lifecycle management facilities (e.g. build, deploy, install,
