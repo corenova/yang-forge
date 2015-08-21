@@ -40,7 +40,7 @@
     "clim": "^1.1.1",
     "colors": "^1.1.2",
     "commander": "^2.8.1",
-    "data-synth": "^0.6.18",
+    "data-synth": "^0.6.19",
     "errorhandler": "^1.4.1",
     "express": "^4.13.1",
     "passport": "^0.2.2",

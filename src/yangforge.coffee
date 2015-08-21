@@ -75,9 +75,8 @@ class Forge extends Synth
       config = input.require (path.resolve pkgdir, './package.json')
       config.pkgdir = pkgdir
       config.origin = input
-      config.source = fs.readFileSync (path.resolve pkgdir, config.schema), 'utf-8'
     catch err
-      console.error "[new] Unable to discover YANG schema for the target module, missing 'schema' in package.json?"
+      console.error "[new] unable to discover 'package.json' for the target module"
       throw err
 
     console.log "forging #{config.name} (#{config.version}) using schema: #{config.schema}"
@@ -86,12 +85,13 @@ class Forge extends Synth
   constructor: (target, hooks={}) ->
     unless Forge.synthesized @constructor
       console.log "[constructor] creating a new forgery..."
-      exts = this.get 'exports.extension' if Forge.instanceof this
+      extensions = @extract 'exports.extension' if Forge.instanceof this
       output = super Forge, ->
         @merge target
         @configure hooks.before
         unless Forge.instanceof target
-          m = ((new this @extract 'extensions').compile target.source, null, exts)
+          @merge extensions
+          m = (new this @extract 'extensions').load target.schema
           @mixin m
           @merge m.extract 'exports'
         @configure hooks.after
@@ -124,9 +124,25 @@ class Forge extends Synth
     if not options.verbose and pkg.exports.extension? and pkg.exports.extension.length > 10
       pkg.exports.extension = pkg.exports.extension.length
 
+    name = @get 'name'
+    name ?= pkg.name
+    schema = (@access name)?.constructor
+    schema ?= @constructor
+    schema = do (schema, options) ->
+      keys = [
+        'prefix', 'namespace', 'description', 'revision', 'organization', 'contact'
+        'include', 'import'
+      ]
+      info = Forge.extract.apply schema, keys
+      for k, data of info.include
+        info.include[k] = arguments.callee data, options
+      for k, data of info.import
+        info.import[k] = data?.get? 'name'
+      return info
+
     res = 
-      name: @get 'name'
-      schema: (@access @get 'name').constructor.info options.vebose
+      name: name
+      schema: schema
       package: pkg
 
     modules = @get 'modules'

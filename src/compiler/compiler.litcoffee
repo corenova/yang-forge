@@ -142,6 +142,7 @@ found in the parsed output in order to prepare the context for the
           "module:" + path.resolve pkgdir, "lib/#{name}"
           "schema:" + path.resolve pkgdir, "yang/#{name}.yang"
           "schema:" + path.resolve pkgdir, "yang/#{name}"
+          "schema:" + path.resolve pkgdir, "#{name}"
           "schema:" + path.resolve "yang/#{name}.yang"
           "schema:" + path.resolve "yang/#{name}"
           "schema:" + path.resolve "#{name}"
@@ -160,7 +161,8 @@ found in the parsed output in order to prepare the context for the
           console.log "[load] try '#{loadPath}'..."
           try m = switch type
             when 'module'
-              try (origin.require arg) catch e then errors.push Meta.objectify loadPath, e; require arg
+              try (origin.require arg)
+              catch e then errors.push Meta.objectify loadPath, e; require arg
             when 'schema'
               @compile (fs.readFileSync arg, 'utf-8'), null, context.exports?.extension
           catch e then errors.push Meta.objectify loadPath, e; continue

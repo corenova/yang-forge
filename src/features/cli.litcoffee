@@ -55,7 +55,7 @@ arguments.
             if option.meta.units?
               optstring = "-#{option.meta.units}, #{optstring}"
             optstring += switch option.meta.type
-              when 'boolean' then ''
+              when 'boolean', undefined then ''
               else
                 if option.meta.required then " <#{option.meta.type}>"
                 else " [#{option.meta.type}]"  

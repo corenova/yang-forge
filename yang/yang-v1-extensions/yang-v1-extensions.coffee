@@ -35,22 +35,12 @@ module.exports = Forge.new module,
 
     @extension 'module', (key, value) ->
       @set name: key, exports: @scope.exports
-      @include serialize: -> Forge.objectify (@get 'name'), (@access (@get 'name')).serialize()
       @bind 'name', key
-      @bind key, Forge.Model value, ->
-        @info = (verbose=false) ->
-          keys = [ 'prefix', 'namespace', 'description', 'revision', 'organization', 'contact' ]
-          keys.push 'include', 'import' if verbose
-          info = @extract.apply this, keys
-          info.include =
-            (@extract.apply data, keys for k, data of info.include) if info.include?
-          info.import =
-            (@extract.apply data, keys for k, data of info.import) if info.import?
-          return info
+      @bind key, Forge.Model value
           
     @extension 'submodule', (key, value) ->
       @set name: key, exports: @scope.exports
-      @mixin value
+      @merge value
 
     @extension 'import',     (key, value) -> @scope[key] = value?.extract? 'exports'
     @extension 'include',    (key, value) -> @mixin value
@@ -82,8 +72,24 @@ module.exports = Forge.new module,
     @extension 'refine',  (key, value) -> @merge "refine.#{key}", value
 
     @extension 'type', (key, value) ->
-      @set 'type', (@scope.resolve 'type', key, false) ? key
-      @merge value
+      @set 'type', switch key
+        when 'empty' then undefined
+        when 'boolean', 'date', 'number' then key
+        when 'union' then value # XXX - need to support 'union'
+        when 'string', 'enumeration' then @merge value; key
+        else
+          Type = (@scope.resolve 'type', key) ? Forge.Meta
+          class extends Type
+            @set name: key
+            @merge value
+            constructor: (value) ->
+              opts = @constructor.extract 'type', 'pattern', 'length', 'range'
+              @value = switch
+                when opts.type is 'string' and opts.pattern?
+                  if (new RegExp opts.pattern).test value then value else null
+                else value
+            valueOf: -> @value
+            toString: -> "@value"
 
     @extension 'config',    (key, value) -> @set 'config', key is 'true'
     @extension 'mandatory', (key, value) -> @set 'mandatory', key is 'true'
