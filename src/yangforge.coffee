@@ -107,7 +107,7 @@ class Forge extends Synth
 
   create: (target, data) ->
     return target if target instanceof Forge
-    target = @load target if typeof target is 'string'
+    target = @load target unless Forge.instanceof target
     target = Forge target unless Forge.synthesized target
     target = new target data, this
     return target
@@ -262,7 +262,7 @@ module.exports = Forge.new module,
 
     @on 'infuse', (input, output, next) ->
       modules = for target in input.get 'targets'
-        console.log "<infuse> absorbing a new source #{target.source} into running forge"
+        console.log "<infuse> absorbing a new source '#{target.source}' into running forge"
         target = @create target.source, target.data
         (@access 'modules').push target if target?
         target

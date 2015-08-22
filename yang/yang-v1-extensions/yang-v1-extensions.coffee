@@ -71,25 +71,49 @@ module.exports = Forge.new module,
     @extension 'augment', (key, value) -> @bind key, value
     @extension 'refine',  (key, value) -> @merge "refine.#{key}", value
 
+    @extension 'pattern', (value) -> @set pattern: new RegExp value
+
     @extension 'type', (key, value) ->
-      @set 'type', switch key
-        when 'empty' then undefined
-        when 'boolean', 'date', 'number' then key
-        when 'union' then value # XXX - need to support 'union'
-        when 'string', 'enumeration' then @merge value; key
+      Typedef = (@scope.resolve 'type', key)
+      Typedef ?= type: key
+
+      Type = Forge.Property Typedef, ->
+        if key is 'union'
+          @merge value?.extract 'types'
         else
-          Type = (@scope.resolve 'type', key) ? Forge.Meta
-          class extends Type
-            @set name: key
-            @merge value
-            constructor: (value) ->
-              opts = @constructor.extract 'type', 'pattern', 'length', 'range'
-              @value = switch
-                when opts.type is 'string' and opts.pattern?
-                  if (new RegExp opts.pattern).test value then value else null
-                else value
-            valueOf: -> @value
-            toString: -> "@value"
+          @merge value
+        @set options: [ 'type', 'instance', 'enum', 'types', 'pattern', 'range', 'length', 'normalizer', 'validator' ]
+        @set
+          normalizer: (value) ->
+            console.log "normalizing '#{value}'"
+            switch
+              when @opts.instance? and not (value instanceof @opts.instance)
+                new @opts.instance value, this
+              when @opts.type is 'enumeration' and typeof value is 'number'
+                for key, val of @opts.enum
+                  return key if val.value is value or val.value is "#{value}"
+                value
+              else value
+          validator: (value) ->
+            console.log "validating '#{value}'"
+            console.log @opts
+            switch
+              when @opts.type is 'string' and @opts.pattern? then @opts.pattern.test value
+              when @opts.type is 'enumeration' then @opts.enum?.hasOwnProperty value
+              else true
+        @include
+          valueOf: -> @value
+
+      # first check the parent's type
+      if (typeof (@get 'type') is 'object' and (Object.keys (@get 'type')).length > 1)
+        # has multiple types (likely union)
+        @merge types: [ Type ]
+      else
+        @set 'type', switch key
+          when 'empty' then undefined
+          when 'union' then 'mixed'
+          else key
+        @set 'instance', Type
 
     @extension 'config',    (key, value) -> @set 'config', key is 'true'
     @extension 'mandatory', (key, value) -> @set 'mandatory', key is 'true'

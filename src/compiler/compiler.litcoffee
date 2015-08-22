@@ -295,7 +295,8 @@ provided input.
               output.set "#{key}.#{val}", undefined
             if ext.argument?
               console.log "[compile:#{id}] #{key} #{val?.slice 0, 50}..."
-              ext.resolver?.call? output, val, {}
+              #ext.resolver?.call? output, val, {}
+              ext.resolver?.call? output, val
             else
               console.log "[compile:#{id}] #{key}"
               res = switch
