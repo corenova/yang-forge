@@ -487,9 +487,9 @@ schema = """
 forgery = new Forge
 HelloWorld = forgery.compile schema
 test = new HelloWorld
-console.log test.get 'hello'
-test.set 'hello', 'there'
-console.log test.get 'works'
+console.log test.get 'hello-world.hello'
+test.set 'hello-world.hello', 'there'
+console.log test.get 'hello-world.hello'
 ```
 
 Forging a new module for build/publish (at a new package directory,
