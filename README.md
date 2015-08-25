@@ -438,6 +438,19 @@ restart of the `yangforge` running instance.
 The `run` command internally utilizes the `infuse` operation to
 instantiate the initial running process.
 
+## Bundled YANG modules
+
+There are a number of YANG schema modules commonly referenced and utilized by other YANG modules during schema definition and they have been *bundled* together into the `yangforge` package for convenience.  All you need to do is to `import <module name>` from your YANG schema and they will be retrieved/resolved automatically.
+
+name | description | reference
+--- | --- | ---
+[complex-types](yang/complex-types) | extensions to model complex types and typed instance identifiers | RFC-6095
+[iana-crypt-hash](yang/iana-crypt-hash) | typedef for storing passwords using a hash function | RFC-7317
+[ietf-inet-types](yang/ietf-inet-types) | collection of generally useful types for Internet addresses | RFC-6991
+[ietf-yang-types](yang/ietf-yang-types) | collection of generally useful derived data types | RFC-6991
+
+Additional YANG modules will be bundled into the `yangforge` package over time. Since `yangforge` facilitate *forging* of new YANG modules and easily using them in your own projects, only industry standards based YANG schema modules will be considered for native bundling at this time.
+
 ## Using YangForge Programmatically (Advanced)
 
 ```coffeescript
@@ -532,16 +545,10 @@ The source code is documented in Markdown format. It's code combined
 with documentation all-in-one.
 
 * [YangForge](src/yangforge.coffee)
-  * [Compiler](src/compiler/compiler.litcoffee)
-  * [Compiler Mixin](src/compiler/compiler-mixin.litcoffee)
+  * [Compiler](src/compiler.litcoffee)
   * [Features](src/features)
-* [YangForge Schema](./yangforge.yang)
+  * [Schema](./yangforge.yang)
 * [Yang v1.0 Extensions](yang/yang-v1-extensions)
-* Optional Built-in Modules
-  * [complex-types](yang/complex-types)
-  * [iana-crypt-hash](yang/iana-crypt-hash)
-  * [ietf-inet-types](yang/ietf-inet-types)
-  * [ietf-yang-types](yang/ietf-yang-types)
 * External Dependencies
   * [data-synth library](http://github.com/saintkepha/data-synth)
 
