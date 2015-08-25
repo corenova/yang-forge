@@ -126,6 +126,6 @@ module.exports = Forge.new module,
     @extension 'mandatory', (key, value) -> @set 'mandatory', key is 'true'
     @extension 'require-instance', (key, value) -> @set 'require-instance', key is 'true'
 
-    @extension 'input',  (key, value) -> @bind 'input', value
-    @extension 'output', (key, value) -> @bind 'output', value
+    @extension 'input',  (key, value) -> @bind 'input',  Forge.Object value
+    @extension 'output', (key, value) -> @bind 'output', Forge.Object value
 

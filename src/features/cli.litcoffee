@@ -89,8 +89,8 @@ arguments.
                 app.invoke action, arguments: ([].concat args...), options: opts
                   .then (res) ->
                     console.log "action '#{action}' completed"
-                    if res? and res.serialize?
-                      console.info res.serialize()
+                    # if res? and res.serialize?
+                    #   console.info res.serialize()
                   .catch (err) ->
                     console.error "error occurred during #{action}"
                     console.error "#{err}".red

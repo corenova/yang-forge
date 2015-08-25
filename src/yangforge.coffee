@@ -217,6 +217,7 @@ module.exports = Forge.new module,
       results = for target in targets
         try (@create target).report input.get 'options'
         catch e then console.error "unable to extract info from '#{target}' module\n".red+"#{e}"
+      results = results[0] if results.length is 1
       output?.set 'result', results
 
       # below should be called only if cli interface...
