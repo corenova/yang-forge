@@ -162,10 +162,10 @@ found in the parsed output in order to prepare the context for the
           try m = switch type
             when 'module'
               try (origin.require arg)
-              catch e then errors.push Meta.objectify loadPath, e; require arg
+              catch e then errors.push Meta.objectify type, e; require arg
             when 'schema'
               @compile (fs.readFileSync arg, 'utf-8'), null, context.exports?.extension
-          catch e then errors.push Meta.objectify loadPath, e; continue
+          catch e then errors.push Meta.objectify type, e; continue
           break if m?
         unless m?
           console.log errors
@@ -191,7 +191,7 @@ found in the parsed output in order to prepare the context for the
           return
         exts = m.get 'exports.extension'
         for key, val of exts when val.override is true
-          delete val.override # don't need this to carry over
+          #delete val.override # don't need this to carry over
           console.log "[import] override '#{key}' extension with deviations"
           context.define 'extension', key, val
         console.log "[import] module '#{name}' loaded into context"
@@ -258,7 +258,7 @@ provided input.
         for key, val of input
           [ prf..., kw ] = key.split ':'
           unless not scope? or kw of scope
-            throw "invalid '#{kw}' extension found during compile operation"
+            throw new Error "invalid '#{kw}' extension found during compile operation"
 
           if key is 'extension'
             output.set key, val

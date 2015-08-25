@@ -55,7 +55,7 @@ class Forge extends Synth
     # can properly export themselves.
     if module.id is input.id
       unless module.loaded is true
-        if input.parent.parent?
+        if input.parent.parent? and Forge.synthesized module.exports
           console.log "[new] searching ancestors for a synthesized forgery..."
           forge = Forge::seek.call input.parent.parent,
             loaded: true
@@ -66,9 +66,6 @@ class Forge extends Synth
 
         console.log "[new] forgery initiating SELF-CONSTRUCTION"
         module.exports = Forge
-      else
-        console.log "FORGERY ALREADY LOADED... (shouldn't be called?)"
-        return module.exports
 
     console.log "[new] processing #{input.id}..."
     try

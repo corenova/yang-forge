@@ -24,7 +24,7 @@ module.exports = Forge.new module,
         console.log "creating temporary complex-type for: #{key}"
         ct = Forge.Model temp: true
         @scope.define 'complex-type', key, ct
-      @set model: ct
+      @set type: ct
 
     @extension 'instance',      (key, value) -> @bind key, Forge.Model value
     @extension 'instance-list', (key, value) -> @bind key, Forge.List type: Forge.Model value
@@ -33,13 +33,13 @@ module.exports = Forge.new module,
     # type: add resolve lookup for 'complex-type'
     # leaf: handle instance-identifier
     # leaf-list: handle instance-identifier
-    @extension 'type', override: true, resolve: (key, value) ->
-      type = (@scope.resolve 'type', key, false) ? key
-      switch
-        when type is 'instance-identifier' then @set type: value.get 'model'
-        else
-          @set type: type
-          @merge value
+    # @extension 'type', override: true, resolve: (key, value) ->
+    #   type = (@scope.resolve 'type', key, false) ? key
+    #   switch
+    #     when type is 'instance-identifier' then @set type: value.get 'model'
+    #     else
+    #       @set type: type
+    #       @merge value
 
     @extension 'leaf', override: true, resolver: (key, value) ->
       @bind key, switch

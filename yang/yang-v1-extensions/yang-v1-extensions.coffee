@@ -81,15 +81,15 @@ module.exports = Forge.new module,
       @set "enum.#{key}", val
 
     @extension 'type', (key, value) ->
-      Typedef = (@scope.resolve 'type', key)
-      Typedef ?= type: key
-
-      Type = Forge.Property Typedef, ->
+      Type = Forge.Property (@scope.resolve 'type', key, false), ->
         @set yang: 'type', name: key
         if key is 'union'
           @merge value?.extract 'types'
         else
           @merge value
+        unless (@get 'type')?
+          @set type: key
+          
         @set options: [ 'type', 'enum', 'types', 'pattern', 'range', 'length', 'normalizer', 'validator' ]
         @set
           normalizer: (value) ->
