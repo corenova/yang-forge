@@ -1,5 +1,5 @@
 {
-  "version": "0.9.19",
+  "version": "0.9.20",
   "name": "yangforge",
   "description": "YANG driven JS application builder",
   "keywords": [
@@ -62,7 +62,9 @@
     "prettyjson",
     "yang-parser",
     "complex-types",
+    "iana-crypt-hash",
     "ietf-inet-types",
+    "ietf-yang-types",
     "yang-v1-extensions"
   ],
   "devDependencies": {
