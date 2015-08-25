@@ -51,6 +51,7 @@
   },
   "optionalDependencies": {
     "complex-types": "file:yang/complex-types",
+    "iana-crypt-hash": "file:yang/iana-crypt-hash",
     "ietf-inet-types": "file:yang/ietf-inet-types",
     "ietf-yang-types": "file:yang/ietf-yang-types"
   },

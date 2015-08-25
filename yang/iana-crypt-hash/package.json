@@ -1,0 +1,11 @@
+{
+  "version": "0.1.0",
+  "name": "iana-crypt-hash",
+  "description": "yangforged iana-crypt-hash module",
+  "license": "MIT",
+  "main": "index.js",
+  "dependencies": {
+    "yangforge": "file:../.."
+  },
+  "schema": "iana-crypt-hash.yang"
+}

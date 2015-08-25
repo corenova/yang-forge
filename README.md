@@ -539,6 +539,7 @@ with documentation all-in-one.
 * [Yang v1.0 Extensions](yang/yang-v1-extensions)
 * Optional Built-in Modules
   * [complex-types](yang/complex-types)
+  * [iana-crypt-hash](yang/iana-crypt-hash)
   * [ietf-inet-types](yang/ietf-inet-types)
   * [ietf-yang-types](yang/ietf-yang-types)
 * External Dependencies
