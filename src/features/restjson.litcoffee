@@ -37,7 +37,7 @@ instances.
 
         router.param 'container', (req,res,next,container) ->
           match = req.module.access "#{req.module.get 'name'}.#{container}"
-          if (match?.meta 'yang') in [ 'container', 'list', 'leaf-list' ]
+          if (match?.meta 'synth') in [ 'model', 'object', 'list' ]
             req.container = match; next()
           else next 'route'
 
@@ -94,7 +94,7 @@ instances.
         subrouter = express.Router()
         subrouter.param 'container', (req,res,next,container) ->
           match = req.container.access container
-          if (match?.meta 'yang') in [ 'container', 'list', 'leaf-list' ]
+          if (match?.meta 'synth') in [ 'model', 'object', 'list' ]
              req.container = match; next()
           else next 'route'
         subrouter.route '/'

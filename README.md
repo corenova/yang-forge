@@ -540,6 +540,7 @@ with documentation all-in-one.
 * Optional Built-in Modules
   * [complex-types](yang/complex-types)
   * [ietf-inet-types](yang/ietf-inet-types)
+  * [ietf-yang-types](yang/ietf-yang-types)
 * External Dependencies
   * [data-synth library](http://github.com/saintkepha/data-synth)
 
