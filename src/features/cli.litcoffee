@@ -30,7 +30,7 @@ arguments.
           continue unless Forge.Meta.instanceof meta
 
           rpc = meta.reduce()
-          continue unless (rpc.meta['if-feature']?.hasOwnProperty 'cli')
+          continue unless ((meta.get 'if-feature')?.hasOwnProperty 'cli')
 
           command = "#{action}"
           args = rpc.input?.arguments
@@ -54,21 +54,26 @@ arguments.
             optstring = "--#{key}"
             if option.meta.units?
               optstring = "-#{option.meta.units}, #{optstring}"
-            optstring += switch option.meta.type
-              when 'boolean', undefined then ''
+            type = option.meta.type
+            type = type.meta.type if typeof type is 'object'
+            optstring += switch type
+              when 'boolean','empty' then ''
               else
-                if option.meta.required then " <#{option.meta.type}>"
-                else " [#{option.meta.type}]"  
+                if option.meta.required then " <#{type}>"
+                else " [#{type}]"
             optdesc = option.meta.description
             if !!option.meta.default
               optdesc += " (default: #{option.meta.default})"
 
-            defaultValue = switch option.meta.type
+            defaultValue = switch type
               when 'boolean' then (option.meta.default is 'true')
               else option.meta.default
             if defaultValue? and !!defaultValue
               console.log "setting option #{key} with default: #{defaultValue}"
-            cmd.option optstring, optdesc, defaultValue
+              cmd.option optstring, optdesc, defaultValue
+            else
+              console.log "setting option #{key}: #{optdesc}"
+              cmd.option optstring, optdesc
 
           do (cmd, action, status) ->
             cmd.action ->
@@ -87,9 +92,11 @@ arguments.
                     if res? and res.serialize?
                       console.info res.serialize()
                   .catch (err) ->
+                    console.error "error occurred during #{action}"
                     console.error "#{err}".red
                     cmd.help()
               catch e
+                console.error "error occurred during #{action}"
                 console.error "#{e}".red
                 cmd.help()
 
@@ -100,5 +107,4 @@ arguments.
             console.info arguments
 
         program.parse process.argv
-        program.help() unless program.args.length
         return program

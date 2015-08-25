@@ -72,23 +72,30 @@ module.exports = Forge.new module,
     @extension 'refine',  (key, value) -> @merge "refine.#{key}", value
 
     @extension 'pattern', (value) -> @set pattern: new RegExp value
+    @extension 'enum', (key, value) ->
+      val = value?.extract? 'value', 'description', 'reference', 'status'
+      unless val?.value?
+        @currentValue ?= 0
+        val = value: @currentValue++
+      val.value = (Number) val.value
+      @set "enum.#{key}", val
 
     @extension 'type', (key, value) ->
       Typedef = (@scope.resolve 'type', key)
       Typedef ?= type: key
 
       Type = Forge.Property Typedef, ->
+        @set yang: 'type', name: key
         if key is 'union'
           @merge value?.extract 'types'
         else
           @merge value
-        @set options: [ 'type', 'instance', 'enum', 'types', 'pattern', 'range', 'length', 'normalizer', 'validator' ]
+        @set options: [ 'type', 'enum', 'types', 'pattern', 'range', 'length', 'normalizer', 'validator' ]
         @set
           normalizer: (value) ->
             console.log "normalizing '#{value}'"
             switch
-              when @opts.instance? and not (value instanceof @opts.instance)
-                new @opts.instance value, this
+              when @opts.type instanceof Function then new @opts.type value, this
               when @opts.type is 'enumeration' and typeof value is 'number'
                 for key, val of @opts.enum
                   return key if val.value is value or val.value is "#{value}"
@@ -96,7 +103,6 @@ module.exports = Forge.new module,
               else value
           validator: (value) ->
             console.log "validating '#{value}'"
-            console.log @opts
             switch
               when @opts.type is 'string' and @opts.pattern? then @opts.pattern.test value
               when @opts.type is 'enumeration' then @opts.enum?.hasOwnProperty value
@@ -110,10 +116,8 @@ module.exports = Forge.new module,
         @merge types: [ Type ]
       else
         @set 'type', switch key
-          when 'empty' then undefined
-          when 'union' then 'mixed'
-          else key
-        @set 'instance', Type
+          when 'boolean' then key
+          else Type
 
     @extension 'config',    (key, value) -> @set 'config', key is 'true'
     @extension 'mandatory', (key, value) -> @set 'mandatory', key is 'true'

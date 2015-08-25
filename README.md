@@ -73,17 +73,17 @@ implemented inside the `YangForge` module forging before-hook
 ## Common Usage Examples
 
 ### Using the `schema` command
-```bash
+```
 $ yfc schema -h
 
-  Usage: schema [options]
+  Usage: schema [options] [schema...]
 
-  process YANG schema files
+  process YANG schema file(s)
 
   Options:
 
     -h, --help              output usage information
-    -c, --compile [string]  compile input file into specified output format
+    -c, --compile           compile input file(s) into specified output format
     -e, --eval [string]     pass a string from the command line as input
     -f, --format [string]   specify output format (yaml, json) (default: yaml)
     -o, --output [string]   set the output directory for compiled schemas
@@ -121,10 +121,15 @@ $ yfc schema -e 'module hello-world { description "a test"; leaf hello { type st
  }
 }
 ```
-You can `--compile` a YANG schema **file** for processing:
+You can also `--compile` a YANG schema **file** for generating the
+compiled schema output:
 ```bash
 $ yfc schema -c examples/jukebox.yang
 ```
+The `--compile` flag internally would invoke YANG statement resolvers,
+which means that it would perform validations and dynamic expansions
+of YANG extensions. Without the `--compile` flag set, the `schema`
+command would only perform superficial syntax parsing.
 
 ### Using the `run` command
 

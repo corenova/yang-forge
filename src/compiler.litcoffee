@@ -73,7 +73,7 @@ ensures syntax correctness and building the JS object tree structure.
           (@parse stmt for stmt in input.substmts)
           .filter (e) -> e?
           .reduce ((a, b) -> Meta.copy a, b, true), {}
-        params = undefined unless Object.keys(params).length > 0
+        params = null unless Object.keys(params).length > 0
 
         unless params?
           Meta.objectify "#{normalize input}", input.arg
@@ -292,7 +292,7 @@ provided input.
             if constraint? and constraint in [ '0..1', '1' ]
               output.set key, val
             else
-              output.set "#{key}.#{val}", undefined
+              output.set "#{key}.#{val}", null
             if ext.argument?
               console.log "[compile:#{id}] #{key} #{val?.slice 0, 50}..."
               #ext.resolver?.call? output, val, {}

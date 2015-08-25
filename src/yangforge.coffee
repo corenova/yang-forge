@@ -1,8 +1,9 @@
-if process.env.yfc_debug?
-  unless console._prefixes?
-    (require 'clim') '[forge]', console, true
-else
-  console.log = ->
+if /bin\/yfc$/.test require.main.filename
+  if process.env.yfc_debug?
+    unless console._prefixes?
+      (require 'clim') '[forge]', console, true
+  else
+    console.log = ->
 
 Synth = require 'data-synth'
 path = require 'path'
@@ -14,7 +15,7 @@ Promise = require 'promise'
 class Forge extends Synth
   @set synth: 'forge', extensions: {}, events: []
 
-  @mixin (require './compiler/compiler')
+  @mixin (require './compiler')
 
   @extension = (name, config) -> switch
     when config instanceof Function
@@ -176,7 +177,8 @@ class Forge extends Synth
       return Promise.reject "cannot invoke without available '#{rpc}' operation"
     schema = new method.meta input: data
     super method.name, (schema.access 'input'), (schema.access 'output'), (e) -> throw e if e?; true
-      .then (res) -> return schema.access 'output'
+      .then (res) ->
+        return schema.access 'output'
 
 module.exports = Forge.new module,
   before: -> console.log "forgery initiating schema compilations..."
@@ -244,20 +246,43 @@ module.exports = Forge.new module,
       child.on 'close', (code) -> next()
 
     @on 'schema', (input, output, next) ->
+      schemas = input.get 'arguments'
       options = input.get 'options'
-      result = switch
-        when options.eval 
-          x = @compile options.eval
-          x?.extract 'module'
-        when options.compile
-          x = @compile (fs.readFileSync options.compile, 'utf-8')
-          x?.extract 'module'
 
-      console.assert !!result, "unable to process input"
-      result = switch
-        when /^json$/i.test options.format then JSON.stringify result, null, 2
-        else prettyjson.render result
-      console.info result if result?
+      if options.eval then schemas = [ options.eval ]
+      else schemas = schemas.map (e) -> (fs.readFileSync e, 'utf-8')
+
+      results = switch
+        when options.compile
+          # XXX - this is a bit of an ugly HACK... need to make this cleaner
+          forgery = @constructor
+          convert = (obj) ->
+            yang = obj?.meta?.yang
+            keys = Object.keys(forgery.get "exports.extension.#{yang}") if yang?
+            meta = Forge.extract.apply obj.meta, keys if keys?
+            o = {}
+            for k, v of meta when v?
+              switch v.meta?.yang
+                when 'type'
+                  type = convert v
+                  delete type.type
+                  if Object.keys(type).length > 0
+                    o[v.meta.yang] = Forge.objectify v.meta.type, type
+                  else
+                    o[v.meta.yang] = v.meta.type
+                else
+                  o[k] = v
+            (for k, v of obj when k isnt 'meta' and v?.meta?.yang?
+              Forge.objectify "#{v.meta.yang}.#{k}", convert v
+            ).reduce ((a, b) -> Forge.Meta.copy a, b), o
+          (@compile schema for schema in schemas).map (x) -> convert x?.reduce()
+        else
+          @parse schema for schema in schemas
+
+      results = results[0] if results.length is 1
+      console.info switch
+        when /^json$/i.test options.format then JSON.stringify results, null, 2
+        else prettyjson.render results
       next()
 
     @on 'infuse', (input, output, next) ->
@@ -288,7 +313,7 @@ module.exports = Forge.new module,
           features = cli: on
         else
           @set 'features.cli', off
-          process.argv = [] # hack for now...
+          #process.argv = [] # hack for now...
 
         console.log "forgery firing up #{Object.keys(features)}..."
         for feature, arg of features

@@ -286,13 +286,17 @@ module yangforge {
 
   rpc schema {
     if-feature cli;
-    description "process YANG schema files";
+    description "process YANG schema file(s)";
     input {
       uses cli-command {
+        refine arguments {
+          config true;
+          description "schema";
+        }
         augment options {
           leaf compile {
-            description "compile input file into specified output format";
-            type string;
+            description "compile input file(s) into specified output format";
+            type empty;
             units c;
           }
           leaf eval {
