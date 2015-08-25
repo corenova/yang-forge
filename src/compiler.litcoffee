@@ -78,6 +78,7 @@ ensures syntax correctness and building the JS object tree structure.
         unless params?
           Meta.objectify "#{normalize input}", input.arg
         else
+          input.arg = input.arg.replace '.','_'
           Meta.objectify "#{normalize input}.#{input.arg}", params
 
 The `preprocess` function is the intermediary method of the compiler

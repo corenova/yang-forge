@@ -71,7 +71,8 @@ module.exports = Forge.new module,
     @extension 'augment', (key, value) -> @bind key, value
     @extension 'refine',  (key, value) -> @merge "refine.#{key}", value
 
-    @extension 'pattern', (value) -> @set pattern: new RegExp value
+    @extension 'pattern', (value) -> @merge patterns: [ new RegExp value ]
+
     @extension 'enum', (key, value) ->
       val = value?.extract? 'value', 'description', 'reference', 'status'
       unless val?.value?
@@ -89,9 +90,10 @@ module.exports = Forge.new module,
           @merge value
         unless (@get 'type')?
           @set type: key
-          
-        @set options: [ 'type', 'enum', 'types', 'pattern', 'range', 'length', 'normalizer', 'validator' ]
+
         @set
+          pattern: @get 'patterns'
+          options: [ 'type', 'enum', 'types', 'pattern', 'range', 'length', 'normalizer', 'validator' ]
           normalizer: (value) ->
             console.log "normalizing '#{value}'"
             switch
@@ -104,7 +106,8 @@ module.exports = Forge.new module,
           validator: (value) ->
             console.log "validating '#{value}'"
             switch
-              when @opts.type is 'string' and @opts.pattern? then @opts.pattern.test value
+              when @opts.type is 'string' and @opts.pattern?
+                @opts.pattern.every (regex) -> regex.test value
               when @opts.type is 'enumeration' then @opts.enum?.hasOwnProperty value
               else true
         @include

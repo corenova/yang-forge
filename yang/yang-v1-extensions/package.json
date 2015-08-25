@@ -320,7 +320,7 @@
       "fraction-digits": "0..1",
       "length": "0..1",
       "path": "0..1",
-      "pattern": "0..1",
+      "pattern": "0..n",
       "range": "0..1",
       "require-instance": "0..1",
       "type": "0..n"

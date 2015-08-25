@@ -55,14 +55,17 @@ class Forge extends Synth
     # can properly export themselves.
     if module.id is input.id
       unless module.loaded is true
-        if input.parent.parent? and Forge.synthesized module.exports
+        if input.parent.parent?
           console.log "[new] searching ancestors for a synthesized forgery..."
           forge = Forge::seek.call input.parent.parent,
             loaded: true
             exports: (v) -> Forge.synthesized v
           if forge?
             console.log "[new] found a forgery!"
-          return forge?.exports ? Forge
+            return forge.exports
+          if /yang-v1-extensions/.test input.parent.id
+            console.log "[new] returning Forge for v1-extensions"
+            return Forge
 
         console.log "[new] forgery initiating SELF-CONSTRUCTION"
         module.exports = Forge

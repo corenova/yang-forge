@@ -1,5 +1,5 @@
 {
-  "version": "0.9.17",
+  "version": "0.9.18",
   "name": "yangforge",
   "description": "YANG driven JS application builder",
   "keywords": [
@@ -51,7 +51,8 @@
   },
   "optionalDependencies": {
     "complex-types": "file:yang/complex-types",
-    "ietf-inet-types": "file:yang/ietf-inet-types"
+    "ietf-inet-types": "file:yang/ietf-inet-types",
+    "ietf-yang-types": "file:yang/ietf-yang-types"
   },
   "bundleDependencies": [
     "clim",
