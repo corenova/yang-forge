@@ -92,11 +92,9 @@ arguments.
                     # if res? and res.serialize?
                     #   console.info res.serialize()
                   .catch (err) ->
-                    console.error "error occurred during #{action}"
                     console.error "#{err}".red
                     cmd.help()
               catch e
-                console.error "error occurred during #{action}"
                 console.error "#{e}".red
                 cmd.help()
 
