@@ -173,8 +173,9 @@ class Forge extends Synth
 
   invoke: (rpc, data) ->
     method = @access "methods.#{rpc}"
-    unless method?
-      return Promise.reject "cannot invoke without available '#{rpc}' operation"
+    return super unless method?
+
+    console.log "invoking schema defined '#{rpc}' RPC operation"
     schema = new method.meta input: data
     super method.name, (schema.access 'input'), (schema.access 'output'), (e) -> throw e if e?; true
       .then (res) ->
@@ -198,6 +199,8 @@ module.exports = Forge.new module,
 
     @on 'build', (input, output, next) ->
       next "this is an example for a failed listener"
+
+    @on 'config', (input, output, next) ->
 
     @on 'init', ->
       console.info "initializing yangforge environment...".grey

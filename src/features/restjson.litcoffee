@@ -48,19 +48,19 @@ instances.
         .options (req, res, next) ->
           res.send
             REPORT:
-              description: 'get detailed information about this resource'
+              description: 'get detailed information about this module'
             GET:
-              description: 'get serialized output for this resource'
+              description: 'get serialized output for this module'
             PUT:
-              description: 'update configuration for this resource'
+              description: 'update configuration for this module'
             COPY:
-              description: 'get a copy of this resource for cloning it elsewhere'
+              description: 'get a copy of this module for cloning it elsewhere'
         .report (req, res, next) -> res.locals.result = req.module.report(); next()
         .get    (req, res, next) -> res.locals.result = req.module.serialize(); next()
         .put    (req, res, next) ->
           (req.module.set req.body).save()
           .then (result) ->
-            res.locals.result = result.serialize();
+            res.locals.result = req.module.serialize();
             next()
           .catch (err) ->
             req.module.rollback()
@@ -94,11 +94,35 @@ instances.
         subrouter = express.Router()
         subrouter.param 'container', (req,res,next,container) ->
           match = req.container.access container
-          if (match?.meta 'synth') in [ 'model', 'object', 'list' ]
-             req.container = match; next()
+          if (match?.meta 'synth') in [ 'model', 'object' ]
+            req.container = match; next()
           else next 'route'
+        subrouter.param 'collection', (req,res,next,collection) ->
+          match = req.container.access collection
+          if (match?.meta 'synth') is 'list'
+            req.collection = match; next()
+          else next 'route'
+        subrouter.param 'key', (req,res,next,key) ->
+          match = req.collection.access key
+          if match? then req.container = match; next() else next 'route'
+
         subrouter.route '/'
         .get (req, res, next) -> res.locals.result = req.container.serialize(); next()
+        .put (req, res, next) -> next()
+
+        subrouter.route '/:collection'
+        .get  (req, res, next) -> res.locals.result = req.collection.serialize(); next()
+        .post (req, res, next) ->
+          req.collection.push req.body
+          req.module.save()
+          .then (result) ->
+            res.locals.result = result.serialize()
+            next()
+          .catch (err) ->
+            req.module.rollback()
+            next err
+
+        subrouter.use '/:collection/:key', subrouter
         subrouter.use '/:container', subrouter
 
         # nested sub-routes for containers and modules
@@ -125,10 +149,10 @@ instances.
           console.error err
           res.status(500).send error: JSON.stringify err
 
-        # TODO open up a socket.io connection stream for store updates
+        if app?
+          console.info "restjson: binding forgery to /restjson".grey
+          # should attach bp.json strict: true here
+          # app.use bp.json string: true
+          app.use "/restjson", restjson
 
-        console.info "restjson: binding forgery to /restjson".grey
-        # should attach bp.json strict: true here
-        # app.use bp.json string: true
-        app.use "/restjson", restjson
         return router

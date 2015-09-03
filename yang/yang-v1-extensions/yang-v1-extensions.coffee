@@ -102,14 +102,14 @@ module.exports = Forge.new module,
                 for key, val of @opts.enum
                   return key if val.value is value or val.value is "#{value}"
                 value
-              else value
-          validator: (value) ->
+              else @normalize value, type: @opts.type
+          validator: (value=@value) ->
             console.log "validating '#{value}'"
             switch
               when @opts.type is 'string' and @opts.pattern?
                 @opts.pattern.every (regex) -> regex.test value
               when @opts.type is 'enumeration' then @opts.enum?.hasOwnProperty value
-              else true
+              else @validate value, type: @opts.type
         @include
           valueOf: -> @value
 
