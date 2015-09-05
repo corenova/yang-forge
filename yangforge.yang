@@ -354,7 +354,8 @@ module yangforge {
     description "absorb requested target module(s) into current runtime";
     input {
       list targets {
-        leaf source { type string; }
+        key "source";
+        leaf source { type string; mandatory true; }
         container data {
           description "initial configuration data for the source module";
         }

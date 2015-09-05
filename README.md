@@ -67,7 +67,7 @@ to the schema section covering various `rpc` extension statements and
 sub-statement definitions for a reference regarding different types of
 command-line arguments, descriptions, and options processing syntax.
 The corresponding **actions** for each of the `rpc` extensions are
-implemented inside the `YangForge` module forging before-hook
+implemented inside the `YangForge` module forging after-hook
 [here](src/yangforge.coffee).
 
 ## Common Usage Examples
@@ -437,6 +437,20 @@ restart of the `yangforge` running instance.
 
 The `run` command internally utilizes the `infuse` operation to
 instantiate the initial running process.
+
+## Troubleshooting
+
+When you encounter errors or issues while utilizing the `yfc` command
+line utility, you can set ENVIRONMENTAL variable `yfc_debug=1` to get
+complete debug output of the `YangForge` execution log.
+
+```bash
+$ yfc_debug=1 yfc <some-command>
+```
+The output generated is very verbose and may or may not assist you in
+determining the root cause. When reporting an issue into the Github
+repository, it will be helpful to paste a snippet of the debug output
+for quicker resolution by the project maintainer.
 
 ## Bundled YANG modules
 

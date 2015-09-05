@@ -51,7 +51,7 @@ module.exports = Forge.new module,
       entry = Forge.Object (value.extract 'bindings')
       @bind key, (Forge.List value.unbind()).set type: entry
     @extension 'leaf-list', (key, value) -> @bind key, Forge.List value
-      
+
     @extension 'enum',      (key, value) -> null
     @extension 'leaf',      (key, value) ->
       @bind key, Forge.Property value, ->

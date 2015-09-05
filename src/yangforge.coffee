@@ -35,7 +35,7 @@ class Forge extends Synth
   @schema
     extensions: @attr 'object'
     modules:    @list Forge, key: 'name', private: true
-    features:   @list Forge.Interface, key: 'name', private: true
+    features:   @list Object, key: 'name', private: true
     methods:    @list Object, key: 'name', private: true
     events:     @computed (-> return @events ), type: 'array', private: true
 
@@ -290,11 +290,18 @@ module.exports = Forge.new module,
       next()
 
     @on 'infuse', (input, output, next) ->
-      modules = for target in input.get 'targets'
+      targets = input.get 'targets'
+      unless targets.length > 0
+        output.set 'message', 'no operation since no target(s) were specified'
+        next()
+        return
+
+      modules = for target in targets
         console.log "<infuse> absorbing a new source '#{target.source}' into running forge"
         target = @create target.source, target.data
         (@access 'modules').push target if target?
         target
+
       output.set 'message', 'request processed successfully'
       output.set 'modules', modules
       console.log "<infuse> completed"
@@ -319,7 +326,7 @@ module.exports = Forge.new module,
           @set 'features.cli', off
           #process.argv = [] # hack for now...
 
-        console.log "forgery firing up #{Object.keys(features)}..."
+        console.log "forgery loading #{Object.keys(features)}..."
         for feature, arg of features
           continue unless arg? and arg
 
@@ -328,7 +335,6 @@ module.exports = Forge.new module,
 
           try (@access 'features').push new (@load "features/#{feature}") null, this
           catch e then console.warn "unable to load feature '#{feature}' due to #{e}"
-
 
         # run passed in features
         console.log "forgery firing up..."

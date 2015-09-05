@@ -18,9 +18,6 @@ for higher-order features to utilize it for associating additional routing endpo
       generator: (port=5000) ->
         express = require 'express'
         app = (->
-          bp = require 'body-parser'
-          @use bp.urlencoded(extended:true), bp.json(strict:true), (require 'passport').initialize()
-
           env = process.env.NODE_ENV ? 'development'
           if env is 'production'
             @use (require 'errorhandler') {dumpExceptions: off, showStack: off}

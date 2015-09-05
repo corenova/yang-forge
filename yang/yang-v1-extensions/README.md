@@ -56,8 +56,8 @@ leaf-list | Forge.List | supported
 length | property meta | unsupported
 list | Forge.List | supported
 mandatory | property meta | supported
-max-elements | property meta | unsupported
-min-elements | property meta | unsupported
+max-elements | property meta | supported
+min-elements | property meta | supported
 module | Forge.Store | supported
 must | conditional | unsupported
 namespace | module meta | supported
@@ -66,7 +66,7 @@ ordered-by | property meta | unsupported
 organization | module meta | supported
 output | rpc schema | supported
 path | TBD | unsupported
-pattern | TBD | unsupported
+pattern | TBD | supported
 position | TBD | unsupported
 prefix | module meta | supported
 presence | meta data | unsupported
@@ -75,12 +75,12 @@ reference | meta data | supported
 refine | merge | unsupported
 require-instance | TBD | unsupported
 revision | meta data | supported
-revision-date | conditional | unsupported
+revision-date | conditional | supported
 rpc | Forge.Action | supported
 status | meta data | supported
 submodule | preprocess | supported
 type | property meta | partial
-typedef | TBD | unsupported
+typedef | TBD | supported
 unique | property meta | supported
 units | property meta | supported
 uses | schema merge | supported

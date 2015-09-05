@@ -24,7 +24,8 @@
       "instance-list": "0..n",
       "leaf": "0..n",
       "leaf-list": "0..n",
-      "refine": "0..n"
+      "refine": "0..n",
+      "rpc": "0..n"
     },
     "extends": {
       "description": "0..1",
