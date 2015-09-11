@@ -179,7 +179,9 @@ $ curl localhost:5000/restjson/example-jukebox
 ```
 ```json
 {
-  "example-jukebox": {
+  "name": "example-jukebox",
+  "description": "Example Jukebox Data Model Module",
+  "module": {
     "jukebox": {
       "library": {
         "artist": []
@@ -222,14 +224,80 @@ $ curl -X REPORT localhost:5000/restjson/ping
 ```
 ```json
 {
-  "name": "ping",
   "schema": {
+    "name": "ping",
     "prefix": "ping",
     "namespace": "urn:opendaylight:ping",
     "revision": {
       "2013-09-11": {
         "description": "TCP ping module"
       }
+    },
+    "import": {
+      "inet": {
+        "name": "ietf-inet-types",
+        "prefix": "inet",
+        "namespace": "urn:ietf:params:xml:ns:yang:ietf-inet-types",
+        "description": "This module contains a collection of generally
+useful derived\nYANG data types for Internet addresses and related
+things.\n\nCopyright (c) 2013 IETF Trust and the persons identified
+as\nauthors of the code.  All rights reserved.\n\nRedistribution and
+use in source and binary forms, with or\nwithout modification, is
+permitted pursuant to, and subject\nto the license terms contained in,
+the Simplified BSD License\nset forth in Section 4.c of the IETF
+Trust's Legal Provisions\nRelating to IETF
+Documents\n(http://trustee.ietf.org/license-info).\n\nThis version of
+//this YANG module is part of RFC 6991; see\nthe RFC itself for full
+//legal notices.",
+        "revision": {
+          "2013-07-15": {
+            "description": "This revision adds the following new data
+types:\n- ip-address-no-zone\n- ipv4-address-no-zone\n-
+ipv6-address-no-zone",
+            "reference": "RFC 6991: Common YANG Data Types"
+          },
+          "2010-09-24": {
+            "description": "Initial revision.",
+            "reference": "RFC 6021: Common YANG Data Types"
+          }
+        },
+        "organization": "IETF NETMOD (NETCONF Data Modeling Language)
+Working Group",
+        "contact": "WG Web:   <http://tools.ietf.org/wg/netmod/>\nWG
+//List:  <mailto:netmod@ietf.org>\n\nWG Chair: David Kessens\n
+//<mailto:david.kessens@nsn.com>\n\nWG Chair: Juergen Schoenwaelder\n
+//<mailto:j.schoenwaelder@jacobs-university.de>\n\nEditor:   Juergen
+//Schoenwaelder\n
+//<mailto:j.schoenwaelder@jacobs-university.de>",
+        "exports": {
+          "extension": 63,
+          "type": [
+            "ip-version",
+            "dscp",
+            "ipv6-flow-label",
+            "port-number",
+            "as-number",
+            "ip-address",
+            "ipv4-address",
+            "ipv6-address",
+            "ip-address-no-zone",
+            "ipv4-address-no-zone",
+            "ipv6-address-no-zone",
+            "ip-prefix",
+            "ipv4-prefix",
+            "ipv6-prefix",
+            "domain-name",
+            "host",
+            "uri"
+          ]
+        }
+      }
+    },
+    "exports": {
+      "extension": 63,
+      "rpc": [
+        "send-echo"
+      ]
     }
   },
   "package": {
@@ -237,13 +305,7 @@ $ curl -X REPORT localhost:5000/restjson/ping
     "description": "an example ping yangforged module",
     "version": "1.0.0",
     "license": "MIT",
-    "author": "Peter Lee <peter@intercloud.net>",
-    "exports": {
-      "extension": 63,
-      "rpc": [
-        "send-echo"
-      ]
-    }
+    "author": "Peter Lee <peter@intercloud.net>"
   },
   "operations": {
     "send-echo": "Send TCP ECHO request"
@@ -343,10 +405,11 @@ $ curl -X REPORT localhost:5000/restjson
 ```
 ```json
 {
-  "name": "yangforge",
   "schema": {
+    "name": "yangforge",
     "prefix": "yf",
-    "description": "This module provides YANG v1 language based schema compilations.",
+    "description": "This module provides YANG v1 language based schema
+compilations.",
     "revision": {
       "2015-05-04": {
         "description": "Initial revision",
@@ -354,18 +417,17 @@ $ curl -X REPORT localhost:5000/restjson
       }
     },
     "organization": "ClearPath Networks NFV R&D Group",
-    "contact": "Web:  <http://www.clearpathnet.com>\nCode: <http://github.com/clearpath-networks/yangforge>\n\nAuthor: Peter K. Lee <mailto:plee@clearpathnet.com>"
-  },
-  "package": {
-    "name": "yangforge",
-    "description": "YANG driven JS application builder",
-    "version": "0.9.14",
-    "license": "Apache-2.0",
-    "author": "Peter Lee <peter@intercloud.net>",
-    "homepage": "https://github.com/opnfv/yangforge",
-    "repository": {
-      "type": "git",
-      "url": "http://github.com/opnfv/yangforge"
+    "contact": "Web:  <http://www.clearpathnet.com>\nCode:
+//<http://github.com/clearpath-networks/yangforge>\n\nAuthor: Peter
+//K. Lee <mailto:plee@clearpathnet.com>",
+    "include": {
+      "yang-v1-extensions": {
+        "name": "yang-v1-extensions",
+        "description": "yangforged yang language v1.0 submodule",
+        "exports": {
+          "extension": 63
+        }
+      }
     },
     "exports": {
       "extension": 63,
@@ -393,12 +455,31 @@ $ curl -X REPORT localhost:5000/restjson
         "schema",
         "sign",
         "enable",
-		"disable",
+        "disable",
         "infuse",
         "defuse",
         "export"
       ]
     }
+  },
+  "package": {
+    "name": "yangforge",
+    "description": "YANG driven JS application builder",
+    "version": "0.9.23",
+    "license": "Apache-2.0",
+    "author": {
+      "name": "Peter Lee",
+      "email": "peter@intercloud.net"
+    },
+    "homepage": "https://github.com/saintkepha/yangforge",
+    "repository": {
+      "type": "git",
+      "url": "git+ssh://git@github.com/saintkepha/yangforge.git"
+    }
+  },
+  "modules": {
+    "ping": "an example ping yangforged module",
+    "example-jukebox": "Example Jukebox Data Model Module"
   },
   "operations": {
     "build": "package the application for deployment",
@@ -410,7 +491,7 @@ $ curl -X REPORT localhost:5000/restjson
     "list": "list installed packages",
     "publish": "publish package to upstream registry",
     "run": "runs one or more modules and/or schemas",
-    "schema": "process YANG schema files",
+    "schema": "process YANG schema file(s)",
     "sign": "sign package to ensure authenticity",
     "enable": "enables passed-in set of feature(s) for the current runtime",
     "disable": "disables passed-in set of feature(s) for the current runtime",
