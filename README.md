@@ -238,22 +238,10 @@ $ curl -X REPORT localhost:5000/restjson/ping
         "name": "ietf-inet-types",
         "prefix": "inet",
         "namespace": "urn:ietf:params:xml:ns:yang:ietf-inet-types",
-        "description": "This module contains a collection of generally
-useful derived\nYANG data types for Internet addresses and related
-things.\n\nCopyright (c) 2013 IETF Trust and the persons identified
-as\nauthors of the code.  All rights reserved.\n\nRedistribution and
-use in source and binary forms, with or\nwithout modification, is
-permitted pursuant to, and subject\nto the license terms contained in,
-the Simplified BSD License\nset forth in Section 4.c of the IETF
-Trust's Legal Provisions\nRelating to IETF
-Documents\n(http://trustee.ietf.org/license-info).\n\nThis version of
-//this YANG module is part of RFC 6991; see\nthe RFC itself for full
-//legal notices.",
+        "description": "This module contains a collection of generally useful derived\nYANG data types for Internet addresses and related things.\n\nCopyright (c) 2013 IETF Trust and the persons identified as\nauthors of the code.  All rights reserved.\n\nRedistribution and use in source and binary forms, with or\nwithout modification, is permitted pursuant to, and subject\nto the license terms contained in, the Simplified BSD License\nset forth in Section 4.c of the IETF Trust's Legal Provisions\nRelating to IETF Documents\n(http://trustee.ietf.org/license-info).\n\nThis version of this YANG module is part of RFC 6991; see\nthe RFC itself for full legal notices.",
         "revision": {
           "2013-07-15": {
-            "description": "This revision adds the following new data
-types:\n- ip-address-no-zone\n- ipv4-address-no-zone\n-
-ipv6-address-no-zone",
+            "description": "This revision adds the following new data types:\n- ip-address-no-zone\n- ipv4-address-no-zone\n- ipv6-address-no-zone",
             "reference": "RFC 6991: Common YANG Data Types"
           },
           "2010-09-24": {
@@ -261,14 +249,8 @@ ipv6-address-no-zone",
             "reference": "RFC 6021: Common YANG Data Types"
           }
         },
-        "organization": "IETF NETMOD (NETCONF Data Modeling Language)
-Working Group",
-        "contact": "WG Web:   <http://tools.ietf.org/wg/netmod/>\nWG
-//List:  <mailto:netmod@ietf.org>\n\nWG Chair: David Kessens\n
-//<mailto:david.kessens@nsn.com>\n\nWG Chair: Juergen Schoenwaelder\n
-//<mailto:j.schoenwaelder@jacobs-university.de>\n\nEditor:   Juergen
-//Schoenwaelder\n
-//<mailto:j.schoenwaelder@jacobs-university.de>",
+        "organization": "IETF NETMOD (NETCONF Data Modeling Language) Working Group",
+        "contact": "WG Web:   <http://tools.ietf.org/wg/netmod/>\nWG List:  <mailto:netmod@ietf.org>\n\nWG Chair: David Kessens\n          <mailto:david.kessens@nsn.com>\n\nWG Chair: Juergen Schoenwaelder\n          <mailto:j.schoenwaelder@jacobs-university.de>\n\nEditor:   Juergen Schoenwaelder\n          <mailto:j.schoenwaelder@jacobs-university.de>",
         "exports": {
           "extension": 63,
           "type": [
@@ -408,8 +390,7 @@ $ curl -X REPORT localhost:5000/restjson
   "schema": {
     "name": "yangforge",
     "prefix": "yf",
-    "description": "This module provides YANG v1 language based schema
-compilations.",
+    "description": "This module provides YANG v1 language based schema compilations.",
     "revision": {
       "2015-05-04": {
         "description": "Initial revision",
@@ -417,9 +398,7 @@ compilations.",
       }
     },
     "organization": "ClearPath Networks NFV R&D Group",
-    "contact": "Web:  <http://www.clearpathnet.com>\nCode:
-//<http://github.com/clearpath-networks/yangforge>\n\nAuthor: Peter
-//K. Lee <mailto:plee@clearpathnet.com>",
+    "contact": "Web:  <http://www.clearpathnet.com>\nCode: <http://github.com/clearpath-networks/yangforge>\n\nAuthor: Peter K. Lee <mailto:plee@clearpathnet.com>",
     "include": {
       "yang-v1-extensions": {
         "name": "yang-v1-extensions",
@@ -476,10 +455,6 @@ compilations.",
       "type": "git",
       "url": "git+ssh://git@github.com/saintkepha/yangforge.git"
     }
-  },
-  "modules": {
-    "ping": "an example ping yangforged module",
-    "example-jukebox": "Example Jukebox Data Model Module"
   },
   "operations": {
     "build": "package the application for deployment",
