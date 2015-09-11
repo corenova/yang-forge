@@ -33,11 +33,18 @@ class Forge extends Synth
       (@get "bindings.#{target}")?.merge 'events', [ key: action, value: func ]
 
   @schema
-    extensions: @attr 'object'
-    modules:    @list Forge, key: 'name', private: true
-    features:   @list Object, key: 'name', private: true
-    methods:    @list Object, key: 'name', private: true
-    events:     @computed (-> return @events ), type: 'array', private: true
+    name:        @computed (-> return (@access 'module')?.meta 'name'), type: 'string'
+    description: @computed (->
+      desc = (@access 'module')?.meta 'description'
+      desc ?= @meta 'description'
+      desc ?= null
+      return desc
+    ), type: 'string'
+    extensions:  @attr 'object'
+    modules:     @list Forge, key: 'name', private: true
+    features:    @list Object, key: 'name', private: true
+    methods:     @list Object, key: 'name', private: true
+    events:      @computed (-> return @events ), type: 'array', private: true
 
   # this is a factory that instantiates based on compiled output of
   # constructor's meta data
@@ -114,46 +121,38 @@ class Forge extends Synth
     return target
 
   report: (options={}) ->
-    keys = [ 'name', 'description', 'version', 'license', 'author', 'homepage', 'repository', 'exports' ]
+    keys = [ 'name', 'description', 'version', 'license', 'author', 'homepage', 'repository' ]
     if options.verbose
       keys.push 'keywords', 'dependencies', 'optionalDependencies'
     pkg = @constructor.extract.apply @constructor, keys
     pkg.dependencies = Object.keys pkg.dependencies if pkg.dependencies?
     pkg.optionalDependencies = Object.keys pkg.optionalDependencies if pkg.optionalDependencies?
 
-    pkg.exports[k] = Object.keys v for k, v of pkg.exports when v instanceof Object
-    if not options.verbose and pkg.exports.extension? and pkg.exports.extension.length > 10
-      pkg.exports.extension = pkg.exports.extension.length
-
-    name = @get 'name'
-    name ?= pkg.name
-    schema = (@access name)?.constructor
+    schema = (@access 'module')?.constructor
     schema ?= @constructor
     schema = do (schema, options) ->
       keys = [
-        'prefix', 'namespace', 'description', 'revision', 'organization', 'contact'
-        'include', 'import'
+        'name', 'prefix', 'namespace', 'description', 'revision', 'organization', 'contact'
+        'include', 'import', 'exports'
       ]
       info = Forge.extract.apply schema, keys
       for k, data of info.include
         info.include[k] = arguments.callee data, options
       for k, data of info.import
-        info.import[k] = data?.get? 'name'
+        info.import[k] = arguments.callee (data.get 'bindings.module'), options
+
+      info.exports[k] = Object.keys v for k, v of info.exports when v instanceof Object
+      if not options.verbose and info.exports.extension? and info.exports.extension.length > 10
+        info.exports.extension = info.exports.extension.length
       return info
 
     res = 
-      name: name
       schema: schema
       package: pkg
 
     modules = @get 'modules'
     if modules.length > 0
-      res.modules = modules.reduce ((a,b) =>
-        m = @access "modules.#{b.name}"
-        unless m.meta 'description'
-          m = m.access b.name
-        a[b.name] = (m.meta 'description') ? '(empty)'; a
-      ), {}
+      res.modules = modules.reduce ((a,b) -> a[b.name] = b.description; a), {}
     methods = @get 'methods'
     if methods.length > 0
       res.operations = methods.reduce ((a,b) ->
@@ -187,10 +186,10 @@ module.exports = Forge.new module,
     console.log "forgery invoking after hook..."
 
     # update yangforge.runtime bindings
-    @rebind 'yangforge.runtime.features', (prev) =>
+    @rebind 'module.runtime.features', (prev) =>
       @computed (-> (@seek synth: 'forge').get 'features' ), type: 'array'
 
-    @rebind 'yangforge.runtime.modules', (prev) =>
+    @rebind 'module.runtime.modules', (prev) =>
       @computed (-> (@seek synth: 'forge').get 'modules' ), type: 'array'
 
     @on 'build', (input, output, next) ->

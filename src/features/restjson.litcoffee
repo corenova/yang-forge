@@ -64,12 +64,12 @@ instances.
             if match? then req.target = match; next() else next 'route'
 
           @param 'container', (req, res, next, container) ->
-            match = req.target.access "#{req.target.get 'name'}.#{container}"
+            match = req.target.access "module.#{container}"
             if (match?.meta 'synth') in [ 'model', 'object', 'list' ]
               req.target = match; next()
             else next 'route'
 
-          @use '/:module', this
+          @use '/:module', router
           @use '/:container', router
 
           return this

@@ -14,7 +14,7 @@ Forge = require 'yangforge'
 module.exports = Forge.new module,
   before: ->
     @extension 'complex-type',  (key, value) ->
-      @scope.define 'complex-type', key, Forge.Model value, -> @set modelName: key, temp: false
+      @scope.define 'complex-type', key, Forge.Model value, -> @set name: key, temp: false
       
     @extension 'abstract',      (key, value) -> undefined
     @extension 'extends',       (key, value) -> @merge (@scope.resolve 'complex-type', key)

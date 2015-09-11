@@ -30,13 +30,11 @@ module.exports = Forge.new module,
     @extension 'feature',  (key, value) -> @scope.define 'feature', key, value
     @extension 'grouping', (key, value) -> @scope.define 'grouping', key, value
     @extension 'typedef',  (key, value) -> @scope.define 'type', key, value
-    @extension 'rpc',      (key, value) -> @scope.define 'rpc', key, value
-    @extension 'notification', (key, value) -> @scope.define 'notification', key, value
 
     @extension 'module', (key, value) ->
-      @set name: key, exports: @scope.exports
-      @bind 'name', key
-      @bind key, Forge.Model value
+      exports = @scope.exports
+      @set name: key, exports: exports
+      @bind 'module', Forge.Model value, -> @set name: key, exports: exports
           
     @extension 'submodule', (key, value) ->
       @set name: key, exports: @scope.exports
@@ -45,6 +43,16 @@ module.exports = Forge.new module,
     @extension 'import',     (key, value) -> @scope[key] = value?.extract? 'exports'
     @extension 'include',    (key, value) -> @mixin value
     @extension 'belongs-to', (key, value) -> @scope[value.get 'prefix'] = @scope
+
+    @extension 'rpc', (key, value) ->
+      @scope.define 'rpc', key, value
+      #@hook key, value
+      # do something
+
+    @extension 'notification', (key, value) ->
+      @scope.define 'notification', key, value
+      #@hook key, value
+      # do something
 
     @extension 'container', (key, value) -> @bind key, Forge.Object value
     @extension 'list',      (key, value) ->
@@ -95,7 +103,7 @@ module.exports = Forge.new module,
           pattern: @get 'patterns'
           options: [ 'type', 'enum', 'types', 'pattern', 'range', 'length', 'normalizer', 'validator' ]
           normalizer: (value) ->
-            console.log "normalizing '#{value}'"
+            console.log "#{@meta 'name'} normalizing '#{value}'"
             switch
               when @opts.type instanceof Function then new @opts.type value, this
               when @opts.type is 'enumeration' and typeof value is 'number'
@@ -104,7 +112,7 @@ module.exports = Forge.new module,
                 value
               else @normalize value, type: @opts.type
           validator: (value=@value) ->
-            console.log "validating '#{value}'"
+            console.log "#{@meta 'name'} validating '#{value}'"
             switch
               when @opts.type is 'string' and @opts.pattern?
                 @opts.pattern.every (regex) -> regex.test value
