@@ -1,5 +1,5 @@
 {
-  "version": "0.9.24",
+  "version": "0.10.0",
   "name": "yangforge",
   "description": "YANG driven JS application builder",
   "keywords": [
@@ -35,7 +35,6 @@
   "bin": {
     "yfc": "./bin/yfc"
   },
-  "schema": "./yangforge.yang",
   "dependencies": {
     "body-parser": "^1.13.2",
     "clim": "^1.1.1",
@@ -48,26 +47,14 @@
     "passport": "^0.2.2",
     "prettyjson": "^1.1.2",
     "promise": "^7.0.4",
-    "yang-parser": "^0.1.0",
-    "yang-v1-extensions": "file:yang/yang-v1-extensions"
-  },
-  "optionalDependencies": {
-    "complex-types": "file:yang/complex-types",
-    "iana-crypt-hash": "file:yang/iana-crypt-hash",
-    "ietf-inet-types": "file:yang/ietf-inet-types",
-    "ietf-yang-types": "file:yang/ietf-yang-types"
+    "yang-parser": "^0.1.0"
   },
   "bundleDependencies": [
     "clim",
     "colors",
     "commander",
     "prettyjson",
-    "yang-parser",
-    "complex-types",
-    "iana-crypt-hash",
-    "ietf-inet-types",
-    "ietf-yang-types",
-    "yang-v1-extensions"
+    "yang-parser"
   ],
   "devDependencies": {
     "coffee-script": ">=1.7"
