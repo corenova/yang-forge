@@ -135,7 +135,7 @@ module yangforge {
 
   rpc config {
     if-feature cli;
-    description "manage application configuration data";
+    description "manage yangforge service configuration";
     input {
       uses cli-command {
         // choice argument {
@@ -214,6 +214,29 @@ module yangforge {
     }
   }
 
+  rpc login {
+    if-feature cli;
+    description "authenticate user to operate on yangforge registry";
+    input {
+      uses cli-command {
+        augment options {
+          leaf registry {
+            description "The base URL of the package registry";
+            type string;
+            units r;
+            default "http://yangforge.intercloud.net";
+          }
+          leaf scope {
+            description "Specify the scope of the package";
+            type string;
+            units s;
+            default "@yang";
+          }
+        }
+      }
+    }
+  }
+  
   rpc list {
     if-feature cli;
     description "list installed packages";

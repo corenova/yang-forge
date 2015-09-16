@@ -70,6 +70,31 @@ The corresponding **actions** for each of the `rpc` extensions are
 implemented inside the `YangForge` module forging after-hook
 [here](src/yangforge.coffee).
 
+## Bundled YANG modules
+
+There are a number of YANG schema modules commonly referenced and utilized by other YANG modules during schema definition and they have been *bundled* together into the `yangforge` package for convenience.  All you need to do is to `import <module name>` from your YANG schema and they will be retrieved/resolved automatically.
+
+name | description | reference
+--- | --- | ---
+[complex-types](yang/complex-types) | extensions to model complex types and typed instance identifiers | RFC-6095
+[iana-crypt-hash](yang/iana-crypt-hash) | typedef for storing passwords using a hash function | RFC-7317
+[ietf-inet-types](yang/ietf-inet-types) | collection of generally useful types for Internet addresses | RFC-6991
+[ietf-yang-types](yang/ietf-yang-types) | collection of generally useful derived data types | RFC-6991
+
+Additional YANG modules will be bundled into the `yangforge` package over time. Since `yangforge` facilitate *forging* of new YANG modules and easily using them in your own projects, only industry standards based YANG schema modules will be considered for native bundling at this time.
+
+## Bundled YANG features
+
+name | description | dependency
+--- | --- | ---
+[cli](src/features/cli.litcoffee) | generates command-line interface | none
+[express](src/features/express.litcoffee) | generates HTTP/HTTPS web server instance | none
+[restjson](src/features/restjson.litcoffee) | generates REST/JSON web services interface | express
+[autodoc](src/features/autodoc.litcoffee) | generates self-documentation interface | express
+
+You can click on the *name* entry above for reference documentation on
+each feature module.
+
 ## Common Usage Examples
 
 ### Using the `schema` command
@@ -152,18 +177,6 @@ $ yfc run -h
     --restjson          enables REST/JSON interface (default: true)
     --autodoc           enables auto-generated documentation interface (default: false)
 ```
-
-#### Built-in interface generators
-
-name | description | dependency
---- | --- | ---
-[cli](src/features/cli.litcoffee) | generates command-line interface | none
-[express](src/features/express.litcoffee) | generates HTTP/HTTPS web server instance | none
-[restjson](src/features/restjson.litcoffee) | generates REST/JSON web services interface | express
-[autodoc](src/features/autodoc.litcoffee) | generates self-documentation interface | express
-
-You can click on the *name* entry above for reference
-documentation on each interface feature.
 
 #### Running a dynamically *compiled* schema instance
 
@@ -503,23 +516,11 @@ complete debug output of the `YangForge` execution log.
 ```bash
 $ yfc_debug=1 yfc <some-command>
 ```
+
 The output generated is very verbose and may or may not assist you in
-determining the root cause. When reporting an issue into the Github
-repository, it will be helpful to paste a snippet of the debug output
-for quicker resolution by the project maintainer.
-
-## Bundled YANG modules
-
-There are a number of YANG schema modules commonly referenced and utilized by other YANG modules during schema definition and they have been *bundled* together into the `yangforge` package for convenience.  All you need to do is to `import <module name>` from your YANG schema and they will be retrieved/resolved automatically.
-
-name | description | reference
---- | --- | ---
-[complex-types](yang/complex-types) | extensions to model complex types and typed instance identifiers | RFC-6095
-[iana-crypt-hash](yang/iana-crypt-hash) | typedef for storing passwords using a hash function | RFC-7317
-[ietf-inet-types](yang/ietf-inet-types) | collection of generally useful types for Internet addresses | RFC-6991
-[ietf-yang-types](yang/ietf-yang-types) | collection of generally useful derived data types | RFC-6991
-
-Additional YANG modules will be bundled into the `yangforge` package over time. Since `yangforge` facilitate *forging* of new YANG modules and easily using them in your own projects, only industry standards based YANG schema modules will be considered for native bundling at this time.
+determining the root cause. However, when reporting an issue into the
+Github repository, it will be helpful to paste a snippet of the debug
+output for quicker resolution by the project maintainer.
 
 ## Using YangForge Programmatically (Advanced)
 

@@ -5,32 +5,16 @@ if /bin\/yfc$/.test require.main.filename
   else
     console.log = ->
 
-Synth = require 'data-synth'
+yaml   = require 'js-yaml'
+coffee = require 'coffee-script'
+
 path = require 'path'
 sys = require 'child_process'
 fs = require 'fs'
 prettyjson = require 'prettyjson'
-Promise = require 'promise'
 
-class Forge extends Synth
+class Forge extends (require './compiler')
   @set synth: 'forge', extensions: {}, events: []
-
-  @mixin (require './compiler')
-
-  @extension = (name, config) -> switch
-    when config instanceof Function
-      @set "extensions.#{name}.resolver", config
-    when config instanceof Object
-      @merge "extensions.#{name}", config
-    else
-      config.warn "attempting to define extension '#{name}' with invalid configuration"
-
-  @on = (event, func) ->
-    [ target, action ] = event.split ':'
-    unless action?
-      @merge events: [ key: target, value: func ]
-    else
-      (@get "bindings.#{target}")?.merge 'events', [ key: action, value: func ]
 
   @schema
     name:        @computed (-> return (@access 'module')?.meta 'name'), type: 'string'
@@ -90,7 +74,7 @@ class Forge extends Synth
     console.log "forging #{config.name} (#{config.version}) using schema: #{config.schema}"
     return this.call this, config, hooks
   
-  constructor: (target, hooks={}) ->
+  oldconstructor: (target, hooks={}) ->
     unless Forge.synthesized @constructor
       console.log "[constructor] creating a new forgery..."
       extensions = @extract 'exports.extension' if Forge.instanceof this
@@ -170,195 +154,52 @@ class Forge extends Synth
     (new this).invoke 'run', options: options
     .catch (e) -> console.error e
 
-  invoke: (rpc, data) ->
-    method = @access "methods.#{rpc}"
-    return super unless method?
+  constructor: ->
+    @Schema = yaml.Schema.create [
+      new yaml.Type '!coffee/function',
+        kind: 'scalar'
+        resolve:   (data) -> typeof data is 'string'
+        construct: (data) -> coffee.eval data
+        predicate: (obj) -> obj instanceof Function
+        represent: (obj) -> obj.toString()
+      new yaml.Type '!yang/schema',
+        kind: 'scalar'
+        resolve:   (data) -> typeof data is 'string' 
+        construct: (data) => (@parse schema: data).schema
+      new yaml.Type '!yang/module',
+        kind: 'scalar'
+        resolve:   (data) -> typeof data is 'string'
+        construct: (data) =>
+          console.log "processing !yang/module with #{data}"
+          try
+            source = fs.readFileSync (path.resolve data, 'package.yaml'), 'utf-8'
+          catch
+            source = data
+          @parse source, pkgdir: data
+    ]
+    super
 
-    console.log "invoking schema defined '#{rpc}' RPC operation"
-    schema = new method.meta input: data
-    super method.name, (schema.access 'input'), (schema.access 'output'), (e) -> throw e if e?; true
-      .then (res) ->
-        return schema.access 'output'
+  parse: (source, options=@options) ->
+    @options = options
+    source = yaml.load source, schema: @Schema if typeof source is 'string'
+    unless source.schema instanceof Object
+      try
+        source.schema = fs.readFileSync (path.resolve options.pkgdir, source.schema), 'utf-8'
+      catch e
+        console.log e
+        source.schema = fs.readFileSync (path.resolve source.schema), 'utf-8'
+      finally
+        source.schema = super source.schema
+    return source
 
-module.exports = Forge.new module,
-  before: -> console.log "forgery initiating schema compilations..."
-  after: ->
-    console.log "forgery invoking after hook..."
+  preprocess: (source) ->
+    source = @parse source if typeof source is 'string'
+    source.schema = super source.schema, source
+    return source
 
-    # update yangforge.runtime bindings
-    @rebind 'module.runtime.features', (prev) =>
-      @computed (-> (@seek synth: 'forge').get 'features' ), type: 'array'
+  compile: (source) ->
+    source = @preprocess source if typeof source is 'string'
+    source.model = (super source.schema, source)
+    return source
 
-    @rebind 'module.runtime.modules', (prev) =>
-      @computed (-> (@seek synth: 'forge').get 'modules' ), type: 'array'
-
-    @on 'build', (input, output, next) ->
-      console.info "should build: #{input.get 'arguments'}"
-      next()
-
-    @on 'build', (input, output, next) ->
-      next "this is an example for a failed listener"
-
-    @on 'config', (input, output, next) ->
-
-    @on 'init', ->
-      console.info "initializing yangforge environment...".grey
-      child = sys.spawn 'npm', [ 'init' ], stdio: 'inherit'
-      # child.stdout.on 'data', (data) ->
-      #   console.info (data.toString 'utf8').replace 'npm', 'yfc'
-      child.on 'close', process.exit.bind process
-      child.on 'error', (err) ->
-        switch err.code
-          when 'ENOENT' then console.error "npm does not exist, try --help".red
-          when 'EACCES' then console.error "npm not executable. try chmod or run as root".red
-        process.exit 1
-
-    @on 'info', (input, output, next) ->
-      targets = input.get 'arguments'
-      targets.push this unless targets.length > 0
-      results = for target in targets
-        try (@create target).report input.get 'options'
-        catch e then console.error "unable to extract info from '#{target}' module\n".red+"#{e}"
-      results = results[0] if results.length is 1
-      output?.set 'result', results
-
-      # below should be called only if cli interface...
-      console.info prettyjson.render results
-      next()
-
-    @on 'install', (input, output, next) ->
-      packages = input.get 'arguments'
-      options = input.get 'options'
-      for pkg in packages
-        console.info "installing #{pkg}" + (if options.save then " --save" else '')
-      next()
-
-    @on 'list', (input, output, next) ->
-      options = input.get 'options'
-      modules = (@get 'modules').map (e) -> e.constructor.info options.verbose
-      unless options.verbose
-        console.info prettyjson.render modules
-        return next()
-      child = sys.exec 'npm list --json', timeout: 5000
-      child.stdout.on 'data', (data) ->
-        result = JSON.parse data
-        results = for mod in modules when result.name is mod.name
-          Synth.copy mod, result
-        console.info prettyjson.render results
-      child.stderr.on 'data', (data) -> console.warn data.red
-      child.on 'close', (code) -> next()
-
-    @on 'schema', (input, output, next) ->
-      schemas = input.get 'arguments'
-      options = input.get 'options'
-
-      if options.eval then schemas = [ options.eval ]
-      else schemas = schemas.map (e) -> (fs.readFileSync e, 'utf-8')
-
-      results = switch
-        when options.compile
-          # XXX - this is a bit of an ugly HACK... need to make this cleaner
-          forgery = @constructor
-          convert = (obj) ->
-            yang = obj?.meta?.yang
-            keys = Object.keys(forgery.get "exports.extension.#{yang}") if yang?
-            meta = Forge.extract.apply obj.meta, keys if keys?
-            o = {}
-            for k, v of meta when v?
-              switch v.meta?.yang
-                when 'type'
-                  type = convert v
-                  delete type.type
-                  if Object.keys(type).length > 0
-                    o[v.meta.yang] = Forge.objectify v.meta.type, type
-                  else
-                    o[v.meta.yang] = v.meta.type
-                else
-                  o[k] = v
-            (for k, v of obj when k isnt 'meta' and v?.meta?.yang?
-              Forge.objectify "#{v.meta.yang}.#{k}", convert v
-            ).reduce ((a, b) -> Forge.Meta.copy a, b), o
-          (@compile schema for schema in schemas).map (x) -> convert x?.reduce()
-        else
-          @parse schema for schema in schemas
-
-      results = results[0] if results.length is 1
-      console.info switch
-        when /^json$/i.test options.format then JSON.stringify results, null, 2
-        else prettyjson.render results
-      next()
-
-    @on 'infuse', (input, output, next) ->
-      targets = input.get 'targets'
-      unless targets.length > 0
-        output.set 'message', 'no operation since no target(s) were specified'
-        next()
-        return
-
-      modules = for target in targets
-        console.log "<infuse> absorbing a new source '#{target.source}' into running forge"
-        target = @create target.source, target.data
-        (@access 'modules').push target if target?
-        target
-
-      output.set 'message', 'request processed successfully'
-      output.set 'modules', modules
-      console.log "<infuse> completed"
-      next()
-
-    @on 'defuse', (input, output, next) ->
-      (@access 'modules').remove input.get 'names'
-      output.set 'message', 'OK'
-      next()
-
-    @on 'run', (input, output, next) ->
-      @invoke 'infuse', targets: (input.get 'arguments').map (e) -> source: e
-      .catch (e) -> next e
-      .then (result) =>
-        modules = result.get 'modules'
-        console.log "<run> starting up: " + modules.map (e) -> e.name
-        
-        features = input.get 'options'
-        if features.cli is true
-          features = cli: on
-        else
-          @set 'features.cli', off
-          #process.argv = [] # hack for now...
-
-        console.log "forgery loading #{Object.keys(features)}..."
-        for feature, arg of features
-          continue unless arg? and arg
-
-          # @invoke 'enable', feature: feature, options: arg
-          #   .then (output) ->
-
-          try (@access 'features').push new (@load "features/#{feature}") null, this
-          catch e then console.warn "unable to load feature '#{feature}' due to #{e}"
-
-        # run passed in features
-        console.log "forgery firing up..."
-        for feature in @get 'features' when feature instanceof Forge.Meta
-          do (feature) =>
-            name = feature.meta 'name'
-            deps = for dep in (feature.meta 'needs') or []
-              console.log "forgery firing up '#{dep}' feature on-behalf of #{name}".green
-              (@get "features.#{dep}")?.run this, features[dep]
-            needs = deps.length
-            deps.unshift this
-            deps.push features[name]
-            console.log "forgery firing up '#{name}' feature with #{needs} dependents".green
-            feature.run.apply feature, deps
-
-        # console.log "forgery fired up!"
-        # console.warn @get 'features'
-        # console.warn @get 'modules'
-        next()
-      
-    @on 'enable', (input, output, next) ->
-      target = input.get 'feature'
-      feature = @access "features.#{target}"
-      unless feature?
-        feature = new (@load "features/#{target}") null, this
-        (@access 'features').push handler
-      handler.enable()
-      next()
+module.exports = (new Forge module).compile (fs.readFileSync (path.resolve "package.yaml"), 'utf-8')

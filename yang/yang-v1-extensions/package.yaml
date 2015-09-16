@@ -1,0 +1,481 @@
+# YANG Version 1.0 Extensions
+#
+# This submodule implements the [RFC 6020](http://www.rfc-editor.org/rfc/rfc6020.txt) 
+# compliant language extensions.  It is used by `yangforge` to produce a new compiler
+# that can then be used to compile any other v1 compatible YANG schema
+# definitions into JS code.
+#
+# The extensions are handled by utilizing the `data-synth` library
+# which provides contextual mapping for different types of extension
+# statements to logical JS object representations.
+#
+# Writing new extensions for YANG language is very straight-forward as
+# long as the context for the callback function to handle the
+# extension is well understood.  For more details, please refer to
+# documentation found inside the main `yangforge` project.
+
+name: yang-v1-extensions
+license: MIT
+schema: !yang/schema yang-v1-extensions.yang
+keywords:
+  - yang
+  - rfc6020
+extension:
+  augment:
+    anyxml: 0..n
+    case: 0..n
+    choice: 0..n
+    container: 0..n
+    description: 0..1
+    if-feature: 0..n
+    leaf: 0..n
+    leaf-list: 0..n
+    list: 0..n
+    reference: 0..1
+    status: 0..1
+    uses: 0..n
+    when: 0..1
+    construct: !coffee/function |
+      (k,v) -> @bind k, v
+
+  belongs-to:
+    prefix: 1
+    construct: !coffee/function  |
+      (k,v) -> @source[v.get 'prefix'] = @source
+
+  bit:
+    description: 0..1
+    reference: 0..1
+    status: 0..1
+    position: 0..1
+
+  case:
+    anyxml: 0..n
+    choice: 0..n
+    container: 0..n
+    description: 0..1
+    if-feature: 0..n
+    leaf: 0..n
+    leaf-list: 0..n
+    list: 0..n
+    reference: 0..1
+    status: 0..1
+    uses: 0..n
+    when: 0..1
+
+  choice:
+    anyxml: 0..n
+    case: 0..n
+    config: 0..1
+    container: 0..n
+    default: 0..1
+    description: 0..1
+    if-feature: 0..n
+    leaf: 0..n
+    leaf-list: 0..n
+    list: 0..n
+    mandatory: 0..1
+    reference: 0..1
+    status: 0..1
+    when: 0..1
+
+  config:
+    construct: !coffee/function |
+      (k,v) -> @set 'config', k is 'true'
+
+  container:
+    anyxml: 0..n
+    choice: 0..n
+    config: 0..1
+    container: 0..n
+    description: 0..1
+    grouping: 0..n
+    if-feature: 0..n
+    leaf: 0..n
+    leaf-list: 0..n
+    list: 0..n
+    must: 0..n
+    presence: 0..1
+    reference: 0..1
+    status: 0..1
+    typedef: 0..n
+    uses: 0..n
+    when: 0..1
+    construct: !coffee/function |
+      (k,v) -> @bind k, @Synth.Object v
+
+  deviate:
+    config: 0..1
+    default: 0..1
+    mandatory: 0..1
+    max-elements: 0..1
+    min-elements: 0..1
+    must: 0..n
+    type: 0..1
+    unique: 0..1
+    units: 0..1
+
+  deviation:
+    description: 0..1
+    deviate: 1..n
+    reference: 0..1
+
+  enum:
+    description: 0..1
+    reference: 0..1
+    status: 0..1
+    value: 0..1
+    construct: !coffee/function |
+      (k,v) ->
+        val = v?.extract? 'value', 'description', 'reference', 'status'
+        unless val?.value?
+          @currentValue ?= 0
+          val = value: @currentValue++
+        val.value = (Number) val.value
+        @set "enum.#{key}", val
+
+  feature:
+    description: 0..1
+    if-feature: 0..n
+    reference: 0..1
+    status: 0..1
+    construct: !coffee/function |
+      (k,v) -> @source.define 'feature', k, v
+
+  grouping:
+    anyxml: 0..n
+    choice: 0..n
+    container: 0..n
+    description: 0..1
+    grouping: 0..n
+    leaf: 0..n
+    leaf-list: 0..n
+    list: 0..n
+    reference: 0..1
+    status: 0..1
+    typedef: 0..n
+    uses: 0..n
+    construct: !coffee/function |
+      (k,v) -> @source.define 'grouping', k, v
+
+  identity:
+    base: 0..1
+    description: 0..1
+    reference: 0..1
+    status: 0..1
+    construct: !coffee/function |
+      (k,v) -> @source.define 'identity', k, v
+
+  import:
+    prefix: 1
+    revision-date: 0..1
+    construct: !coffee/function |
+      (k,v) -> @source[k] = v
+
+  include: 
+    revision-date: 0..1
+    construct: !coffee/function |
+      (k,v) -> @mixin (@compiler.compile v, @source)
+
+  input:
+    anyxml: 0..n
+    choice: 0..n
+    container: 0..n
+    grouping: 0..n
+    leaf: 0..n
+    leaf-list: 0..n
+    list: 0..n
+    typedef: 0..n
+    uses: 0..n
+    construct: !coffee/function |
+      (k,v) -> @bind 'input', @Synth.Object v
+
+  leaf:
+    config: 0..1
+    default: 0..1
+    description: 0..1
+    if-feature: 0..n
+    mandatory: 0..1
+    must: 0..n
+    reference: 0..1
+    status: 0..1
+    type: 0..1
+    units: 0..1
+    when: 0..1
+    construct: !coffee/function |
+      (k,v) -> @bind k, @Synth.Property v
+
+  leaf-list:
+    config: 0..1
+    description: 0..1
+    if-feature: 0..n
+    max-elements: 0..1
+    min-elements: 0..1
+    must: 0..n
+    ordered-by: 0..1
+    reference: 0..1
+    status: 0..1
+    type: 0..1
+    units: 0..1
+    when: 0..1
+    construct: !coffee/function |
+      (k,v) -> @bind k, @Synth.List v
+
+  list:
+    anyxml: 0..n
+    choice: 0..n 
+    config: 0..1
+    container: 0..n
+    description: 0..1
+    grouping: 0..n
+    if-feature: 0..n
+    key: 0..1
+    leaf: 0..n
+    leaf-list: 0..n
+    list: 0..n
+    max-elements: 0..1
+    min-elements: 0..1
+    must: 0..n
+    ordered-by: 0..1
+    reference: 0..1
+    status: 0..1
+    typedef: 0..n
+    unique: 0..1
+    uses: 0..n
+    when: 0..1
+    construct: !coffee/function |
+      (k,v) ->
+        entry = @Synth.Object v.extract 'bindings'
+        @bind k, (@Synth.List v.unbind()).set type: entry
+
+  mandatory:
+    construct: !coffee/function |
+      (k,v) -> @set 'mandatory', k is 'true'
+
+  module:
+    anyxml: 0..n
+    augment: 0..n
+    choice: 0..n
+    contact: 0..1
+    container: 0..n
+    description: 0..1
+    deviation: 0..n
+    extension: 0..n
+    feature: 0..n
+    grouping: 0..n
+    identity: 0..n
+    import: 0..n
+    include: 0..n
+    leaf: 0..n
+    leaf-list: 0..n
+    list: 0..n
+    namespace: 0..1
+    notification: 0..n
+    organization: 0..1
+    prefix: 0..1
+    reference: 0..1
+    revision: 0..n
+    rpc: 0..n
+    typedef: 0..n
+    uses: 0..n
+    yang-version: 0..1
+    construct: !coffee/function |
+      (k,v) ->
+        tag = 
+          name: k
+          exports: @source
+        @set tag
+        @bind k, @Synth.Model v, -> @set tag
+
+  must:
+    description: 0..1
+    error-app-tag: 0..1
+    error-message: 0..1
+    reference: 0..1
+
+  notification:
+    anyxml: 0..n
+    choice: 0..n
+    container: 0..n
+    description: 0..1
+    grouping: 0..n
+    if-feature: 0..n
+    leaf: 0..n
+    leaf-list: 0..n
+    list: 0..n
+    reference: 0..1
+    status: 0..1
+    typedef: 0..n
+    uses: 0..n
+    construct: !coffee/function |
+      (k,v) -> @source.define 'notification', k, v
+
+  output:
+    anyxml: 0..n
+    choice: 0..n
+    container: 0..n
+    grouping: 0..n
+    leaf: 0..n
+    leaf-list: 0..n
+    list: 0..n
+    typedef: 0..n
+    uses: 0..n
+    construct: !coffee/function |
+      (k,v) -> @bind 'output', @Synth.Object v
+
+  pattern:
+    construct: !coffee/function |
+      (k,v) -> @merge patterns: [ new RegExp value ]
+
+  refine:
+    default: 0..1
+    description: 0..1
+    reference: 0..1
+    config: 0..1
+    mandatory: 0..1
+    presence: 0..1
+    must: 0..n
+    min-elements: 0..1
+    max-elements: 0..1
+    construct: !coffee/function |
+      (k,v) -> @merge "refine.#{k}", v
+
+  require-instance:
+    construct: !coffee/function |
+      (k,v) -> @set 'require-instance', k is 'true'
+
+  revision:
+    description: 0..1
+    reference: 0..1
+
+  rpc:
+    description: 0..1
+    grouping: 0..n
+    if-feature: 0..n
+    input: 0..1
+    output: 0..1
+    reference: 0..1
+    status: 0..1
+    typedef: 0..n
+    construct: !coffee/function |
+      (k,v) -> 
+        func = @source.resolve 'rpc', k
+        unless func instanceof Function
+          console.warn "unable to bind rpc '#{k}' without function definition"
+          return
+        @bind k, (data, resolve, reject) ->
+          rpc = new v input: data
+          func rpc.access 'input', rpc.access 'output', (e) ->
+            unless e? then resolve rpc.access 'output' else reject e
+
+  submodule:
+    anyxml: 0..n
+    augment: 0..n
+    belongs-to: 0..1
+    choice: 0..n
+    contact: 0..1
+    container: 0..n
+    description: 0..1
+    deviation: 0..n
+    extension: 0..n
+    feature: 0..n
+    grouping: 0..n
+    identity: 0..n
+    import: 0..n
+    include: 0..n
+    leaf: 0..n
+    leaf-list: 0..n
+    list: 0..n
+    notification: 0..n
+    organization: 0..1
+    reference: 0..1
+    revision: 0..n
+    rpc: 0..n
+    typedef: 0..n
+    uses: 0..n
+    yang-version: 0..1
+    construct: !coffee/function |
+      (k,v) ->
+        tag = 
+          name: k
+          exports: @source.exports
+        @set tag
+        @merge v
+
+  type:
+    base: 0..1
+    bit: 0..n
+    enum: 0..n
+    fraction-digits: 0..1
+    length: 0..1
+    path: 0..1
+    pattern: 0..n
+    range: 0..1
+    require-instance: 0..1
+    type: 0..n
+
+    # should re-factor this 'type' construct
+    construct: !coffee/function |
+      (key, value) ->
+        Type = @Synth.Property (@source.resolve 'type', key, false), ->
+          @set yang: 'type', name: key
+          if key is 'union'
+            @merge value?.extract 'types'
+          else
+            @merge value
+          unless (@get 'type')?
+            @set type: key
+
+          @set
+            pattern: @get 'patterns'
+            options: [ 'type', 'enum', 'types', 'pattern', 'range', 'length', 'normalizer', 'validator' ]
+            normalizer: (value) ->
+              console.log "#{@meta 'name'} normalizing '#{value}'"
+              switch
+                when @opts.type instanceof Function then new @opts.type value, this
+                when @opts.type is 'enumeration' and typeof value is 'number'
+                  for key, val of @opts.enum
+                    return key if val.value is value or val.value is "#{value}"
+                  value
+                else @normalize value, type: @opts.type
+            validator: (value=@value) ->
+              console.log "#{@meta 'name'} validating '#{value}'"
+              switch
+                when @opts.type is 'string' and @opts.pattern?
+                  @opts.pattern.every (regex) -> regex.test value
+                when @opts.type is 'enumeration' then @opts.enum?.hasOwnProperty value
+                else @validate value, type: @opts.type
+          @include
+            valueOf: -> @value
+
+        # first check the parent's type
+        if (typeof (@get 'type') is 'object' and (Object.keys (@get 'type')).length > 1)
+          # has multiple types (likely union)
+          @merge types: [ Type ]
+        else
+          @set 'type', switch key
+            when 'boolean' then key
+            else Type
+
+  typedef:
+    default: 0..1
+    description: 0..1
+    units: 0..1
+    type: 0..1
+    reference: 0..1
+    construct: !coffee/function |
+      (k,v) -> @source.define 'type', k, v
+
+  uses:
+    augment: 0..n
+    description: 0..1
+    if-feature: 0..n
+    refine: 0..n
+    reference: 0..1
+    status: 0..1
+    when: 0..1
+    construct: !coffee/function |
+      (k,v) ->
+        @mixin (@source.resolve 'grouping', k), v
+        for x, y of v?.get? 'refine'
+          @rebind x, (prev) -> (class extends prev).merge y
