@@ -3,21 +3,24 @@
   "name": "yangforge",
   "description": "YANG driven JS application builder",
   "keywords": [
+    "yang",
+    "yaml",
+    "json",
+    "restjson",
+    "restconf",
     "build",
-    "config",
+    "compile",
+    "parse",
+    "translate",
+    "package",
+    "publish",
+    "generate",
     "datastore",
     "datamodel",
     "forge",
     "model",
-    "yang",
     "opnfv",
-    "parse",
-    "restjson",
-    "restconf",
     "rpc",
-    "translate",
-    "yang-json",
-    "yang-yaml",
     "yfc"
   ],
   "preferGlobal": true,
@@ -31,9 +34,9 @@
   "bugs": {
     "url": "https://github.com/saintkepha/yangforge/issues"
   },
-  "main": "lib/yangforge.js",
+  "main": "yangforge.js",
   "bin": {
-    "yfc": "./bin/yfc"
+    "yfc": "bin/yfc"
   },
   "dependencies": {
     "body-parser": "^1.13.2",
@@ -65,7 +68,7 @@
   },
   "scripts": {
     "test": "mocha test",
-    "prepublish": "mkdir -p lib; coffee -o lib -c src",
+    "prepublish": "coffee -c *coffee",
     "start": "bin/yfc run"
   }
 }

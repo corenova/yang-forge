@@ -20,8 +20,10 @@ schema: !yang/schema yang-v1-extensions.yang
 keywords:
   - yang
   - rfc6020
+
+# 
 extension:
-  augment:
+  augment: !yang/extension
     anyxml: 0..n
     case: 0..n
     choice: 0..n
@@ -35,21 +37,19 @@ extension:
     status: 0..1
     uses: 0..n
     when: 0..1
-    construct: !coffee/function |
-      (k,v) -> @bind k, v
 
-  belongs-to:
+  belongs-to: !yang/extension
     prefix: 1
-    construct: !coffee/function  |
-      (k,v) -> @source[v.get 'prefix'] = @source
+    preprocess: !coffee/function |
+      (arg, params, ctx) -> @source[params.prefix] = @source
 
-  bit:
+  bit: !yang/extension
     description: 0..1
     reference: 0..1
     status: 0..1
     position: 0..1
 
-  case:
+  case: !yang/extension
     anyxml: 0..n
     choice: 0..n
     container: 0..n
@@ -63,7 +63,7 @@ extension:
     uses: 0..n
     when: 0..1
 
-  choice:
+  choice: !yang/extension
     anyxml: 0..n
     case: 0..n
     config: 0..1
@@ -79,11 +79,11 @@ extension:
     status: 0..1
     when: 0..1
 
-  config:
-    construct: !coffee/function |
-      (k,v) -> @set 'config', k is 'true'
+  config: !yang/extension
+    preprocess: !coffee/function |
+      (arg, p, ctx) -> ctx.config = (arg is 'true')
 
-  container:
+  container: !yang/extension
     anyxml: 0..n
     choice: 0..n
     config: 0..1
@@ -102,9 +102,9 @@ extension:
     uses: 0..n
     when: 0..1
     construct: !coffee/function |
-      (k,v) -> @bind k, @Synth.Object v
+      (arg, params, children) -> new ((@Synth.Object params).bind children)
 
-  deviate:
+  deviate: !yang/extension
     config: 0..1
     default: 0..1
     mandatory: 0..1
@@ -115,34 +115,36 @@ extension:
     unique: 0..1
     units: 0..1
 
-  deviation:
+  deviation: !yang/extension
     description: 0..1
     deviate: 1..n
     reference: 0..1
 
-  enum:
+  enum: !yang/extension
     description: 0..1
     reference: 0..1
     status: 0..1
     value: 0..1
-    construct: !coffee/function |
-      (k,v) ->
-        val = v?.extract? 'value', 'description', 'reference', 'status'
-        unless val?.value?
-          @currentValue ?= 0
-          val = value: @currentValue++
-        val.value = (Number) val.value
-        @set "enum.#{key}", val
+    preprocess: !coffee/function |
+      (arg, params, ctx) ->
+        unless params.value?
+          ctx.enumValue ?= 0
+          params.value = ctx.enumValue++
+        params.value = (Number) params.value
+        ctx.enum[arg] = params
 
-  feature:
+  feature: !yang/extension
     description: 0..1
     if-feature: 0..n
     reference: 0..1
     status: 0..1
-    construct: !coffee/function |
-      (k,v) -> @source.define 'feature', k, v
+    # TODO: should grab the feature module and *do* something
+    preprocess: !coffee/function |
+      (arg, params) ->
+        if (@resolve 'feature', arg)?
+          @define 'feature', arg, params
 
-  grouping:
+  grouping: !yang/extension
     anyxml: 0..n
     choice: 0..n
     container: 0..n
@@ -155,29 +157,32 @@ extension:
     status: 0..1
     typedef: 0..n
     uses: 0..n
-    construct: !coffee/function |
-      (k,v) -> @source.define 'grouping', k, v
+    preprocess: !coffee/function |
+      (arg, params) -> @define 'grouping', arg, params
 
-  identity:
+  identity: !yang/extension
     base: 0..1
     description: 0..1
     reference: 0..1
     status: 0..1
-    construct: !coffee/function |
-      (k,v) -> @source.define 'identity', k, v
+    # TODO: resolve 'base' statements
+    preprocess: !coffee/function |
+      (arg, params) -> @define 'identity', arg, params
 
-  import:
+  if-feature: !yang/extension
+    preprocess: !coffee/function |
+      (arg, params, ctx) -> ctx['if-feature'] = (@resolve 'feature', arg)?
+
+  import: !yang/extension
     prefix: 1
     revision-date: 0..1
-    construct: !coffee/function |
-      (k,v) -> @source[k] = v
+    preprocess: !coffee/function |
+      (arg, params) -> @source[arg] = params
 
-  include: 
+  include: !yang/extension
     revision-date: 0..1
-    construct: !coffee/function |
-      (k,v) -> @mixin (@compiler.compile v, @source)
 
-  input:
+  input: !yang/extension
     anyxml: 0..n
     choice: 0..n
     container: 0..n
@@ -188,9 +193,9 @@ extension:
     typedef: 0..n
     uses: 0..n
     construct: !coffee/function |
-      (k,v) -> @bind 'input', @Synth.Object v
+      (arg, params, children) -> (@Synth.Object params).bind children
 
-  leaf:
+  leaf: !yang/extension
     config: 0..1
     default: 0..1
     description: 0..1
@@ -203,9 +208,9 @@ extension:
     units: 0..1
     when: 0..1
     construct: !coffee/function |
-      (k,v) -> @bind k, @Synth.Property v
+      (arg, params) -> new (@Synth.Property params)
 
-  leaf-list:
+  leaf-list: !yang/extension
     config: 0..1
     description: 0..1
     if-feature: 0..n
@@ -219,9 +224,9 @@ extension:
     units: 0..1
     when: 0..1
     construct: !coffee/function |
-      (k,v) -> @bind k, @Synth.List v
+      (arg, params) -> new (@Synth.List params)
 
-  list:
+  list: !yang/extension
     anyxml: 0..n
     choice: 0..n 
     config: 0..1
@@ -244,15 +249,15 @@ extension:
     uses: 0..n
     when: 0..1
     construct: !coffee/function |
-      (k,v) ->
-        entry = @Synth.Object v.extract 'bindings'
-        @bind k, (@Synth.List v.unbind()).set type: entry
+      (arg, params, children) -> 
+        item = (@Synth.Object null).bind children
+        new ((@Synth.List params).set type: item)
 
-  mandatory:
-    construct: !coffee/function |
-      (k,v) -> @set 'mandatory', k is 'true'
+  mandatory: !yang/extension
+    preprocess: !coffee/function |
+      (arg, p, ctx) -> ctx.mandatory = (arg is 'true')
 
-  module:
+  module: !yang/extension
     anyxml: 0..n
     augment: 0..n
     choice: 0..n
@@ -279,21 +284,23 @@ extension:
     typedef: 0..n
     uses: 0..n
     yang-version: 0..1
+    preprocess: !coffee/function |
+      (arg, params, ctx) ->
+        for target, changes of params.augment when /^\//.test target
+          match = @locate ctx, target
+          continue unless match?
+          #TODO...
+          #match[k] ?= v for k, v of changes
     construct: !coffee/function |
-      (k,v) ->
-        tag = 
-          name: k
-          exports: @source
-        @set tag
-        @bind k, @Synth.Model v, -> @set tag
+      (arg, params, children) -> new ((@Synth.Store params).bind children)
 
-  must:
+  must: !yang/extension
     description: 0..1
     error-app-tag: 0..1
     error-message: 0..1
     reference: 0..1
 
-  notification:
+  notification: !yang/extension
     anyxml: 0..n
     choice: 0..n
     container: 0..n
@@ -307,10 +314,10 @@ extension:
     status: 0..1
     typedef: 0..n
     uses: 0..n
-    construct: !coffee/function |
-      (k,v) -> @source.define 'notification', k, v
+    preprocess: !coffee/function |
+      (arg, params) -> @define 'notification', arg, params
 
-  output:
+  output: !yang/extension
     anyxml: 0..n
     choice: 0..n
     container: 0..n
@@ -321,13 +328,15 @@ extension:
     typedef: 0..n
     uses: 0..n
     construct: !coffee/function |
-      (k,v) -> @bind 'output', @Synth.Object v
+      (arg, params, children) -> (@Synth.Object params).bind children
 
-  pattern:
-    construct: !coffee/function |
-      (k,v) -> @merge patterns: [ new RegExp value ]
+  pattern: !yang/extension
+    preprocess: !coffee/function |
+      (arg, p, ctx) -> 
+        ctx.patterns ?= []
+        ctx.patterns.push new RegExp arg
 
-  refine:
+  refine: !yang/extension
     default: 0..1
     description: 0..1
     reference: 0..1
@@ -337,18 +346,16 @@ extension:
     must: 0..n
     min-elements: 0..1
     max-elements: 0..1
-    construct: !coffee/function |
-      (k,v) -> @merge "refine.#{k}", v
 
-  require-instance:
-    construct: !coffee/function |
-      (k,v) -> @set 'require-instance', k is 'true'
+  require-instance: !yang/extension
+    preprocess: !coffee/function |
+      (arg, params, ctx) -> ctx['require-instance'] = (arg is 'true')
 
-  revision:
+  revision: !yang/extension
     description: 0..1
     reference: 0..1
 
-  rpc:
+  rpc: !yang/extension
     description: 0..1
     grouping: 0..n
     if-feature: 0..n
@@ -358,17 +365,22 @@ extension:
     status: 0..1
     typedef: 0..n
     construct: !coffee/function |
-      (k,v) -> 
-        func = @source.resolve 'rpc', k
+      (arg, params, children) ->
+        func = @resolve 'rpc', arg, false
         unless func instanceof Function
-          console.warn "unable to bind rpc '#{k}' without function definition"
+          console.warn "unable to construct rpc '#{arg}' without function definition"
           return
-        @bind k, (data, resolve, reject) ->
-          rpc = new v input: data
-          func rpc.access 'input', rpc.access 'output', (e) ->
-            unless e? then resolve rpc.access 'output' else reject e
-
-  submodule:
+        input  = children.input  ? @Synth.Meta
+        output = children.output ? @Synth.Meta
+        (data, resolve, reject) ->
+          console.log "executing rpc #{arg}..."
+          input = new input data
+          output = new output
+          func.call this, input, output, (e) ->
+            unless e? then resolve output else reject e
+        
+  submodule: !yang/extension
+    argument: name
     anyxml: 0..n
     augment: 0..n
     belongs-to: 0..1
@@ -394,15 +406,12 @@ extension:
     typedef: 0..n
     uses: 0..n
     yang-version: 0..1
-    construct: !coffee/function |
-      (k,v) ->
-        tag = 
-          name: k
-          exports: @source.exports
-        @set tag
-        @merge v
+    preprocess: !coffee/function |
+      (arg, params, ctx) ->
+        ctx[k] = v for k, v of params
+        delete ctx.submodule
 
-  type:
+  type: !yang/extension
     base: 0..1
     bit: 0..n
     enum: 0..n
@@ -412,61 +421,34 @@ extension:
     pattern: 0..n
     range: 0..1
     require-instance: 0..1
-    type: 0..n
+    type: 0..n # for 'union' case only
 
-    # should re-factor this 'type' construct
+    preprocess: !coffee/function |
+      (arg, params, ctx) ->
+        basis = @resolve 'typedef', arg
+
     construct: !coffee/function |
-      (key, value) ->
-        Type = @Synth.Property (@source.resolve 'type', key, false), ->
-          @set yang: 'type', name: key
-          if key is 'union'
-            @merge value?.extract 'types'
-          else
-            @merge value
-          unless (@get 'type')?
-            @set type: key
+      (arg, params, children, ctx) ->
+        ctx.type = class
+          constructor: (value) ->
+            @name = arg
+            value = (params.normalize? value) ? value
+            if params.validate?
+              console.assert (params.validate? value, params),
+                "unable to validate passed-in '#{value}' as '#{arg}'"
+            @value = value
+          valueOf: -> @value
 
-          @set
-            pattern: @get 'patterns'
-            options: [ 'type', 'enum', 'types', 'pattern', 'range', 'length', 'normalizer', 'validator' ]
-            normalizer: (value) ->
-              console.log "#{@meta 'name'} normalizing '#{value}'"
-              switch
-                when @opts.type instanceof Function then new @opts.type value, this
-                when @opts.type is 'enumeration' and typeof value is 'number'
-                  for key, val of @opts.enum
-                    return key if val.value is value or val.value is "#{value}"
-                  value
-                else @normalize value, type: @opts.type
-            validator: (value=@value) ->
-              console.log "#{@meta 'name'} validating '#{value}'"
-              switch
-                when @opts.type is 'string' and @opts.pattern?
-                  @opts.pattern.every (regex) -> regex.test value
-                when @opts.type is 'enumeration' then @opts.enum?.hasOwnProperty value
-                else @validate value, type: @opts.type
-          @include
-            valueOf: -> @value
-
-        # first check the parent's type
-        if (typeof (@get 'type') is 'object' and (Object.keys (@get 'type')).length > 1)
-          # has multiple types (likely union)
-          @merge types: [ Type ]
-        else
-          @set 'type', switch key
-            when 'boolean' then key
-            else Type
-
-  typedef:
+  typedef: !yang/extension
     default: 0..1
     description: 0..1
     units: 0..1
     type: 0..1
     reference: 0..1
-    construct: !coffee/function |
-      (k,v) -> @source.define 'type', k, v
+    preprocess: !coffee/function |
+      (arg, params) -> @define 'typedef', arg, params
 
-  uses:
+  uses: !yang/extension
     augment: 0..n
     description: 0..1
     if-feature: 0..n
@@ -474,8 +456,56 @@ extension:
     reference: 0..1
     status: 0..1
     when: 0..1
-    construct: !coffee/function |
-      (k,v) ->
-        @mixin (@source.resolve 'grouping', k), v
-        for x, y of v?.get? 'refine'
-          @rebind x, (prev) -> (class extends prev).merge y
+    preprocess: !coffee/function |
+      (arg, params, ctx) ->
+        ctx[k] = v for k, v of (@resolve 'grouping', arg)
+        for target, changes of params.refine
+          match = @locate ctx, target
+          continue unless match?
+          match[k] = v for k, v of changes
+        for target, changes of params.augment
+          match = @locate ctx, target
+          continue unless match?
+          #TODO...
+          #match[k] ?= v for k, v of changes
+
+# YANG v1.0 built-in typedefs
+typedef:
+  int8:
+    type: { number: { range: -128..127 } }
+
+  int16: !yang/schema |
+    type number {
+      range "-32768..32767";
+    }
+
+  number:
+
+  enumeration:
+    normalize: !coffee/function |
+      (value) -> 
+        if typeof value is 'number'
+          for key, val of @enum when val.value is value or val.value is "#{value}"
+            return key
+        value
+    validate: !coffee/function |
+      (value) -> @enum.hasOwnProperty value
+
+  string:
+    normalize: !coffee/function |
+      (value) -> "#{value}"
+    validate: !coffee/function |
+      (value, opts) ->
+        tests = [ (v) -> typeof v is 'string' ]
+        if opts.patterns?
+          tests.push (v) -> opts.patterns.every (regex) -> regex.test v
+        if opts.length?
+          tests.push (v) ->
+            checks = opts.length.split '|'
+            checks.some (cond) -> 
+              [ x, y ] = cond.split '..'
+              if y? and y isnt 'max'
+                (Number) x <= v.length <= (Number) y
+              else
+                v.length >= (Number) x
+        tests.every (test) -> test? value

@@ -1,8 +1,15 @@
-Forge = require 'yangforge'
-module.exports = Forge.new module,
-  after: ->
+name: ping
+description: An example ping module from ODL
+license: MIT
+schema: !yang/schema ping.yang
+keywords:
+  - yangforge
+  - ping
+  - example
+rpc:
+  send-echo: !coffee/function |
     sys = require 'child_process'
-    @on 'send-echo', (input, output, done, origin) ->
+    (input, output, done) ->
       destination = input.get 'destination'
       unless destination?
         console.error "cannot issue ping without destination address"
