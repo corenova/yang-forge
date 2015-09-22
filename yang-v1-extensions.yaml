@@ -43,12 +43,14 @@ extension:
     preprocess: !coffee/function |
       (arg, params, ctx) -> @source[params.prefix] = @source
 
+  # TODO
   bit: !yang/extension
     description: 0..1
     reference: 0..1
     status: 0..1
     position: 0..1
 
+  # TODO
   case: !yang/extension
     anyxml: 0..n
     choice: 0..n
@@ -63,6 +65,7 @@ extension:
     uses: 0..n
     when: 0..1
 
+  # TODO
   choice: !yang/extension
     anyxml: 0..n
     case: 0..n
@@ -102,8 +105,9 @@ extension:
     uses: 0..n
     when: 0..1
     construct: !coffee/function |
-      (arg, params, children) -> new ((@Synth.Object params).bind children)
+      (arg, params, children) -> (@Synth.Object params).bind children
 
+  # TODO
   deviate: !yang/extension
     config: 0..1
     default: 0..1
@@ -115,6 +119,7 @@ extension:
     unique: 0..1
     units: 0..1
 
+  # TODO
   deviation: !yang/extension
     description: 0..1
     deviate: 1..n
@@ -130,7 +135,9 @@ extension:
         unless params.value?
           ctx.enumValue ?= 0
           params.value = ctx.enumValue++
-        params.value = (Number) params.value
+        else
+          params.value = (Number) params.value
+          ctx.enumValue = params.value + 1
         ctx.enum[arg] = params
 
   feature: !yang/extension
@@ -138,11 +145,17 @@ extension:
     if-feature: 0..n
     reference: 0..1
     status: 0..1
-    # TODO: should grab the feature module and *do* something
     preprocess: !coffee/function |
-      (arg, params) ->
-        if (@resolve 'feature', arg)?
-          @define 'feature', arg, params
+      (arg, params, ctx) ->
+        unless ((v for k, v of params['if-feature']).every (e) -> e is true)
+          if typeof ctx.feature is 'object'
+            delete ctx.feature[arg]
+          else
+            delete ctx.feature
+    construct: !coffee/function |
+      (arg, params, children) ->
+        feature = @resolve 'feature', arg
+        null
 
   grouping: !yang/extension
     anyxml: 0..n
@@ -171,7 +184,10 @@ extension:
 
   if-feature: !yang/extension
     preprocess: !coffee/function |
-      (arg, params, ctx) -> ctx['if-feature'] = (@resolve 'feature', arg)?
+      (arg, params, ctx) -> 
+        unless typeof ctx['if-feature'] is 'object'
+          ctx['if-feature'] = {}
+        ctx['if-feature'][arg] = (@resolve 'feature', arg)?
 
   import: !yang/extension
     prefix: 1
@@ -208,7 +224,7 @@ extension:
     units: 0..1
     when: 0..1
     construct: !coffee/function |
-      (arg, params) -> new (@Synth.Property params)
+      (arg, params) -> (@Synth.Property params)
 
   leaf-list: !yang/extension
     config: 0..1
@@ -224,7 +240,7 @@ extension:
     units: 0..1
     when: 0..1
     construct: !coffee/function |
-      (arg, params) -> new (@Synth.List params)
+      (arg, params) -> (@Synth.List params)
 
   list: !yang/extension
     anyxml: 0..n
@@ -251,7 +267,7 @@ extension:
     construct: !coffee/function |
       (arg, params, children) -> 
         item = (@Synth.Object null).bind children
-        new ((@Synth.List params).set type: item)
+        (@Synth.List params).set type: item
 
   mandatory: !yang/extension
     preprocess: !coffee/function |
@@ -289,17 +305,18 @@ extension:
         for target, changes of params.augment when /^\//.test target
           match = @locate ctx, target
           continue unless match?
-          #TODO...
-          #match[k] ?= v for k, v of changes
+          @Synth.copy match, changes
     construct: !coffee/function |
-      (arg, params, children) -> new ((@Synth.Store params).bind children)
+      (arg, params, children) -> (@Synth.Store params).bind children
 
+  # TODO
   must: !yang/extension
     description: 0..1
     error-app-tag: 0..1
     error-message: 0..1
     reference: 0..1
 
+  # TODO
   notification: !yang/extension
     anyxml: 0..n
     choice: 0..n
@@ -370,12 +387,12 @@ extension:
         unless func instanceof Function
           console.warn "unable to construct rpc '#{arg}' without function definition"
           return
-        input  = children.input  ? @Synth.Meta
-        output = children.output ? @Synth.Meta
+        request  = children.input  ? @Synth.Meta
+        response = children.output ? @Synth.Meta
         (data, resolve, reject) ->
           console.log "executing rpc #{arg}..."
-          input = new input data
-          output = new output
+          input = new request data
+          output = new response
           func.call this, input, output, (e) ->
             unless e? then resolve output else reject e
         
@@ -426,6 +443,7 @@ extension:
     preprocess: !coffee/function |
       (arg, params, ctx) ->
         basis = @resolve 'typedef', arg
+        delete ctx.enumValue
 
     construct: !coffee/function |
       (arg, params, children, ctx) ->
@@ -458,7 +476,7 @@ extension:
     when: 0..1
     preprocess: !coffee/function |
       (arg, params, ctx) ->
-        ctx[k] = v for k, v of (@resolve 'grouping', arg)
+        @Synth.copy ctx, (@resolve 'grouping', arg)
         for target, changes of params.refine
           match = @locate ctx, target
           continue unless match?
@@ -466,10 +484,9 @@ extension:
         for target, changes of params.augment
           match = @locate ctx, target
           continue unless match?
-          #TODO...
-          #match[k] ?= v for k, v of changes
+          @Synth.copy match, changes
 
-# YANG v1.0 built-in typedefs
+# YANG v1.0 built-in TYPE DEFINITIONS
 typedef:
   int8:
     type: { number: { range: -128..127 } }

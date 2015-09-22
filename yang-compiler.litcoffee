@@ -5,10 +5,10 @@ YANG schema modeling language by using the built-in *extension* syntax
 to define additional schema language constructs.
 
 The compiler only supports bare minium set of YANG statements and
-should be used only to generate a new compiler such as 'yang-compiler'
+should be used only to generate a new compiler such as [yangforge](./yangforge.coffee)
 which implements the version 1.0 of the YANG language specifications.
 
-    Meta = (require 'data-synth').Meta
+    synth = require 'data-synth'
 
     class YangCompiler
 
@@ -22,9 +22,9 @@ which implements the version 1.0 of the YANG language specifications.
               base = @source[prefix[0]]
             else
               base = @source
-            Meta.copy base, Meta.objectify "#{type}.#{key}", value
+            synth.copy base, synth.objectify "#{type}.#{key}", value
           when exists.constructor is Object
-            Meta.copy exists, value
+            synth.copy exists, value
         return undefined
         
       resolve: (type, key, warn=true) ->
@@ -72,14 +72,14 @@ ensures syntax correctness and building the JS object tree structure.
         params = 
           (YangCompiler::parse.call this, stmt for stmt in input.substmts)
           .filter (e) -> e?
-          .reduce ((a, b) -> Meta.copy a, b, true), {}
+          .reduce ((a, b) -> synth.copy a, b, true), {}
         params = null unless Object.keys(params).length > 0
 
         unless params?
-          Meta.objectify "#{normalize input}", input.arg
+          synth.objectify "#{normalize input}", input.arg
         else
           input.arg = input.arg.replace '.','_'
-          Meta.objectify "#{normalize input}.#{input.arg}", params
+          synth.objectify "#{normalize input}.#{input.arg}", params
 
 The `preprocess` function is the intermediary method of the compiler
 which prepares a parsed output to be ready for the `compile`
@@ -209,13 +209,13 @@ return instantiated copy.
         #   console.warn "[import] requested #{rev} not availabe in '#{name}'"
         #   console.log m.get 'revision'
         #   return
-        obj = Meta.extract.call m, 'extension'
+        obj = synth.extract.call m, 'extension'
         for key, val of obj.extension when val.override is true
           #delete val.override # don't need this to carry over
           console.log "[import:#{context.name}] override '#{key}' extension with deviations"
-          Meta.copy context.extension[key], val
+          synth.copy context.extension[key], val
         console.log "[import:#{context.name}] module '#{name}' loaded into context"
-        Meta.objectify opts.prefix ? name, m
+        synth.objectify opts.prefix ? name, m
 
       export: (input) ->
         console.assert input instanceof Object, "invalid input to export module"
@@ -223,9 +223,9 @@ return instantiated copy.
           "need to pass in 'name' of the module to export"
         format = input.format ? 'json'
         m = switch
-          when (Meta.instanceof input) then input
+          when (synth.instanceof input) then input
           else @resolve 'module', input.name
-        console.assert (Meta.instanceof m),
+        console.assert (synth.instanceof m),
           "unable to retrieve requested module #{input.name} for export"
 
         tosource = require 'tosource'

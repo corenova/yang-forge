@@ -48,10 +48,15 @@ feature:
   express: !yaml/schema features/express.yaml
   #restjson: !yaml/schema features/restjson.yaml
 
+route:
+  /runtime/features: !coffee/function |
+    (input, output, next) ->
+      
 rpc:
   build: !coffee/function |
     (input, output, done) ->
-      console.info "should build: #{input.get 'arguments'}"
+      modules = (@parent.load target for target in (input.get 'arguments'))
+      console.info (@parent.render modules, noColor: true)
       done()
   
   config: !coffee/function |
@@ -59,6 +64,16 @@ rpc:
 
   init: !coffee/function |
     -> 
+#   console.info "initializing yangforge environment...".grey
+#   child = sys.spawn 'npm', [ 'init' ], stdio: 'inherit'
+#   # child.stdout.on 'data', (data) ->
+#   #   console.info (data.toString 'utf8').replace 'npm', 'yfc'
+#   child.on 'close', process.exit.bind process
+#   child.on 'error', (err) ->
+#     switch err.code
+#       when 'ENOENT' then console.error "npm does not exist, try --help".red
+#       when 'EACCES' then console.error "npm not executable. try chmod or run as root".red
+#     process.exit 1
 
   info: !coffee/function |
     (input, output, done) ->
@@ -83,9 +98,9 @@ rpc:
         return
       modules = for target in targets
         console.log "<infuse> absorbing a new source '#{target.source}' into running forge"
-        target = @create target.source, target.data
-        (@access 'runtime.modules').push target if target?
-        target
+        m = @load target
+        (@access 'runtime.modules').push m if m?
+        m
       output.set 'message', 'request processed successfully'
       output.set 'modules', modules
       console.log "<infuse> completed"
@@ -105,153 +120,11 @@ rpc:
         modules = res.get 'modules'
         console.log "<run> starting up: " + modules.map (e) -> e.name
 
-
-# # update yangforge.runtime bindings
-# @rebind 'module.runtime.features', (prev) =>
-#   @computed (-> (@seek synth: 'forge').get 'features' ), type: 'array'
-
-# @rebind 'module.runtime.modules', (prev) =>
-#   @computed (-> (@seek synth: 'forge').get 'modules' ), type: 'array'
-
-# @on 'build', (input, output, next) ->
-#   console.info "should build: #{input.get 'arguments'}"
-#   next()
-
-# @on 'build', (input, output, next) ->
-#   next "this is an example for a failed listener"
-
-# @on 'config', (input, output, next) ->
-
-# @on 'init', ->
-#   console.info "initializing yangforge environment...".grey
-#   child = sys.spawn 'npm', [ 'init' ], stdio: 'inherit'
-#   # child.stdout.on 'data', (data) ->
-#   #   console.info (data.toString 'utf8').replace 'npm', 'yfc'
-#   child.on 'close', process.exit.bind process
-#   child.on 'error', (err) ->
-#     switch err.code
-#       when 'ENOENT' then console.error "npm does not exist, try --help".red
-#       when 'EACCES' then console.error "npm not executable. try chmod or run as root".red
-#     process.exit 1
-
-# @on 'info', (input, output, next) ->
-#   targets = input.get 'arguments'
-#   targets.push this unless targets.length > 0
-#   results = for target in targets
-#     try (@create target).report input.get 'options'
-#     catch e then console.error "unable to extract info from '#{target}' module\n".red+"#{e}"
-#   results = results[0] if results.length is 1
-#   output?.set 'result', results
-
-#   # below should be called only if cli interface...
-#   console.info prettyjson.render results
-#   next()
-
-# @on 'install', (input, output, next) ->
-#   packages = input.get 'arguments'
-#   options = input.get 'options'
-#   for pkg in packages
-#     console.info "installing #{pkg}" + (if options.save then " --save" else '')
-#   next()
-
-# @on 'login', (input, output, next) ->
-#   options = input.get 'options'
-#   cmd = sys.spawn 'npm', [
-#     'login'
-#     "--registry=#{options.registry}"
-#     "--scope=#{options.scope}"
-#   ], stdio: 'inherit'
-#   cmd.on 'close', process.exit.bind process
-#   cmd.on 'error', (err) ->
-#     switch err.code
-#       when 'ENOENT' then console.error "npm does not exist, try --help".red
-#       when 'EACCES' then console.error "npm not executable. try chmod or run as root".red
-#     process.exit 1
-
-# @on 'list', (input, output, next) ->
-#   options = input.get 'options'
-#   modules = (@get 'modules').map (e) -> e.constructor.info options.verbose
-#   unless options.verbose
-#     console.info prettyjson.render modules
-#     return next()
-#   child = sys.exec 'npm list --json', timeout: 5000
-#   child.stdout.on 'data', (data) ->
-#     result = JSON.parse data
-#     results = for mod in modules when result.name is mod.name
-#       Forge.copy mod, result
-#     console.info prettyjson.render results
-#   child.stderr.on 'data', (data) -> console.warn data.red
-#   child.on 'close', (code) -> next()
-
-# @on 'schema', (input, output, next) ->
-#   schemas = input.get 'arguments'
-#   options = input.get 'options'
-
-#   if options.eval then schemas = [ options.eval ]
-#   else schemas = schemas.map (e) -> (fs.readFileSync e, 'utf-8')
-
-#   results = switch
-#     when options.compile
-#       # XXX - this is a bit of an ugly HACK... need to make this cleaner
-#       forgery = @constructor
-#       convert = (obj) ->
-#         yang = obj?.meta?.yang
-#         keys = Object.keys(forgery.get "exports.extension.#{yang}") if yang?
-#         meta = Forge.extract.apply obj.meta, keys if keys?
-#         o = {}
-#         for k, v of meta when v?
-#           switch v.meta?.yang
-#             when 'type'
-#               type = convert v
-#               delete type.type
-#               if Object.keys(type).length > 0
-#                 o[v.meta.yang] = Forge.objectify v.meta.type, type
-#               else
-#                 o[v.meta.yang] = v.meta.type
-#             else
-#               o[k] = v
-#         (for k, v of obj when k isnt 'meta' and v?.meta?.yang?
-#           Forge.objectify "#{v.meta.yang}.#{k}", convert v
-#         ).reduce ((a, b) -> Forge.Meta.copy a, b), o
-#       (@compile schema for schema in schemas).map (x) -> convert x?.reduce()
-#     else
-#       @parse schema for schema in schemas
-
-#   results = results[0] if results.length is 1
-#   console.info switch
-#     when /^json$/i.test options.format then JSON.stringify results, null, 2
-#     else prettyjson.render results
-#   next()
-
-# @on 'infuse', (input, output, next) ->
-#   targets = input.get 'targets'
-#   unless targets.length > 0
-#     output.set 'message', 'no operation since no target(s) were specified'
-#     next()
-#     return
-
-#   modules = for target in targets
-#     console.log "<infuse> absorbing a new source '#{target.source}' into running forge"
-#     target = @create target.source, target.data
-#     (@access 'modules').push target if target?
-#     target
-
-#   output.set 'message', 'request processed successfully'
-#   output.set 'modules', modules
-#   console.log "<infuse> completed"
-#   next()
-
-# @on 'defuse', (input, output, next) ->
-#   (@access 'modules').remove input.get 'names'
-#   output.set 'message', 'OK'
-#   next()
-
-# @on 'run', (input, output, next) ->
-#   @invoke 'infuse', targets: (input.get 'arguments').map (e) -> source: e
-#   .catch (e) -> next e
-#   .then (result) =>
-#     modules = result.get 'modules'
-#     console.log "<run> starting up: " + modules.map (e) -> e.name
+        features = input.get 'options'
+        for name, arg of features
+          feature = @meta "feature.#{name}"
+          
+        
 
 #     features = input.get 'options'
 #     if features.cli is true
@@ -288,6 +161,62 @@ rpc:
 #     # console.warn @get 'features'
 #     # console.warn @get 'modules'
 #     next()
+
+  schema: !coffee/function |
+    (input, output, next) ->
+      schemas = input.get 'arguments'
+      options = input.get 'options'
+
+      if options.eval then schemas = [ options.eval ]
+      else schemas = schemas.map (e) -> (fs.readFileSync e, 'utf-8')
+
+      results = switch
+        when options.compile
+          # XXX - this is a bit of an ugly HACK... need to make this cleaner
+          forgery = @constructor
+          convert = (obj) ->
+            yang = obj?.meta?.yang
+            keys = Object.keys(forgery.get "exports.extension.#{yang}") if yang?
+            meta = Forge.extract.apply obj.meta, keys if keys?
+            o = {}
+            for k, v of meta when v?
+              switch v.meta?.yang
+                when 'type'
+                  type = convert v
+                  delete type.type
+                  if Object.keys(type).length > 0
+                    o[v.meta.yang] = Forge.objectify v.meta.type, type
+                  else
+                    o[v.meta.yang] = v.meta.type
+                else
+                  o[k] = v
+            (for k, v of obj when k isnt 'meta' and v?.meta?.yang?
+              Forge.objectify "#{v.meta.yang}.#{k}", convert v
+            ).reduce ((a, b) -> Forge.Meta.copy a, b), o
+          (@compile schema for schema in schemas).map (x) -> convert x?.reduce()
+        else
+          @parse schema for schema in schemas
+
+      results = results[0] if results.length is 1
+      console.info switch
+        when /^json$/i.test options.format then JSON.stringify results, null, 2
+        else prettyjson.render results
+      next()
+
+# @on 'list', (input, output, next) ->
+#   options = input.get 'options'
+#   modules = (@get 'modules').map (e) -> e.constructor.info options.verbose
+#   unless options.verbose
+#     console.info prettyjson.render modules
+#     return next()
+#   child = sys.exec 'npm list --json', timeout: 5000
+#   child.stdout.on 'data', (data) ->
+#     result = JSON.parse data
+#     results = for mod in modules when result.name is mod.name
+#       Forge.copy mod, result
+#     console.info prettyjson.render results
+#   child.stderr.on 'data', (data) -> console.warn data.red
+#   child.on 'close', (code) -> next()
 
 # @on 'enable', (input, output, next) ->
 #   target = input.get 'feature'
