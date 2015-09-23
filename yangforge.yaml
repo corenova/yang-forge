@@ -1,5 +1,6 @@
 name: yangforge
 description: YANG driven JS application builder
+license: Apache-2.0
 keywords:
   - build
   - config
@@ -17,7 +18,6 @@ keywords:
   - yang-json
   - yang-yaml
   - yfc
-license: Apache-2.0
 schema: !yang/schema yangforge.yang
 dependencies:
   yang-v1-extensions: !yaml/schema yang-v1-extensions.yaml
@@ -44,9 +44,9 @@ extension:
         ctx[k] = v for k, v of m.schema
 
 feature:
-  #cli:      !yaml/schema featuers/cli.yaml
-  express: !yaml/schema features/express.yaml
-  #restjson: !yaml/schema features/restjson.yaml
+  cli:      !yaml/schema features/cli.yaml
+  express:  !yaml/schema features/express.yaml
+  restjson: !yaml/schema features/restjson.yaml
 
 route:
   /runtime/features: !coffee/function |
@@ -55,39 +55,27 @@ route:
 rpc:
   build: !coffee/function |
     (input, output, done) ->
-      modules = (@parent.load target for target in (input.get 'arguments'))
+      modules = (@parent.import target for target in (input.get 'arguments'))
       console.info (@parent.render modules, noColor: true)
       done()
   
   config: !coffee/function |
     (input, output, done) ->
 
-  init: !coffee/function |
-    -> 
-#   console.info "initializing yangforge environment...".grey
-#   child = sys.spawn 'npm', [ 'init' ], stdio: 'inherit'
-#   # child.stdout.on 'data', (data) ->
-#   #   console.info (data.toString 'utf8').replace 'npm', 'yfc'
-#   child.on 'close', process.exit.bind process
-#   child.on 'error', (err) ->
-#     switch err.code
-#       when 'ENOENT' then console.error "npm does not exist, try --help".red
-#       when 'EACCES' then console.error "npm not executable. try chmod or run as root".red
-#     process.exit 1
-
   info: !coffee/function |
     (input, output, done) ->
       targets = input.get 'arguments'
-      targets.push this unless targets.length > 0
-      results = for target in targets
-        try (@create target).report input.get 'options'
-        catch e then console.error "unable to extract info from '#{target}' module\n".red+"#{e}"
-      results = results[0] if results.length is 1
-      output?.set 'result', results
+      unless targets.length > 0
+        console.info @parent.render @parent.info this
+        done()
+        return
 
-      # below should be called only if cli interface...
-      console.info prettyjson.render results
-      done()
+      @parent.import targets
+      .catch (err) -> console.error err
+      .then (apps) =>
+        results = (@parent.info app for app in apps)
+        console.info @parent.render results
+        done()
 
   infuse: !coffee/function |
     (input, output, done) ->
@@ -114,16 +102,20 @@ rpc:
 
   run: !coffee/function |
     (input, output, done) ->
+      features = input.get 'options'
+      if features.cli is true
+        (@parent.resolve 'feature', 'cli').run this
+        return done()
+
+      for name, arg of features
+        feature = @parent.resolve 'feature', name
+        
       @invoke 'infuse', targets: (input.get 'arguments').map (e) -> source: e
       .catch (e) -> done e
       .then (res) =>
         modules = res.get 'modules'
         console.log "<run> starting up: " + modules.map (e) -> e.name
 
-        features = input.get 'options'
-        for name, arg of features
-          feature = @meta "feature.#{name}"
-          
         
 
 #     features = input.get 'options'

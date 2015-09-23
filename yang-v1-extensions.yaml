@@ -307,7 +307,8 @@ extension:
           continue unless match?
           @Synth.copy match, changes
     construct: !coffee/function |
-      (arg, params, children) -> (@Synth.Store params).bind children
+      (arg, params, children) -> 
+        (@Synth.Store params, -> @set name: arg).bind children
 
   # TODO
   must: !yang/extension
@@ -384,9 +385,7 @@ extension:
     construct: !coffee/function |
       (arg, params, children) ->
         func = @resolve 'rpc', arg, false
-        unless func instanceof Function
-          console.warn "unable to construct rpc '#{arg}' without function definition"
-          return
+        return unless func instanceof Function
         request  = children.input  ? @Synth.Meta
         response = children.output ? @Synth.Meta
         (data, resolve, reject) ->

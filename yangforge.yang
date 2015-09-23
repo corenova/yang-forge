@@ -168,7 +168,7 @@ module yangforge {
   
   rpc info {
     if-feature cli;
-    description "show info about one or more packages";
+    description "shows info about one or more packages";
     input {
       uses cli-command {
         refine arguments {
@@ -214,29 +214,6 @@ module yangforge {
     }
   }
 
-  rpc login {
-    if-feature cli;
-    description "authenticate user to operate on yangforge registry";
-    input {
-      uses cli-command {
-        augment options {
-          leaf registry {
-            description "The base URL of the package registry";
-            type string;
-            units r;
-            default "http://yangforge.intercloud.net";
-          }
-          leaf scope {
-            description "Specify the scope of the package";
-            type string;
-            units s;
-            default "@yang";
-          }
-        }
-      }
-    }
-  }
-  
   rpc list {
     if-feature cli;
     description "list installed packages";
@@ -264,9 +241,10 @@ module yangforge {
       uses cli-command {
         augment options {
           leaf registry {
-            description "specify target registry";
+            description "The base URL of the package registry";
             type string;
             units r;
+            default "http://yangforge.intercloud.net";
           }
         }
       }

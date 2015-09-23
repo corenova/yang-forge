@@ -6,18 +6,20 @@ if /bin\/yfc$/.test require?.main?.filename
   else
     console.log = ->
 
-synth  = require 'data-synth'
-yaml   = require 'js-yaml'
-coffee = require 'coffee-script'
-path   = require 'path'
-fs     = require 'fs'
-url    = require 'url'
-needle = require 'needle'
+promise = require 'promise'
+synth   = require 'data-synth'
+yaml    = require 'js-yaml'
+coffee  = require 'coffee-script'
+path    = require 'path'
+fs      = require 'fs'
+url     = require 'url'
+needle  = require 'needle'
 
 prettyjson = require 'prettyjson'
 Compiler   = require './yang-compiler'
 
 class Forge extends Compiler
+  Promise: promise
   Synth: synth
   
   # NOT the most efficient way to do it...
@@ -93,9 +95,12 @@ class Forge extends Compiler
       when (synth.instanceof source) then new source
       else source
 
-  # performs async import of a target source path
+  # performs async import of a target source path, accepts 'source' as array
   import: (source, opts={}, resolve, reject) ->
-    return @invoke arguments.callee, source, opts unless resolve? and reject?
+    if source instanceof Array
+      return @Promise.all (@import x, opts for x in source)
+    unless resolve? and reject?
+      return @invoke arguments.callee, source, opts 
     
     url = url.parse source if typeof source is 'string'
     switch url.protocol
@@ -111,6 +116,27 @@ class Forge extends Compiler
           resolve @load data, pkgdir: (path.dirname (path.resolve url.pathname))
         
   render: prettyjson.render
+
+  info: (about, options={}) ->
+    schema = about.constructor
+    schema = do (schema, options) ->
+      keys = [
+        'name', 'prefix', 'namespace', 'description', 'revision', 'organization', 'contact'
+        'include', 'import'
+      ]
+      info = synth.extract.apply schema, keys
+      return info
+
+    summarize = (what) ->
+      (synth.objectify k, v.description for k, v of what)
+      .reduce ((a,b) -> synth.copy a, b), {}
+
+    info = synth.extract.call about.parent.constructor, 'name', 'description', 'license', 'keywords'
+    info.schema     = schema
+    info.typedefs   = summarize about.meta 'typedef'
+    info.features   = summarize about.meta 'feature'
+    info.operations = summarize about.meta 'rpc'
+    return info
 
   # RUN THIS FORGE (convenience function for programmatic run)
   run: (features...) ->
