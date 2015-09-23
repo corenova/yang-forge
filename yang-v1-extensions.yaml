@@ -133,11 +133,11 @@ extension:
     preprocess: !coffee/function |
       (arg, params, ctx) ->
         unless params.value?
-          ctx.enumValue ?= 0
-          params.value = ctx.enumValue++
+          @enumValue ?= 0
+          params.value = @enumValue++
         else
           params.value = (Number) params.value
-          ctx.enumValue = params.value + 1
+          @enumValue = params.value + 1
         ctx.enum[arg] = params
 
   feature: !yang/extension
@@ -302,7 +302,7 @@ extension:
     yang-version: 0..1
     preprocess: !coffee/function |
       (arg, params, ctx) ->
-        for target, changes of params.augment when /^\//.test target
+        for target, changes of params.augment
           match = @locate ctx, target
           continue unless match?
           @Synth.copy match, changes
@@ -443,7 +443,7 @@ extension:
     preprocess: !coffee/function |
       (arg, params, ctx) ->
         basis = @resolve 'typedef', arg
-        delete ctx.enumValue
+        delete @enumValue
 
     construct: !coffee/function |
       (arg, params, children, ctx) ->

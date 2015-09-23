@@ -89,7 +89,7 @@ found in the parsed output in order to prepare the context for the
 
       extractKeys = (x) -> if x instanceof Object then (Object.keys x) else [x].filter (e) -> e? and !!e
 
-      fork: (f, args...) -> f?.apply? (new @constructor fork: true), args
+      fork: (f, args...) -> f?.apply? (new @constructor), args
 
       preprocess: (schema, source={}, scope) ->
         source.extension ?= source.parent?.extension
@@ -199,6 +199,10 @@ return instantiated copy.
               catch e
                 console.error "[compile:#{source.name}] failed to compile '#{key} #{arg}'"; throw e
         return output
+
+#
+# DEPRECATED
+# 
 
       import: (target, opts, context=this) ->
         console.log "[import:#{context.name}] loading '#{target}'..."

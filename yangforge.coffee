@@ -1,4 +1,5 @@
-if /bin\/yfc$/.test require.main.filename
+# BELOW is a bit HACKISH
+if /bin\/yfc$/.test require?.main?.filename
   if process.env.yfc_debug?
     unless console._prefixes?
       (require 'clim') '[forge]', console, true
@@ -10,14 +11,29 @@ yaml   = require 'js-yaml'
 coffee = require 'coffee-script'
 path   = require 'path'
 fs     = require 'fs'
+url    = require 'url'
+needle = require 'needle'
 
 prettyjson = require 'prettyjson'
+Compiler   = require './yang-compiler'
 
-class Forge extends (require './yang-compiler')
-
+class Forge extends Compiler
   Synth: synth
-  constructor: (@options={}) ->
-    @SCHEMA = SCHEMA = yaml.Schema.create [
+  
+  # NOT the most efficient way to do it...
+  genSchema: (options={}) ->
+    readFile = (data, opts) ->
+      try
+        try
+          pkgdir = path.dirname (path.resolve opts.pkgdir, data)
+          data = fs.readFileSync (path.resolve opts.pkgdir, data), 'utf-8'
+        catch
+          pkgdir = path.dirname (path.resolve data)
+          data = fs.readFileSync (path.resolve data), 'utf-8'
+      catch
+      return data: data, pkgdir: pkgdir
+    
+    yaml.Schema.create [
       new yaml.Type '!coffee/function',
         kind: 'scalar'
         resolve:   (data) -> typeof data is 'string'
@@ -31,74 +47,69 @@ class Forge extends (require './yang-compiler')
           #@preprocess data
           typeof data.module is 'object'
         construct: (data) -> data
-      new yaml.Type '!yang/schema',
-        kind: 'scalar'
-        resolve:   (data) -> typeof data is 'string' 
-        construct: (data) => (@parse schema: data).schema
       new yaml.Type '!yang/extension',
         kind: 'mapping'
         resolve:   (data={}) -> true
         construct: (data) -> data
+      new yaml.Type '!yang/schema',
+        kind: 'scalar'
+        resolve:   (data) -> typeof data is 'string' 
+        construct: (data) =>
+          console.log "processing !yang/schema using: #{data}"
+          res = readFile data, options
+          (@parse schema: res.data, options).schema
       new yaml.Type '!yaml/schema',
         kind: 'scalar'
         resolve:   (data) -> typeof data is 'string'
         construct: (data) =>
           console.log "processing !yaml/schema using: #{data}"
-          try
-            try
-              pkgdir = path.dirname (path.resolve @options.pkgdir, data)
-              data = fs.readFileSync (path.resolve @options.pkgdir, data), 'utf-8'
-            catch
-              pkgdir = path.dirname (path.resolve data)
-              data = fs.readFileSync (path.resolve data), 'utf-8'
-          catch
-          @parse data, pkgdir: pkgdir
+          res = readFile data, options
+          @parse res.data, pkgdir: res.pkgdir
     ]
-    unless @options.fork is true
-      # self-compile primary source...
-      @options.pkgdir = __dirname
-      data = (fs.readFileSync (path.resolve __dirname, "yangforge.yaml"), 'utf-8')
-      return @load data, null, ->
-        @mixin Forge
-        @include SCHEMA: SCHEMA, source: @extract()
-    super
 
-  valueOf:  -> @constructor.extract()
-  toString: -> 'Forge'
-
-  parse: (source, options=@options) ->
-    @options = options # XXX - be careful with this one...
-    source = yaml.load source, schema: @SCHEMA if typeof source is 'string'
+  parse: (source, opts={}) ->
+    source = yaml.load source, schema: @genSchema opts if typeof source is 'string'
     unless source?.schema instanceof Object
-      try
-        try
-          source.schema = fs.readFileSync (path.resolve options.pkgdir, source.schema), 'utf-8'
-        catch
-          source.schema = fs.readFileSync (path.resolve source.schema), 'utf-8'
-      catch
       source.schema = super source.schema if source.schema?
     return source
 
-  preprocess: (source) ->
-    source = @parse source if typeof source is 'string'
+  preprocess: (source, opts) ->
+    source = @parse source, opts if typeof source is 'string'
     source.parent = @source
     source.schema = super source.schema, source if source.schema?
     delete source.parent
     return source
 
-  compile: (source) ->
-    source = @preprocess source
+  compile: (source, opts={}) ->
+    source = @preprocess source, opts
     model = super source.schema, source if source.schema?
     return switch
-      when model? then (synth.Meta source).bind model
+      when model? then ((synth.Meta source).bind model).configure opts.hook
       else source
 
-  load: (source, data, hook) ->
-    source = @compile source unless synth.instanceof source
+  load: (source, opts) ->
+    source = @compile source, opts unless synth.instanceof source
     return switch
-      when (synth.instanceof source) then new (source.configure hook) data, this
+      when (synth.instanceof source) then new source
       else source
 
+  # performs async import of a target source path
+  import: (source, opts={}, resolve, reject) ->
+    return @invoke arguments.callee, source, opts unless resolve? and reject?
+    
+    url = url.parse source if typeof source is 'string'
+    switch url.protocol
+      when 'http:','https:'
+        needle.get source, (err, res) =>
+          if not err and res.statusCode is 200 then resolve @load res.body else reject err
+      when 'github:'
+        needle.get "https://raw.githubusercontent.com/#{url.hostname}#{url.pathname}", (err, res) =>
+          if not err and res.statusCode is 200 then resolve @load res.body else reject err
+      else
+        fs.readFile (path.resolve url.pathname), 'utf8', (err, data) =>
+          if err? then return reject err
+          resolve @load data, pkgdir: (path.dirname (path.resolve url.pathname))
+        
   render: prettyjson.render
 
   # RUN THIS FORGE (convenience function for programmatic run)
@@ -110,5 +121,15 @@ class Forge extends (require './yang-compiler')
     (@access 'yangforge').invoke 'run', options: options
     .catch (e) -> console.error e
 
-exports = module.exports = new Forge strict: true
-exports.Forge = Forge
+  valueOf:  -> @source
+  toString: -> 'Forge'
+
+#
+# self-forge using the yangforge.yaml schema
+# 
+module.exports = (new Forge).load '!yaml/schema yangforge.yaml',
+  pkgdir: __dirname
+  hook: ->
+    @mixin Forge
+    @include source: @extract()
+
