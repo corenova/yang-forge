@@ -525,7 +525,7 @@ typedefs, among other things.
 ### Primary interfaces
 
 name | description
---- | --- | ---
+--- | ---
 forge.import     | local/remote async loading of one or more modules using filenames
 forge.load       | local async/sync loading of module(s), only one-at-a-time with sync
 forge.compile    | local sync compilation of a module, generates class obj that can be instantiated
