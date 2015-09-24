@@ -96,10 +96,10 @@ and they will be retrieved/resolved automatically.
 
 name | description | reference
 --- | --- | ---
-[complex-types](yang/complex-types) | extensions to model complex types and typed instance identifiers | RFC-6095
-[iana-crypt-hash](yang/iana-crypt-hash) | typedef for storing passwords using a hash function | RFC-7317
-[ietf-inet-types](yang/ietf-inet-types) | collection of generally useful types for Internet addresses | RFC-6991
-[ietf-yang-types](yang/ietf-yang-types) | collection of generally useful derived data types | RFC-6991
+[complex-types](complex-types.yang) | extensions to model complex types and typed instance identifiers | RFC-6095
+[iana-crypt-hash](iana-crypt-hash.yang) | typedef for storing passwords using a hash function | RFC-7317
+[ietf-inet-types](ietf-inet-types.yang) | collection of generally useful types for Internet addresses | RFC-6991
+[ietf-yang-types](ietf-yang-types.yang) | collection of generally useful derived data types | RFC-6991
 
 Additional YANG modules will be bundled into the `yangforge` package
 over time. Since `yangforge` facilitate *forging* of new YANG modules
@@ -139,7 +139,7 @@ $ yfc schema -h
 ```
 
 You can `--eval` a YANG schema **string** directly for dynamic parsing:
-```bash
+```
 $ yfc schema -e 'module hello-world { description "a test"; leaf hello { type string; default "world"; } }'
 ```
 ```yaml
@@ -152,7 +152,7 @@ module:
         default: world
 ```
 You can specify explicit output `--format` (default is YAML as above):
-```bash
+```
 $ yfc schema -e 'module hello-world { description "a test"; leaf hello { type string; default "world"; } }' -f json
 ```
 ```json
@@ -184,7 +184,7 @@ The real power of `YangForge` is actualized when **yangforged**
 modules are run using one or more **dynamic interface
 generators**.
 
-```bash
+```
 $ yfc run -h
 
   Usage: run [options] [modules...]

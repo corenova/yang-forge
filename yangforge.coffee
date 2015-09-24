@@ -44,20 +44,26 @@ class Forge extends Compiler
           ]
           meta = synth.extract.apply schema, keys
           return meta
-        info.typedefs   = summarize schema.typedef if schema.typedef?
         info.features   = summarize schema.feature if schema.feature?
+        info.typedefs   = summarize schema.typedef if schema.typedef?
         info.operations = summarize schema.rpc     if schema.rpc?
         break; # just return ONE...
 
       return @render info, options
 
-    # RUN THIS SPARK (convenience function for programmatic run)
+    enable: (name, options) ->
+      @feature[name] ?= (@meta "feature.#{name}")?.construct? options
+
+    disable: (name) ->
+      @feature[name]?.destroy?()
+      delete @feature[name]
+
     run: (features...) ->
       options = features
         .map (e) -> synth.objectify e, on
         .reduce ((a, b) -> synth.copy a, b, true), {}
 
-      (@access 'yangforge').invoke 'run', options: options
+      (@access @meta 'main').invoke 'run', options: options
       .catch (e) -> console.error e
 
     valueOf:  -> @source
@@ -149,14 +155,17 @@ class Forge extends Compiler
 
   compile: (source, opts={}) ->
     source = @preprocess source, opts
-    return unless source?
-    source.parent = @source
-    model = super source.schema, source if source.schema?
-    delete source.parent
-    return switch
-      when model? then ((synth Spark, opts.hook) source).bind model
-      #when model? then ((synth.Meta source).bind model).configure opts.hook
-      else source
+    if source?.schema?
+      try
+        source.parent = @source
+        model = super source.schema, source if source.schema?
+        for own name of model
+          source.main = name
+          break; # should only be ONE here
+        source = ((synth Spark, opts.hook) source).bind model
+      finally
+        delete source.parent
+    return source
 
   # performs load of a target source, defaults to async: true but can be optionally set to false
   # allows 'source' as array but ONLY if async is true
@@ -165,7 +174,6 @@ class Forge extends Compiler
       return promise.all (@load x, opts for x in source) if source instanceof Array
       return @invoke arguments.callee, source, opts unless resolve? and reject?
     else resolve = (x) -> x
-
     source = @compile source, opts unless synth.instanceof source
     resolve switch
       when (synth.instanceof source) then new source (source.get 'config')
