@@ -15,6 +15,10 @@ module yangforge {
   description
     "This module provides YANG v1 language based schema compilations.";
 
+  revision 2015-09-23 {
+    description "Enhanced with 0.10.x functionality";
+  }
+  
   revision 2015-05-04 {
     description "Initial revision";
     reference "RFC-6020";
@@ -99,6 +103,7 @@ module yangforge {
   container runtime {
     config false;
     leaf id { type string; }
+    leaf forgery { type string; }
     list modules {
       description
         "Provides state information about available modules for the current runtime context";
@@ -112,6 +117,21 @@ module yangforge {
       key "name";
     }
   }
+
+  container registry {
+    if-feature registry-service;
+    description "Provides module repository service for publish/install";
+    list modules {
+      key "name";
+      uses unique-element;
+      leaf data {
+        type binary;
+        description "Binary type data must be 'explicitly' accessed to retrieve content";
+      }
+      leaf size { type number; units 'Bytes'; mandatory true; }
+      leaf checksum { type string; mandatory true; }
+    }
+  }
   
   // RPC definitions for CLI
   
@@ -122,7 +142,8 @@ module yangforge {
       uses cli-command {
         refine arguments {
           config true;
-          description "name";
+          units "file";
+          max-elements 1;
         }
         augment options {
           leaf save { type empty; }
@@ -135,7 +156,7 @@ module yangforge {
 
   rpc config {
     if-feature cli;
-    description "manage application configuration data";
+    description "manage yangforge service configuration";
     input {
       uses cli-command {
         // choice argument {
@@ -168,62 +189,21 @@ module yangforge {
   
   rpc info {
     if-feature cli;
-    description "show info about one or more packages";
+    description "shows info about a specific module";
     input {
       uses cli-command {
         refine arguments {
           config true;
-          description "name";
+          units "name";
+          max-elements 1;
         }
         augment options {
-          leaf verbose {
-            description "increase verbosity";
-            type empty;
-            units v;
+          leaf format {
+            description "specify output format (yaml, json)";
+            type string;
+            units f;
+            default yaml;
           }
-        }
-      }
-    }
-    output {
-      leaf-list result { type object; }
-    }
-  }
-
-  rpc init {
-    if-feature cli;
-    description "initialize package configuration";
-  }
-  
-  rpc install {
-    if-feature cli;
-    description "install one or more packages";
-    input {
-      uses cli-command {
-        refine arguments {
-          config true;
-          description "package";
-        }
-        augment options {
-          leaf save {
-            description "add package into dependencies";
-            type empty;
-            units s;
-          }
-        }
-      }
-    }
-  }
-
-  rpc list {
-    if-feature cli;
-    description "list installed packages";
-    input {
-      uses cli-command {
-        refine arguments {
-          config true;
-          description "package";
-        } 
-        augment options {
           leaf verbose {
             description "increase verbosity";
             type empty;
@@ -241,9 +221,10 @@ module yangforge {
       uses cli-command {
         augment options {
           leaf registry {
-            description "specify target registry";
+            description "The base URL of the package registry";
             type string;
             units r;
+            default "http://yangforge.intercloud.net";
           }
         }
       }
@@ -258,7 +239,7 @@ module yangforge {
       uses cli-command {
         refine arguments {
           config true;
-          description "module";
+          units "modules";
         }
         augment options {
           leaf cli {
@@ -287,19 +268,15 @@ module yangforge {
 
   rpc schema {
     if-feature cli;
-    description "process YANG schema file(s)";
+    description "process a specific YANG schema file";
     input {
       uses cli-command {
         refine arguments {
           config true;
-          description "schema";
+          units "file";
+          max-elements 1;
         }
         augment options {
-          leaf compile {
-            description "compile input file(s) into specified output format";
-            type empty;
-            units c;
-          }
           leaf eval {
             description "pass a string from the command line as input";
             type string;
@@ -312,7 +289,7 @@ module yangforge {
             default yaml;
           }
           leaf output {
-            description "set the output directory for compiled schemas";
+            description "set the output filename for compiled schema";
             type string;
             units o;
           }
@@ -363,7 +340,7 @@ module yangforge {
     }
     output {
       leaf message { type string; }
-      leaf-list modules { type object; }
+      leaf-list modules { type string; }
     }
   }
 

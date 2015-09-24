@@ -1,0 +1,143 @@
+name: yangforge
+description: YANG driven JS application builder
+version: 0.10.2
+license: Apache-2.0
+registry: https://yangforge.intercloud.net
+keywords:
+  - build
+  - config
+  - datastore
+  - datamodel
+  - forge
+  - model
+  - yang
+  - opnfv
+  - parse
+  - restjson
+  - restconf
+  - rpc
+  - translate
+  - yang-json
+  - yang-yaml
+  - yfc
+
+# schema - describes the data model of the application
+schema: !yang/schema yangforge.yang
+
+# config - contains the initial configuration of the application
+config: !json yangforge.json
+
+dependencies:
+  yang-v1-extensions: !yaml/schema yang-v1-extensions.yaml
+  ietf-yang-types: { schema: !yang/schema ietf-yang-types.yang }
+  ietf-inet-types: { schema: !yang/schema ietf-inet-types.yang }
+  iana-crypt-hash: { schema: !yang/schema iana-crypt-hash.yang }
+
+extension:
+  module: !yang/extension
+    argument: name
+    include: 0..n
+    prefix: 0..1
+
+  prefix: !yang/extension
+    argument: value
+
+  include: !yang/extension
+    argument: module
+    preprocess: !coffee/function |
+      (arg, params, ctx) ->
+        m = @preprocess (@resolve 'dependencies', arg)
+        @define 'extension', k, v for k, v of m.extension
+        @define 'typedef', k, v for k, v of m.typedef
+        ctx[k] = v for k, v of m.schema
+
+feature:
+  cli:      !yaml/schema features/cli.yaml
+  express:  !yaml/schema features/express.yaml
+  restjson: !yaml/schema features/restjson.yaml
+
+route:
+  /runtime/features: !coffee/function |
+    (input, output, next) ->
+      
+rpc:
+  build: !coffee/function |
+    (input, output, done) ->
+      @parent.import (input.get 'arguments')
+      .then (apps) =>
+        console.info app.info format: 'yaml' for app in apps
+        done()
+      .catch (err) -> done err
+  
+  config: !coffee/function |
+    (input, output, done) ->
+
+  info: !coffee/function |
+    (input, output, done) ->
+      target = (input.get 'arguments')[0]
+      target ?= @parent
+      @parent.import target
+      .then (app) ->
+        output.set app.info? (input.get 'options')
+        done()
+      .catch (err) -> done err
+
+  schema: !coffee/function |
+    (input, output, done) ->
+      schema = (input.get 'arguments')[0]
+      options = input.get 'options'
+
+      schema = options.eval if options.eval?
+      schema = (@parent.preprocess "schema: !yang/schema #{schema}").schema
+      schema = @parent.render schema, options
+      # TODO handle options.output to write to a file
+      output.set schema
+      done()
+
+  infuse: !coffee/function |
+    (input, output, done) ->
+      targets = input.get 'targets'
+      unless targets.length > 0
+        output.set 'message', 'no operation since no target(s) were specified'
+        return done()
+
+      @parent.import (targets.map (e) -> e.source)
+      .then (apps) =>
+        models = []
+        for app in apps
+          for name, model of app.properties
+            console.log "<infuse> absorbing a new model '#{name}' into running forge"
+            @parent.attach name, model
+            models.push name
+        console.log models
+        output.set 'message', 'request processed successfully'
+        output.set 'modules', models
+        console.log "<infuse> completed"
+        done()
+      .catch (err) -> done err
+      
+  defuse: !coffee/function |
+    (input, output, done) ->
+      for name in input.get 'names'
+        @parent.detach name
+      output.set 'message', 'OK'
+      done()
+
+  run: !coffee/function |
+    (input, output, done) ->
+      features = input.get 'options'
+      if features.cli is true
+        (@parent.resolve 'feature', 'cli').run this
+        return done()
+
+      console.log "forgery firing up..."
+      for name, arg of features when arg? and arg isnt false
+        console.log "#{name} with #{arg}"
+        features[name] = (@parent.resolve 'feature', name)?.run? this, features
+        
+      @invoke 'infuse', targets: (input.get 'arguments').map (e) -> source: e
+      .then (res) =>
+        modules = res.get 'modules'
+        output.set "<run> starting with: " + (modules)
+        done()
+      .catch (err) -> done err

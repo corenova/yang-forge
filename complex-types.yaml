@@ -1,0 +1,58 @@
+# YANG comlex-types module
+#
+# The YANG complex-types module provides additional Yang language
+# extensions according to [RFC
+# 6095](http://tools.ietf.org/html/rfc6095). These extensions provide
+# mechanisms to manage the `complex-type` schema definitions which
+# essentially allows a given YANG data schema module to describe more
+# than one data models and to build relationships between the data
+# models.
+
+name: complex-types
+license: Apache-2.0
+schema: !yang/schema complex-types.yang
+extension:
+  complex-type: !yang/extension
+    preprocess: !coffee/function |
+      (arg, params) ->
+        @define 'complex-type', arg, @Synth.Model params
+
+  abstract: !yang/extension
+  extends:  !yang/extension
+    preprocess: !coffee/function |
+      (arg, params, ctx) ->
+        ctx[k] = v for k, v of (@resolve 'complex-type', arg)
+
+  instance-type: !yang/extension
+    preprocess: !coffee/function |
+      (arg, params, ctx) ->
+        ct = (@resolve 'complex-type', arg, false)
+        unless ct?
+          console.log "creating temporary complex-type for: #{arg}"
+          ct = @Synth.Model temp: true
+          @define 'complex-type', arg, ct
+        ctx.type = ct
+
+  instance: !yang/extension
+    construct: !coffee/function |
+      (arg, params, children) -> new ((@Synth.Model params).bind children)
+
+  instance-list: !yang/extension
+    construct: !coffee/function |
+      (arg, params, children) -> 
+        item = (@Synth.Model null).bind children
+        new ((@Synth.List params).set type: item)
+
+# complex-type provides special handling for existing YANG 1.0 extensions
+# leaf: handle instance-identifier
+# leaf-list: handle instance-identifier
+
+# @extension 'leaf', override: true, resolver: (key, value) ->
+#   @bind key, switch
+#     when Forge.Model.synthesized (value?.get? 'type') then Forge.BelongsTo value
+#     else Forge.Property value
+
+# @extension 'leaf-list', override: true, resolver: (key, value) ->
+#   @bind key, switch
+#     when Forge.Model.synthesized (value?.get? 'type') then Forge.HasMany value
+#     else Forge.List value
