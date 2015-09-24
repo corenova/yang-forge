@@ -127,7 +127,7 @@ rpc:
     (input, output, done) ->
       features = input.get 'options'
       if features.cli is true
-        (@parent.resolve 'feature', 'cli').run? this
+        (@parent.resolve 'feature', 'cli').run this
         return done()
 
       console.log "forgery firing up..."

@@ -13,20 +13,25 @@ name: express
 description: Fast, unopionated, minimalist web framework (HTTP/HTTPS)
 config:
   port: 5000
+dependencies:
+  express:      !npm/require express
+  errorhandler: !npm/require errorhandler
+
 run: !coffee/function |
-  express = require 'express'
   (model, options) ->
+    express = @require 'express'
+    errorhandler = @require 'errorhandler'
     port = options.express ? @config.port
     app = (->
       env = process.env.NODE_ENV ? 'development'
       if env is 'production'
-        @use (require 'errorhandler') {dumpExceptions: off, showStack: off}
+        @use errorhandler {dumpExceptions: off, showStack: off}
         # the following will prevent production instance from crash...
         process.on 'uncaughtException', (err) ->
           console.log 'ALERT.. caught exception', err, err?.stack
       else
         console.log "running in #{env} mode"
-        @use (require 'errorhandler') {dumpExceptions: on, showStack: on}
+        @use errorhandler {dumpExceptions: on, showStack: on}
         @set 'json spaces', 2
 
       return this

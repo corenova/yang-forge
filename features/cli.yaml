@@ -10,10 +10,13 @@
 
 name: cli
 description: Command Line Interface
+dependencies:
+  commander: !npm/require commander
+  colors: !npm/require colors
+
 run: !coffee/function |
   (model) ->
-    program = require 'commander'
-    colors = require 'colors'
+    program = @require 'commander'
 
     # 1. Setup some default execution context
     version = (model.parent.meta 'version')

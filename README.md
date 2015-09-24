@@ -526,11 +526,11 @@ typedefs, among other things.
 
 name | description
 --- | --- | ---
-forge.import     | generates command-line interface
-forge.load       | generates HTTP/HTTPS web server instance
-forge.compile    | generates REST/JSON web services interface
-forge.preprocess | generates self-documentation interface
-forge.parse      | generates self-documentation interface
+forge.import     | local/remote async loading of one or more modules using filenames
+forge.load       | local async/sync loading of module(s), only one-at-a-time with sync
+forge.compile    | local sync compilation of a module, generates class obj that can be instantiated
+forge.preprocess | local sync preprocessing of a module, constraint validations, schema manipulations
+forge.parse      | local sync parsing of a module, syntax validations, custom-tag resolutions
 
 ### Programmatic Usage Examples
 

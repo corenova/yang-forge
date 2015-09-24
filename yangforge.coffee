@@ -83,6 +83,10 @@ class Forge extends Compiler
         construct: (data) -> coffee.eval data
         predicate: (obj) -> obj instanceof Function
         represent: (obj) -> obj.toString()
+      new yaml.Type '!npm/require',
+        kind: 'scalar'
+        resolve:   (data) -> typeof data is 'string'
+        construct: (data) -> require data
       new yaml.Type '!yang',
         kind: 'mapping'
         resolve:   (data={}) ->
@@ -129,12 +133,15 @@ class Forge extends Compiler
     source = yaml.load source, schema: @genSchema opts if typeof source is 'string'
     unless source? and typeof source is 'object'
       throw @error "unable to parse requested source data: #{input}"
-    unless source?.schema instanceof Object
+    unless source.schema instanceof Object
       source.schema = super source.schema if source.schema?
+    if source.dependencies?
+      source.require = (arg) -> @dependencies[arg]
     return source
 
   preprocess: (source, opts) ->
     source = @parse source, opts if typeof source is 'string'
+    return unless source?
     source.parent = @source
     source.schema = super source.schema, source if source.schema?
     delete source.parent
@@ -142,6 +149,7 @@ class Forge extends Compiler
 
   compile: (source, opts={}) ->
     source = @preprocess source, opts
+    return unless source?
     source.parent = @source
     model = super source.schema, source if source.schema?
     delete source.parent
