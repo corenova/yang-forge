@@ -80,6 +80,18 @@ rpc:
         done()
       .catch (err) -> done err
 
+  schema: !coffee/function |
+    (input, output, done) ->
+      schema = (input.get 'arguments')[0]
+      options = input.get 'options'
+
+      schema = options.eval if options.eval?
+      schema = (@parent.preprocess "schema: !yang/schema #{schema}").schema
+      schema = @parent.render schema, options
+      # TODO handle options.output to write to a file
+      output.set schema
+      done()
+
   infuse: !coffee/function |
     (input, output, done) ->
       targets = input.get 'targets'
@@ -156,47 +168,6 @@ rpc:
 #     # console.warn @get 'features'
 #     # console.warn @get 'modules'
 #     next()
-
-  schema: !coffee/function |
-    (input, output, next) ->
-      schemas = input.get 'arguments'
-      options = input.get 'options'
-
-      if options.eval then schemas = [ options.eval ]
-      else schemas = schemas.map (e) -> (fs.readFileSync e, 'utf-8')
-
-      results = switch
-        when options.compile
-          # XXX - this is a bit of an ugly HACK... need to make this cleaner
-          forgery = @constructor
-          convert = (obj) ->
-            yang = obj?.meta?.yang
-            keys = Object.keys(forgery.get "exports.extension.#{yang}") if yang?
-            meta = Forge.extract.apply obj.meta, keys if keys?
-            o = {}
-            for k, v of meta when v?
-              switch v.meta?.yang
-                when 'type'
-                  type = convert v
-                  delete type.type
-                  if Object.keys(type).length > 0
-                    o[v.meta.yang] = Forge.objectify v.meta.type, type
-                  else
-                    o[v.meta.yang] = v.meta.type
-                else
-                  o[k] = v
-            (for k, v of obj when k isnt 'meta' and v?.meta?.yang?
-              Forge.objectify "#{v.meta.yang}.#{k}", convert v
-            ).reduce ((a, b) -> Forge.Meta.copy a, b), o
-          (@compile schema for schema in schemas).map (x) -> convert x?.reduce()
-        else
-          @parse schema for schema in schemas
-
-      results = results[0] if results.length is 1
-      console.info switch
-        when /^json$/i.test options.format then JSON.stringify results, null, 2
-        else prettyjson.render results
-      next()
 
 # @on 'list', (input, output, next) ->
 #   options = input.get 'options'

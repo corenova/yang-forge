@@ -313,19 +313,15 @@ module yangforge {
 
   rpc schema {
     if-feature cli;
-    description "process YANG schema file(s)";
+    description "process a specific YANG schema file";
     input {
       uses cli-command {
         refine arguments {
           config true;
           description "schema";
+          max-elements 1;
         }
         augment options {
-          leaf compile {
-            description "compile input file(s) into specified output format";
-            type empty;
-            units c;
-          }
           leaf eval {
             description "pass a string from the command line as input";
             type string;
@@ -337,8 +333,13 @@ module yangforge {
             units f;
             default yaml;
           }
+          leaf noColor {
+            description "remove color from your life";
+            type empty;
+            units x;
+          }
           leaf output {
-            description "set the output directory for compiled schemas";
+            description "set the output filename for compiled schema";
             type string;
             units o;
           }

@@ -356,8 +356,8 @@ extension:
       (arg, params, children) -> (@Synth.Object params).bind children
 
   pattern: !yang/extension
-    preprocess: !coffee/function |
-      (arg, params, ctx) -> 
+    construct: !coffee/function |
+      (arg, params, children, ctx) -> 
         ctx.patterns ?= []
         ctx.patterns.push new RegExp arg
 

@@ -24,7 +24,11 @@ class Forge extends Compiler
   Synth: synth
 
   class Spark extends synth.Meta
-    render: prettyjson.render
+    render: (data, opts={}) ->
+      switch opts.format
+        when 'json' then JSON.stringify data, null, 2
+        when 'yaml' then prettyjson.render data, opts
+        else data
 
     info: (options={}) ->
       summarize = (what) ->
@@ -45,9 +49,7 @@ class Forge extends Compiler
         info.operations = summarize schema.rpc     if schema.rpc?
         break; # just return ONE...
 
-      return switch options.format
-        when 'json' then info
-        when 'yaml' then @render info, options
+      return @render info, options
 
     # RUN THIS SPARK (convenience function for programmatic run)
     run: (features...) ->
@@ -116,9 +118,10 @@ class Forge extends Compiler
       new yaml.Type '!yfx',
         kind: 'scalar'
         resolve:   (data) -> typeof data is 'string'
-        construct: (data) ->
-          console.log "processing !yfx executable archive"
-          null
+        construct: (data) =>
+          console.log "processing !yfx executable archive (just treat as YAML for now)"
+          res = fetch data, options
+          @parse res.data, pkgdir: res.pkgdir
     ]
 
   parse: (source, opts={}) ->

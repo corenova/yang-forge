@@ -85,6 +85,7 @@ run: !coffee/function |
                 console.log "action '#{action}' completed"
                 console.info res.get()
               .catch (err) ->
+                console.error err if err?.context
                 console.error "#{err}".red
                 cmd.help()
           catch e

@@ -74,7 +74,7 @@ ensures syntax correctness and building the JS object tree structure.
           e.offset = 30 unless e.offset > 30
           offender = input.slice e.offset-30, e.offset+30
           offender = offender.replace /\s\s+/g, ' '
-          throw @error "[yang-compiler:parse] YANG syntax issue found", offender
+          throw @error "[yang-compiler:parse] invalid YANG syntax detected", offender
 
         console.assert input instanceof Object,
           "must pass in proper input to parse"
