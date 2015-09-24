@@ -99,6 +99,7 @@ module yangforge {
   container runtime {
     config false;
     leaf id { type string; }
+    leaf forgery { type string; }
     list modules {
       description
         "Provides state information about available modules for the current runtime context";
@@ -110,6 +111,21 @@ module yangforge {
         "Provides state information about available features for the current runtime context";
       uses unique-element;
       key "name";
+    }
+  }
+
+  container registry {
+    if-feature registry-service;
+    description "Provides module repository service for publish/install";
+    list modules {
+      key "name";
+      uses unique-element;
+      leaf data {
+        type binary;
+        description "Binary type data must be 'explicitly' accessed to retrieve content";
+      }
+      leaf size { type number; units 'Bytes'; mandatory true; }
+      leaf checksum { type string; mandatory true; }
     }
   }
   
@@ -168,14 +184,26 @@ module yangforge {
   
   rpc info {
     if-feature cli;
-    description "shows info about one or more packages";
+    description "shows info about a specific module";
     input {
       uses cli-command {
         refine arguments {
           config true;
           description "name";
+          max-elements 1;
         }
         augment options {
+          leaf format {
+            description "specify output format (yaml, json)";
+            type string;
+            units f;
+            default yaml;
+          }
+          leaf noColor {
+            description "remove color from your life";
+            type empty;
+            units x;
+          }
           leaf verbose {
             description "increase verbosity";
             type empty;
@@ -183,9 +211,6 @@ module yangforge {
           }
         }
       }
-    }
-    output {
-      leaf-list result { type object; }
     }
   }
 

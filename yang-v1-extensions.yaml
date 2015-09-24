@@ -193,7 +193,13 @@ extension:
     prefix: 1
     revision-date: 0..1
     preprocess: !coffee/function |
-      (arg, params) -> @source[arg] = params
+      (arg, params, ctx) -> 
+        m = @preprocess (@resolve 'dependencies', arg)
+        rev = params['revision-date']
+        if rev? and not (rev of m.revision)
+          throw @error "[import] requested #{rev} not available in #{arg}", ctx
+        @define 'extension', k, v for k, v of m.extension when v.override is true
+        @source[params.prefix] = m
 
   include: !yang/extension
     revision-date: 0..1
@@ -306,6 +312,7 @@ extension:
           match = @locate ctx, target
           continue unless match?
           @Synth.copy match, changes
+        delete @source[params.prefix]
     construct: !coffee/function |
       (arg, params, children) -> 
         (@Synth.Store params, -> @set name: arg).bind children
@@ -350,9 +357,13 @@ extension:
 
   pattern: !yang/extension
     preprocess: !coffee/function |
-      (arg, p, ctx) -> 
+      (arg, params, ctx) -> 
         ctx.patterns ?= []
         ctx.patterns.push new RegExp arg
+
+  prefix: !yang/extension
+    preprocess: !coffee/function |
+      (arg, params, ctx) -> @source[arg] = @source
 
   refine: !yang/extension
     default: 0..1
@@ -372,6 +383,8 @@ extension:
   revision: !yang/extension
     description: 0..1
     reference: 0..1
+    preprocess: !coffee/function |
+      (arg, params, ctx) -> @define 'revision', arg, params
 
   rpc: !yang/extension
     description: 0..1
@@ -440,18 +453,17 @@ extension:
     type: 0..n # for 'union' case only
 
     preprocess: !coffee/function |
-      (arg, params, ctx) ->
-        basis = @resolve 'typedef', arg
-        delete @enumValue
+      (arg, params, ctx) -> delete @enumValue
 
     construct: !coffee/function |
       (arg, params, children, ctx) ->
+        basis = @resolve 'typedef', arg
         ctx.type = class
           constructor: (value) ->
             @name = arg
-            value = (params.normalize? value) ? value
-            if params.validate?
-              console.assert (params.validate? value, params),
+            value = (basis.normalize? value) ? value
+            if basis.validate?
+              console.assert (basis.validate? value, params),
                 "unable to validate passed-in '#{value}' as '#{arg}'"
             @value = value
           valueOf: -> @value

@@ -1,6 +1,7 @@
 name: yangforge
 description: YANG driven JS application builder
 license: Apache-2.0
+registry: https://yangforge.intercloud.net
 keywords:
   - build
   - config
@@ -18,7 +19,13 @@ keywords:
   - yang-json
   - yang-yaml
   - yfc
+
+# schema - describes the data model of the application
 schema: !yang/schema yangforge.yang
+
+# config - contains the initial configuration of the application
+config: !json yangforge.json
+
 dependencies:
   yang-v1-extensions: !yaml/schema yang-v1-extensions.yaml
   ietf-yang-types: { schema: !yang/schema ietf-yang-types.yang }
@@ -55,27 +62,23 @@ route:
 rpc:
   build: !coffee/function |
     (input, output, done) ->
-      modules = (@parent.import target for target in (input.get 'arguments'))
-      console.info (@parent.render modules, noColor: true)
-      done()
+      @parent.import (input.get 'arguments')
+      .then (apps) =>
+        console.info app.info format: 'yaml' for app in apps
+        done()
   
   config: !coffee/function |
     (input, output, done) ->
 
   info: !coffee/function |
     (input, output, done) ->
-      targets = input.get 'arguments'
-      unless targets.length > 0
-        console.info @parent.render @parent.info this
+      target = (input.get 'arguments')[0]
+      target ?= @parent
+      @parent.import target
+      .then (app) ->
+        output.set app.info? (input.get 'options')
         done()
-        return
-
-      @parent.import targets
-      .catch (err) -> console.error err
-      .then (apps) =>
-        results = (@parent.info app for app in apps)
-        console.info @parent.render results
-        done()
+      .catch (err) -> done err
 
   infuse: !coffee/function |
     (input, output, done) ->
@@ -111,10 +114,10 @@ rpc:
         feature = @parent.resolve 'feature', name
         
       @invoke 'infuse', targets: (input.get 'arguments').map (e) -> source: e
-      .catch (e) -> done e
       .then (res) =>
         modules = res.get 'modules'
         console.log "<run> starting up: " + modules.map (e) -> e.name
+      .catch (e) -> done e
 
         
 

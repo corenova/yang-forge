@@ -52,6 +52,12 @@ which implements the version 1.0 of the YANG language specifications.
         console.warn "[locate] unable to find '#{path}' within #{Object.keys inside}"
         return
 
+      error: (msg, context) ->
+        res = new Error msg
+        res.name = 'CompileError'
+        res.context = context
+        return res
+
 The `parse` function performs recursive parsing of passed in statement
 and sub-statements and usually invoked in the context of the
 originating `compile` function below.  It expects the `statement` as
@@ -64,7 +70,11 @@ ensures syntax correctness and building the JS object tree structure.
       parse: (input, parser=(require 'yang-parser')) ->
         try
           input = (parser.parse input) if typeof input is 'string'
-        catch e then console.error "[yang-compiler:parse] failed to parse: #{input}"
+        catch e
+          e.offset = 30 unless e.offset > 30
+          offender = input.slice e.offset-30, e.offset+30
+          offender = offender.replace /\s\s+/g, ' '
+          throw @error "[yang-compiler:parse] YANG syntax issue found", offender
 
         console.assert input instanceof Object,
           "must pass in proper input to parse"
@@ -107,9 +117,8 @@ found in the parsed output in order to prepare the context for the
         # if constructors are associated with these extension keywords.
         for key, val of schema
           [ prf..., kw ] = key.split ':'
-          console.log "[preprocess:#{source.name}] processing #{key}..."
           unless kw of scope
-            throw new Error "invalid '#{kw}' extension found during preprocess operation"
+            throw @error "invalid '#{kw}' extension found during preprocess operation", schema
 
           if key is 'extension'
             extensions = (extractKeys val)
@@ -121,8 +130,8 @@ found in the parsed output in order to prepare the context for the
             continue
 
           ext = @resolve 'extension', key
-          console.assert (ext instanceof Object),
-            "[preprocess:#{source.name}] encountered unknown extension '#{key}'"
+          unless (ext instanceof Object)
+            throw @error "[preprocess:#{source.name}] encountered unresolved extension '#{key}'", schema
           constraint = scope[kw]
 
           unless ext.argument?
@@ -135,17 +144,23 @@ found in the parsed output in order to prepare the context for the
               when '0..1','1' then args.length <= 1
               when '1..n' then args.length > 1
               else true
-            console.assert valid,
-              "[preprocess:#{source.name}] constraint violation for '#{key}' (#{args.length} != #{constraint})"
+            unless valid
+              throw @error "[preprocess:#{source.name}] constraint violation for '#{key}' (#{args.length} != #{constraint})", schema
             for arg in args
               params = if val instanceof Object then val[arg]
-              console.log "[preprocess:#{source.name}] #{key} #{arg} " + if params? then "{ #{Object.keys params} }" else ''
+              argument = switch
+                when typeof arg is 'string' and arg.length > 50
+                  ((arg.replace /\s\s+/g, ' ').slice 0, 50) + '...'
+                else arg
+              source.name ?= arg if key in [ 'module', 'submodule' ]
+              console.log "[preprocess:#{source.name}] #{key} #{argument} " + if params? then "{ #{Object.keys params} }" else ''
               params ?= {}
               YangCompiler::preprocess.call this, params, source, ext
               try
                 ext.preprocess?.call? this, arg, params, schema
               catch e
-                console.error "[preprocess:#{source.name}] failed to preprocess '#{key} #{arg}'"; throw e
+                console.error e
+                throw @error "[preprocess:#{source.name}] failed to preprocess '#{key} #{arg}'", schema
 
         return schema
         
@@ -176,8 +191,8 @@ return instantiated copy.
           continue if key is 'extension'
 
           ext = @resolve 'extension', key
-          console.assert (ext instanceof Object),
-            "[compile:#{source.name}] encountered unknown extension '#{key}'"
+          unless (ext instanceof Object)
+            throw @error "[compile:#{source.name}] encountered unknown extension '#{key}'", schema
 
           # here we short-circuit if there is no 'construct' for this extension
           continue unless ext.construct instanceof Function
@@ -197,51 +212,9 @@ return instantiated copy.
                 output[arg] = ext.construct.call this, arg, params, children, output
                 delete output[arg] unless output[arg]?
               catch e
-                console.error "[compile:#{source.name}] failed to compile '#{key} #{arg}'"; throw e
+                console.error e
+                throw @error "[compile:#{source.name}] failed to compile '#{key} #{arg}'", schema
         return output
-
-#
-# DEPRECATED
-# 
-
-      import: (target, opts, context=this) ->
-        console.log "[import:#{context.name}] loading '#{target}'..."
-        m = @preprocess context?.dependencies?[target]
-        name = m.name
-        rev = opts['revision-date']
-        # if rev? and not (m.get "revision.#{rev}")?
-        #   console.warn "[import] requested #{rev} not availabe in '#{name}'"
-        #   console.log m.get 'revision'
-        #   return
-        obj = synth.extract.call m, 'extension'
-        for key, val of obj.extension when val.override is true
-          #delete val.override # don't need this to carry over
-          console.log "[import:#{context.name}] override '#{key}' extension with deviations"
-          synth.copy context.extension[key], val
-        console.log "[import:#{context.name}] module '#{name}' loaded into context"
-        synth.objectify opts.prefix ? name, m
-
-      export: (input) ->
-        console.assert input instanceof Object, "invalid input to export module"
-        console.assert typeof input.name is 'string' and !!input.name,
-          "need to pass in 'name' of the module to export"
-        format = input.format ? 'json'
-        m = switch
-          when (synth.instanceof input) then input
-          else @resolve 'module', input.name
-        console.assert (synth.instanceof m),
-          "unable to retrieve requested module #{input.name} for export"
-
-        tosource = require 'tosource'
-
-        obj = m.extract 'name', 'schema', 'map', 'extensions', 'importers', 'exporters', 'procedures'
-        for key in [ 'extensions', 'importers', 'procedures' ]
-          obj[key]?.toJSON = ->
-            @[k] = tosource v for k, v of this when k isnt 'toJSON' and v instanceof Function
-            this
-        
-        return switch format
-          when 'json' then JSON.stringify obj
 
 Here we return the new `YangCompiler` class for import and use by
 other modules.

@@ -83,6 +83,7 @@ run: !coffee/function |
             app.invoke action, arguments: ([].concat args...), options: opts
               .then (res) ->
                 console.log "action '#{action}' completed"
+                console.info res.get()
               .catch (err) ->
                 console.error "#{err}".red
                 cmd.help()
