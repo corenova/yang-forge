@@ -623,6 +623,8 @@ with documentation all-in-one.
   * [Schema](yangforge.yang)
 * External Dependencies
   * [data-synth library](http://github.com/saintkepha/data-synth)
+  * [js-yaml library](https://github.com/nodeca/js-yaml)
+  * [yang-parser library](https://gitlab.labs.nic.cz/labs/yang-tools/wikis/coffee_parser)
 
 ## License
   [Apache 2.0](LICENSE)
