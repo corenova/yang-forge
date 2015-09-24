@@ -1,82 +1,77 @@
 {
-  "version": "0.9.21",
+  "version": "0.10.3",
   "name": "yangforge",
   "description": "YANG driven JS application builder",
   "keywords": [
+    "yang",
+    "yaml",
+    "json",
+    "restjson",
+    "restconf",
     "build",
-    "config",
+    "compile",
+    "parse",
+    "translate",
+    "package",
+    "publish",
+    "generate",
     "datastore",
     "datamodel",
     "forge",
     "model",
-    "yang",
-    "restjson",
-    "restconf",
+    "opnfv",
     "rpc",
-    "parse",
-    "translate",
-    "yang-json",
-    "yang-yaml",
     "yfc"
   ],
   "preferGlobal": true,
   "author": "Peter Lee <peter@intercloud.net>",
-  "homepage": "https://github.com/opnfv/yangforge",
+  "homepage": "https://github.com/saintkepha/yangforge",
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "http://github.com/opnfv/yangforge"
+    "url": "http://github.com/saintkepha/yangforge"
   },
   "bugs": {
-    "url": "https://github.com/opnfv/yangforge/issues"
+    "url": "https://github.com/saintkepha/yangforge/issues"
   },
-  "main": "lib/yangforge.js",
+  "main": "yangforge.js",
   "bin": {
-    "yfc": "./bin/yfc"
+    "yfc": "bin/yfc"
   },
-  "schema": "./yangforge.yang",
   "dependencies": {
     "body-parser": "^1.13.2",
     "clim": "^1.1.1",
     "colors": "^1.1.2",
     "commander": "^2.8.1",
-    "data-synth": "^0.6.21",
+    "data-synth": "^0.6.24",
     "errorhandler": "^1.4.1",
     "express": "^4.13.1",
+    "indent-string": "^2.1.0",
+    "js-yaml": "^3.4.2",
+    "needle": "^0.10.0",
     "passport": "^0.2.2",
     "prettyjson": "^1.1.2",
     "promise": "^7.0.4",
-    "yang-parser": "^0.1.0",
-    "yang-v1-extensions": "file:yang/yang-v1-extensions"
-  },
-  "optionalDependencies": {
-    "complex-types": "file:yang/complex-types",
-    "iana-crypt-hash": "file:yang/iana-crypt-hash",
-    "ietf-inet-types": "file:yang/ietf-inet-types",
-    "ietf-yang-types": "file:yang/ietf-yang-types"
+    "yang-parser": "^0.1.0"
   },
   "bundleDependencies": [
     "clim",
     "colors",
     "commander",
+    "indent-string",
+    "js-yaml",
+    "needle",
     "prettyjson",
-    "yang-parser",
-    "complex-types",
-    "iana-crypt-hash",
-    "ietf-inet-types",
-    "ietf-yang-types",
-    "yang-v1-extensions"
+    "yang-parser"
   ],
   "devDependencies": {
     "coffee-script": ">=1.7"
   },
   "engines": {
-    "node": ">=0.10.3",
-    "npm": ">=2.0"
+    "node": ">=0.10.28"
   },
   "scripts": {
-    "test": "mocha test",
-    "prepublish": "mkdir -p lib; coffee -o lib -c src",
+    "prepublish": "coffee -c *coffee",
     "start": "bin/yfc run"
   }
 }

@@ -4,11 +4,10 @@ This module provides YANG schema language extension support for
 satisfying the [RFC 6020](http://tools.ietf.org/html/rfc6020)
 specifications.
 
-The [schema](yang-v1-extensions.yang) file and the extended language
-constraints inside [package.json](package.json) file are fused
-together with various *extension handler* routines inside the
-[module code](yang-v1-extensions.coffee) to construct an importable
-*yangforged* module.
+The [YANG schema](yang-v1-extensions.yang) file and the extended
+language constraints and various *extension handler* routines inside
+[YAML module](yang-v1-extensions.yaml) file are fused together to
+construct an importable *yangforged* module.
 
 ## Current RFC 6020 Implementation Coverage
 
@@ -53,11 +52,11 @@ input | rpc schema | supported
 key | property meta | supported
 leaf | Forge.Property | supported
 leaf-list | Forge.List | supported
-length | property meta | unsupported
+length | property meta | supported
 list | Forge.List | supported
 mandatory | property meta | supported
-max-elements | property meta | unsupported
-min-elements | property meta | unsupported
+max-elements | property meta | supported
+min-elements | property meta | supported
 module | Forge.Store | supported
 must | conditional | unsupported
 namespace | module meta | supported
@@ -66,21 +65,21 @@ ordered-by | property meta | unsupported
 organization | module meta | supported
 output | rpc schema | supported
 path | TBD | unsupported
-pattern | TBD | unsupported
+pattern | TBD | supported
 position | TBD | unsupported
 prefix | module meta | supported
 presence | meta data | unsupported
 range | property meta | unsupported
 reference | meta data | supported
-refine | merge | unsupported
+refine | merge | supported
 require-instance | TBD | unsupported
 revision | meta data | supported
-revision-date | conditional | unsupported
+revision-date | conditional | supported
 rpc | Forge.Action | supported
 status | meta data | supported
 submodule | preprocess | supported
 type | property meta | partial
-typedef | TBD | unsupported
+typedef | TBD | supported
 unique | property meta | supported
 units | property meta | supported
 uses | schema merge | supported
