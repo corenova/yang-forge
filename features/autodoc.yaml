@@ -7,5 +7,5 @@
 
 name: autodoc
 description: Automated schema driven documentation generator
-generator: !coffee/function |
+run: !coffee/function |
   -> console.log 'please write me...'

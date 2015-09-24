@@ -16,9 +16,10 @@ run: !coffee/function |
     colors = require 'colors'
 
     # 1. Setup some default execution context
+    version = (model.parent.meta 'version')
     program
-      .version (model.meta 'version')
-      .description (model.meta 'description')
+      .version version
+      .description (model.parent.meta 'description')
       .option '--no-color', 'disable color output'
 
     for action, rpc of (model.meta 'rpc')
@@ -49,7 +50,6 @@ run: !coffee/function |
             if option.units?
               optstring = "-#{option.units}, #{optstring}"
             type = option.type
-            #type = type.meta.type if typeof type is 'object'
             optstring += switch type
               when 'boolean','empty' then ''
               else

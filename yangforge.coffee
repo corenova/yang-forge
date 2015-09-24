@@ -208,6 +208,7 @@ class Forge extends Compiler
             resolve @load "#{tag} #{res.body}"
       else
         # here we use needle to get the remote content
+        console.log "fetching remote content at: #{source}"
         needle.get source, (err, res) =>
           if err? or res.statusCode isnt 200 then reject err
           else resolve @load "#{tag} |\n#{indent res.body, ' ', 2}" 

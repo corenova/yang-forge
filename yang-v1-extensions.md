@@ -4,11 +4,10 @@ This module provides YANG schema language extension support for
 satisfying the [RFC 6020](http://tools.ietf.org/html/rfc6020)
 specifications.
 
-The [schema](yang-v1-extensions.yang) file and the extended language
-constraints inside [package.json](package.json) file are fused
-together with various *extension handler* routines inside the
-[module code](yang-v1-extensions.coffee) to construct an importable
-*yangforged* module.
+The [YANG schema](yang-v1-extensions.yang) file and the extended
+language constraints and various *extension handler* routines inside
+[YAML module](yang-v1-extensions.yaml) file are fused together to
+construct an importable *yangforged* module.
 
 ## Current RFC 6020 Implementation Coverage
 
@@ -53,7 +52,7 @@ input | rpc schema | supported
 key | property meta | supported
 leaf | Forge.Property | supported
 leaf-list | Forge.List | supported
-length | property meta | unsupported
+length | property meta | supported
 list | Forge.List | supported
 mandatory | property meta | supported
 max-elements | property meta | supported
@@ -72,7 +71,7 @@ prefix | module meta | supported
 presence | meta data | unsupported
 range | property meta | unsupported
 reference | meta data | supported
-refine | merge | unsupported
+refine | merge | supported
 require-instance | TBD | unsupported
 revision | meta data | supported
 revision-date | conditional | supported

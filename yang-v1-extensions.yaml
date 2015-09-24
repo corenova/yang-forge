@@ -231,8 +231,7 @@ extension:
     when: 0..1
     construct: !coffee/function |
       (arg, params, children) -> 
-        params.type = children.type if children.type?
-        (@Synth.Property params)
+        @Synth.Property params, -> @set type: children.type if children.type?
 
   leaf-list: !yang/extension
     config: 0..1
@@ -462,17 +461,28 @@ extension:
       (arg, params, children, ctx) ->
         basis = @resolve 'typedef', arg
         return unless basis?
+        for own key, value of basis.type
+          basis = @resolve 'typedef', key
+          params = value
+          break;
+        options = @Synth.copy {}, params
+        options.patterns = []
+        options.patterns.push new RegExp params.pattern if params.pattern?
         ctx.type = class
+          @type = arg
+          @valueOf  = -> @type
+          @toString = -> @type
           constructor: (value) ->
             @name = arg
-            value = (basis.normalize? value) ? value
+            value = (basis.normalize? value, options) ? value
             if basis.validate?
-              console.assert (basis.validate? value, params),
+              #console.log "VALIDATE: #{arg}"
+              console.assert (basis.validate? value, options),
                 "unable to validate passed-in '#{value}' as '#{arg}'"
             @value = value
           get:      -> @value
           valueOf:  -> @value
-          toString: -> @name
+          toString: -> @constructor.type
         null
 
   typedef: !yang/extension
@@ -518,13 +528,13 @@ typedef:
 
   enumeration:
     normalize: !coffee/function |
-      (value) -> 
+      (value, opts) -> 
         if typeof value is 'number'
-          for key, val of @enum when val.value is value or val.value is "#{value}"
+          for key, val of opts.enum when val.value is value or val.value is "#{value}"
             return key
         value
     validate: !coffee/function |
-      (value) -> @enum.hasOwnProperty value
+      (value, opts) -> opts.enum.hasOwnProperty value
 
   # boolean:
   #   normalize: !coffee/function |

@@ -1,5 +1,6 @@
 name: yangforge
 description: YANG driven JS application builder
+version: 0.10.2
 license: Apache-2.0
 registry: https://yangforge.intercloud.net
 keywords:
