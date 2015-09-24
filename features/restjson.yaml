@@ -14,20 +14,16 @@ description: REST/JSON web services interface generator
 dependencies:
   express: !yaml/schema express.yaml
 
-schema: !yang
-  module:
-    restjson: TBD
-
 # TODO - componentize various routers
-generator: !coffee/function |
-  (app) ->
+run: !coffee/function |
+  express = require 'express'
+  synth = require 'data-synth'
+  (model, options) ->
     console.log "generating REST/JSON interface..."
-    express = require 'express'
 
-    self = this
     router = (->
       @all '*', (req, res, next) ->
-        req.target ?= self
+        req.target ?= model.parent
         next()
 
       @param 'target', (req, res, next, target) ->
@@ -35,7 +31,6 @@ generator: !coffee/function |
         if match? then req.target = match; next() else next 'route'
 
       @get '/', (req, res, next) ->
-        #res.locals.result = Forge.objectify req.params.target, req.target.serialize()
         res.locals.result = req.target.serialize()
         next()
 
@@ -44,12 +39,12 @@ generator: !coffee/function |
 
     #Primary Module routing endpoint
 
-    console.log "generating Module Router..."
-    moduleRouter = (->
+    console.log "generating Spark Router..."
+    sparkRouter = (->
       @route '/'
       .all (req, res, next) ->
-        if (req.target.meta 'synth') is 'forge'
-          console.log "Module: #{req.originalUrl}"
+        if (req.target.meta 'synth') is 'store'
+          console.log "Spark: #{req.originalUrl}"
           next()
         else next 'route'
       .options (req, res, next) ->
@@ -62,21 +57,7 @@ generator: !coffee/function |
             description: 'update configuration for this module'
           COPY:
             description: 'get a copy of this module for cloning it elsewhere'
-      .report (req, res, next) -> res.locals.result = req.target.report(); next()
-
-      @param 'module', (req, res, next, module) ->
-        match = req.target.access "modules.#{module}"
-        if match? then req.target = match; next() else next 'route'
-
-      @param 'container', (req, res, next, container) ->
-        match = req.target.access "module.#{container}"
-        if (match?.meta 'synth') in [ 'model', 'object', 'list' ]
-          req.target = match; next()
-        else next 'route'
-
-      @use '/:module', router
-      @use '/:container', router
-
+      .report (req, res, next) -> res.locals.result = req.target.report?(); next()
       return this
     ).call express.Router()
 
@@ -86,10 +67,13 @@ generator: !coffee/function |
     modelRouter = (->
       @route '/'
       .all (req, res, next) ->
-        if (req.target.meta 'synth') in [ 'forge', 'model' ]
+        if (req.target.meta 'synth') is 'model'
           console.log "Model: #{req.originalUrl}"
           next()
         else next 'route'
+      .report (req, res, next) -> 
+        res.locals.result = req.target.parent.info()
+        next()
       .put (req, res, next) ->
         (req.target.set req.body).save()
         .then (result) ->
@@ -100,29 +84,23 @@ generator: !coffee/function |
           next err
 
       @param 'action', (req, res, next, action) ->
-        match = req.target.access "methods.#{action}"
-        if match? then req.action = match; next() else next 'route'
+        if req.target.methods?[action]? then next() else next 'route'
 
       @route '/:action'
       .options (req, res, next) ->
-        keys = Forge.Property.get 'options'
-        keys.push 'description', 'reference', 'status'
-        collapse = (obj) ->
-          return obj unless obj instanceof Object
-          for k, v of obj when k isnt 'meta'
-            obj[k] = collapse v
-          for k, v of obj.meta when k in keys
-            obj[k] = v
-          delete obj.meta
-          return obj
+        meta = req.target.meta "rpc.#{req.params.action}"
+        rpc = synth.extract.call meta, 'description', 'status', 'reference', 'input', 'output'
+        delete rpc.input?.uses
+        delete rpc.input?.typedef
+        delete rpc.output?.uses
+        delete rpc.output?.typedef
         res.send
-          POST: collapse req.action.meta.reduce()
+          POST: rpc
       .post (req, res, next) ->
-        console.info "restjson: invoking rpc operation '#{req.action.name}'".grey
-        req.target.invoke req.action.name, req.body, req.target
+        console.info "restjson: invoking rpc operation '#{req.params.action}'".grey
+        req.target.invoke req.params.action, req.body
           .then  (output) -> res.locals.result = output.get(); next()
           .catch (err) -> next err
-
       return this
     ).call express.Router()
 
@@ -156,7 +134,7 @@ generator: !coffee/function |
         next "cannot add a new entry without data" unless req.body?
         req.target.push req.body
 
-        model = req.target.seek synth: (v) -> v in [ 'model', 'forge' ]
+        model = req.target.seek synth: 'model'
         model.save()
         .then (result) ->
           res.locals.result = req.target.serialize()
@@ -180,7 +158,7 @@ generator: !coffee/function |
 
     #Main REST/JSON routing endpoint
 
-    router.use moduleRouter, modelRouter, objRouter, listRouter
+    router.use sparkRouter, modelRouter, objRouter, listRouter
     # Nested Loopback to itself if additional target in the URL
     router.use '/:target', router
 
@@ -211,8 +189,8 @@ generator: !coffee/function |
       return this
     ).call express.Router()
 
-    if app?
+    if options.express?
       console.info "restjson: binding forgery to /restjson".grey
-      app.use "/restjson", restjson
+      options.express.use "/restjson", restjson
 
     return restjson

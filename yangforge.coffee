@@ -23,10 +23,10 @@ class Forge extends Compiler
   Promise: promise
   Synth: synth
 
-  class Spark extends synth.Meta
+  class Spark extends synth.Store
     render: (data, opts={}) ->
       switch opts.format
-        when 'json' then JSON.stringify data, null, 2
+        when 'json' then JSON.stringify data, 2
         when 'yaml' then prettyjson.render data, opts
         else data
 

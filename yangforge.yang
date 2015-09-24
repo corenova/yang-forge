@@ -138,7 +138,8 @@ module yangforge {
       uses cli-command {
         refine arguments {
           config true;
-          description "name";
+          units "file";
+          max-elements 1;
         }
         augment options {
           leaf save { type empty; }
@@ -189,7 +190,7 @@ module yangforge {
       uses cli-command {
         refine arguments {
           config true;
-          description "name";
+          units "name";
           max-elements 1;
         }
         augment options {
@@ -204,51 +205,6 @@ module yangforge {
             type empty;
             units x;
           }
-          leaf verbose {
-            description "increase verbosity";
-            type empty;
-            units v;
-          }
-        }
-      }
-    }
-  }
-
-  rpc init {
-    if-feature cli;
-    description "initialize package configuration";
-  }
-  
-  rpc install {
-    if-feature cli;
-    description "install one or more packages";
-    input {
-      uses cli-command {
-        refine arguments {
-          config true;
-          description "package";
-        }
-        augment options {
-          leaf save {
-            description "add package into dependencies";
-            type empty;
-            units s;
-          }
-        }
-      }
-    }
-  }
-
-  rpc list {
-    if-feature cli;
-    description "list installed packages";
-    input {
-      uses cli-command {
-        refine arguments {
-          config true;
-          description "package";
-        } 
-        augment options {
           leaf verbose {
             description "increase verbosity";
             type empty;
@@ -284,7 +240,7 @@ module yangforge {
       uses cli-command {
         refine arguments {
           config true;
-          description "module";
+          units "modules";
         }
         augment options {
           leaf cli {
@@ -318,7 +274,7 @@ module yangforge {
       uses cli-command {
         refine arguments {
           config true;
-          description "schema";
+          units "file";
           max-elements 1;
         }
         augment options {
@@ -390,7 +346,7 @@ module yangforge {
     }
     output {
       leaf message { type string; }
-      leaf-list modules { type object; }
+      leaf-list modules { type string; }
     }
   }
 

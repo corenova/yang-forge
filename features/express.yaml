@@ -11,23 +11,12 @@
 
 name: express
 description: Fast, unopionated, minimalist web framework (HTTP/HTTPS)
-
-# The below is an example of an explicit definition of YANG-style schema
-schema: !yang
-  module: 
-    express:
-      leaf:
-        id:   { type: string }
-        port: { type: number, default: 5000 }
-      rpc:
-        enable: 
-          input: { uses: yf:enable-feature }
-        disable:
-          input: { uses: yf:disable-feature }
-
-generator: !coffee/function |
+config:
+  port: 5000
+run: !coffee/function |
   express = require 'express'
-  (port=@config.port) ->
+  (model, options) ->
+    port = options.express ? @config.port
     app = (->
       env = process.env.NODE_ENV ? 'development'
       if env is 'production'

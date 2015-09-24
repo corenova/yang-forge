@@ -230,7 +230,9 @@ extension:
     units: 0..1
     when: 0..1
     construct: !coffee/function |
-      (arg, params) -> (@Synth.Property params)
+      (arg, params, children) -> 
+        params.type = children.type if children.type?
+        (@Synth.Property params)
 
   leaf-list: !yang/extension
     config: 0..1
@@ -315,7 +317,7 @@ extension:
         delete @source[params.prefix]
     construct: !coffee/function |
       (arg, params, children) -> 
-        (@Synth.Store params, -> @set name: arg).bind children
+        (@Synth.Model params, -> @set name: arg).bind children
 
   # TODO
   must: !yang/extension
@@ -375,6 +377,7 @@ extension:
     must: 0..n
     min-elements: 0..1
     max-elements: 0..1
+    units: 0..1
 
   require-instance: !yang/extension
     preprocess: !coffee/function |
@@ -458,6 +461,7 @@ extension:
     construct: !coffee/function |
       (arg, params, children, ctx) ->
         basis = @resolve 'typedef', arg
+        return unless basis?
         ctx.type = class
           constructor: (value) ->
             @name = arg
@@ -466,7 +470,10 @@ extension:
               console.assert (basis.validate? value, params),
                 "unable to validate passed-in '#{value}' as '#{arg}'"
             @value = value
-          valueOf: -> @value
+          get:      -> @value
+          valueOf:  -> @value
+          toString: -> @name
+        null
 
   typedef: !yang/extension
     default: 0..1
@@ -518,6 +525,14 @@ typedef:
         value
     validate: !coffee/function |
       (value) -> @enum.hasOwnProperty value
+
+  # boolean:
+  #   normalize: !coffee/function |
+  #     (value) -> 
+  #       console.log "normalizing boolean!"
+  #       unless typeof value is 'boolean' then value is 'true' else value
+  #   validate: !coffee/function |
+  #     (value) -> typeof value is 'boolean'
 
   string:
     normalize: !coffee/function |

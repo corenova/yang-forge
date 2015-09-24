@@ -11,17 +11,17 @@
 name: cli
 description: Command Line Interface
 run: !coffee/function |
-  (app) ->
+  (model) ->
     program = require 'commander'
     colors = require 'colors'
 
     # 1. Setup some default execution context
     program
-      .version (app.meta 'version')
-      .description (app.meta 'description')
+      .version (model.meta 'version')
+      .description (model.meta 'description')
       .option '--no-color', 'disable color output'
 
-    for action, rpc of (app.meta 'rpc')
+    for action, rpc of (model.meta 'rpc')
       continue unless rpc['if-feature']?.cli is true
 
       status = rpc.status
@@ -29,7 +29,7 @@ run: !coffee/function |
       if rpc.input?.uses['cli-command']?
         args = rpc.input['leaf-list'].arguments
         if args?.config is true
-          argstring = args.description ? args.type
+          argstring = args.units ? args.type
           argstring += '...' unless args['max-elements'] is '1'
           command +=
             if args.mandatory then " <#{argstring}>"
@@ -80,7 +80,7 @@ run: !coffee/function |
 
           try
             [ args..., opts ] = arguments
-            app.invoke action, arguments: ([].concat args...), options: opts
+            model.invoke action, arguments: ([].concat args...), options: opts
               .then (res) ->
                 console.log "action '#{action}' completed"
                 console.info res.get()

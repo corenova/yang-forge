@@ -66,6 +66,7 @@ rpc:
       .then (apps) =>
         console.info app.info format: 'yaml' for app in apps
         done()
+      .catch (err) -> done err
   
   config: !coffee/function |
     (input, output, done) ->
@@ -97,21 +98,27 @@ rpc:
       targets = input.get 'targets'
       unless targets.length > 0
         output.set 'message', 'no operation since no target(s) were specified'
+        return done()
+
+      @parent.import (targets.map (e) -> e.source)
+      .then (apps) =>
+        models = []
+        for app in apps
+          for name, model of app.properties
+            console.log "<infuse> absorbing a new model '#{name}' into running forge"
+            @parent.attach name, model
+            models.push name
+        console.log models
+        output.set 'message', 'request processed successfully'
+        output.set 'modules', models
+        console.log "<infuse> completed"
         done()
-        return
-      modules = for target in targets
-        console.log "<infuse> absorbing a new source '#{target.source}' into running forge"
-        m = @load target
-        (@access 'runtime.modules').push m if m?
-        m
-      output.set 'message', 'request processed successfully'
-      output.set 'modules', modules
-      console.log "<infuse> completed"
-      done()
+      .catch (err) -> done err
       
   defuse: !coffee/function |
     (input, output, done) ->
-      (@access 'runtime.modules').remove input.get 'targets'
+      for name in input.get 'names'
+        @parent.detach name
       output.set 'message', 'OK'
       done()
 
@@ -119,76 +126,17 @@ rpc:
     (input, output, done) ->
       features = input.get 'options'
       if features.cli is true
-        (@parent.resolve 'feature', 'cli').run this
+        (@parent.resolve 'feature', 'cli').run? this
         return done()
 
-      for name, arg of features
-        feature = @parent.resolve 'feature', name
+      console.log "forgery firing up..."
+      for name, arg of features when arg? and arg isnt false
+        console.log "#{name} with #{arg}"
+        features[name] = (@parent.resolve 'feature', name)?.run? this, features
         
       @invoke 'infuse', targets: (input.get 'arguments').map (e) -> source: e
       .then (res) =>
         modules = res.get 'modules'
-        console.log "<run> starting up: " + modules.map (e) -> e.name
-      .catch (e) -> done e
-
-        
-
-#     features = input.get 'options'
-#     if features.cli is true
-#       features = cli: on
-#     else
-#       @set 'features.cli', off
-#       #process.argv = [] # hack for now...
-
-#     console.log "forgery loading #{Object.keys(features)}..."
-#     for feature, arg of features
-#       continue unless arg? and arg
-
-#       # @invoke 'enable', feature: feature, options: arg
-#       #   .then (output) ->
-
-#       try (@access 'features').push new (@load "features/#{feature}") null, this
-#       catch e then console.warn "unable to load feature '#{feature}' due to #{e}"
-
-#     # run passed in features
-#     console.log "forgery firing up..."
-#     for feature in @get 'features' when feature instanceof Forge.Meta
-#       do (feature) =>
-#         name = feature.meta 'name'
-#         deps = for dep in (feature.meta 'needs') or []
-#           console.log "forgery firing up '#{dep}' feature on-behalf of #{name}".green
-#           (@get "features.#{dep}")?.run this, features[dep]
-#         needs = deps.length
-#         deps.unshift this
-#         deps.push features[name]
-#         console.log "forgery firing up '#{name}' feature with #{needs} dependents".green
-#         feature.run.apply feature, deps
-
-#     # console.log "forgery fired up!"
-#     # console.warn @get 'features'
-#     # console.warn @get 'modules'
-#     next()
-
-# @on 'list', (input, output, next) ->
-#   options = input.get 'options'
-#   modules = (@get 'modules').map (e) -> e.constructor.info options.verbose
-#   unless options.verbose
-#     console.info prettyjson.render modules
-#     return next()
-#   child = sys.exec 'npm list --json', timeout: 5000
-#   child.stdout.on 'data', (data) ->
-#     result = JSON.parse data
-#     results = for mod in modules when result.name is mod.name
-#       Forge.copy mod, result
-#     console.info prettyjson.render results
-#   child.stderr.on 'data', (data) -> console.warn data.red
-#   child.on 'close', (code) -> next()
-
-# @on 'enable', (input, output, next) ->
-#   target = input.get 'feature'
-#   feature = @access "features.#{target}"
-#   unless feature?
-#     feature = new (@load "features/#{target}") null, this
-#     (@access 'features').push handler
-#   handler.enable()
-#   next()
+        output.set "<run> starting with: " + (modules)
+        done()
+      .catch (err) -> done err
