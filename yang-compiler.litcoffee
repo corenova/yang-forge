@@ -74,7 +74,7 @@ ensures syntax correctness and building the JS object tree structure.
           e.offset = 30 unless e.offset > 30
           offender = input.slice e.offset-30, e.offset+30
           offender = offender.replace /\s\s+/g, ' '
-          throw @error "[yang-compiler:parse] invalid YANG syntax detected", offender
+          throw @error "[yang-compiler:parse] invalid YANG syntax detected (file not found?)", offender
 
         console.assert input instanceof Object,
           "must pass in proper input to parse"
@@ -102,12 +102,15 @@ found in the parsed output in order to prepare the context for the
       fork: (f, args...) -> f?.apply? (new @constructor), args
 
       preprocess: (schema, source={}, scope) ->
-        source.extension ?= source.parent?.extension
-        console.assert source.extension instanceof Object,
-          "cannot preprocess requested schema without source.extension scope"
-        return @fork arguments.callee, schema, source, source.extension unless scope?
-        @source = source
+        unless scope?
+          # first merge source extension using parent extensions if available
+          basis = synth.copy {}, source.parent?.extension
+          source.extension = synth.copy basis, source.extension
+          console.assert (Object.keys source.extension).length > 0,
+            "cannot preprocess requested schema without source.extension scope"
+          return @fork arguments.callee, schema, source, source.extension
 
+        @source = source
         schema = (YangCompiler::parse.call this, schema) if typeof schema is 'string'
         console.assert schema instanceof Object,
           "must pass in proper 'schema' to preprocess"
@@ -124,6 +127,8 @@ found in the parsed output in order to prepare the context for the
             extensions = (extractKeys val)
             for name in extensions
               extension = if val instanceof Object then val[name] else {}
+              for ext of extension when ext isnt 'argument'
+                delete extension[ext]
               @define 'extension', name, extension
             delete schema.extension
             console.log "[preprocess:#{source.name}] found #{extensions.length} new extension(s)"
@@ -160,7 +165,7 @@ found in the parsed output in order to prepare the context for the
                 ext.preprocess?.call? this, arg, params, schema
               catch e
                 console.error e
-                throw @error "[preprocess:#{source.name}] failed to preprocess '#{key} #{arg}'", schema
+                throw @error "[preprocess:#{source.name}] failed to preprocess '#{key} #{arg}'", args
 
         return schema
         

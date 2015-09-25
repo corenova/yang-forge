@@ -20,8 +20,7 @@ prettyjson = require 'prettyjson'
 Compiler   = require './yang-compiler'
 
 class Forge extends Compiler
-  Promise: promise
-  Synth: synth
+  require: require
 
   class Spark extends synth.Store
     render: (data, opts={}) ->
@@ -66,21 +65,21 @@ class Forge extends Compiler
       (@access @meta 'main').invoke 'run', options: options
       .catch (e) -> console.error e
 
-    valueOf:  -> @source
-    toString: -> 'Spark'
+    toString: -> "Spark:#{@meta 'name'}"
 
   # NOT the most efficient way to do it...
   genSchema: (options={}) ->
-    fetch = (data, opts) ->
+    
+    fetch = (input, opts) ->
       try
         try
-          pkgdir = path.dirname (path.resolve opts.pkgdir, data)
-          data = fs.readFileSync (path.resolve opts.pkgdir, data), 'utf-8'
+          data = fs.readFileSync (path.resolve opts.pkgdir, input), 'utf-8'
+          pkgdir = path.dirname (path.resolve opts.pkgdir, input)
         catch
-          pkgdir = path.dirname (path.resolve data)
-          data = fs.readFileSync (path.resolve data), 'utf-8'
-      catch
-      return data: data, pkgdir: pkgdir
+          data = fs.readFileSync (path.resolve input), 'utf-8'
+          pkgdir = path.dirname (path.resolve input)
+      catch then data = input
+      return [ data, pkgdir ]
     
     yaml.Schema.create [
       new yaml.Type '!coffee/function',
@@ -89,10 +88,6 @@ class Forge extends Compiler
         construct: (data) -> coffee.eval data
         predicate: (obj) -> obj instanceof Function
         represent: (obj) -> obj.toString()
-      new yaml.Type '!npm/require',
-        kind: 'scalar'
-        resolve:   (data) -> typeof data is 'string'
-        construct: (data) -> require data
       new yaml.Type '!yang',
         kind: 'mapping'
         resolve:   (data={}) ->
@@ -107,50 +102,68 @@ class Forge extends Compiler
       new yaml.Type '!json',
         kind: 'scalar'
         resolve:   (data) -> typeof data is 'string'
-        construct: (data) ->
+        construct: (data) =>
           console.log "processing !json using: #{data}"
-          res = fetch data, options
-          JSON.parse res.data
+          [ data, pkgdir ] = fetch data, options
+          @parse data, format: 'json'
       new yaml.Type '!yang/schema',
         kind: 'scalar'
         resolve:   (data) -> typeof data is 'string' 
         construct: (data) =>
           console.log "processing !yang/schema using: #{data}"
-          res = fetch data, options
-          Compiler::parse.call this, res.data
+          [ data, pkgdir ] = fetch data, options
+          options.pkgdir ?= pkgdir if pkgdir?
+          @parse data, format: 'yang', options
       new yaml.Type '!yaml/schema',
         kind: 'scalar'
         resolve:   (data) -> typeof data is 'string'
         construct: (data) =>
           console.log "processing !yaml/schema using: #{data}"
-          res = fetch data, options
-          @parse res.data, pkgdir: res.pkgdir
+          [ data, pkgdir ] = fetch data, options
+          options.pkgdir ?= pkgdir if pkgdir?
+          @parse data, format: 'yaml', pkgdir: pkgdir
       new yaml.Type '!yfx',
         kind: 'scalar'
         resolve:   (data) -> typeof data is 'string'
         construct: (data) =>
           console.log "processing !yfx executable archive (just treat as YAML for now)"
-          res = fetch data, options
-          @parse res.data, pkgdir: res.pkgdir
+          [ data, pkgdir ] = fetch data, options
+          options.pkgdir ?= pkgdir if pkgdir?
+          @parse data, format: 'yaml', pkgdir: pkgdir
     ]
 
   parse: (source, opts={}) ->
+    return source unless typeof source is 'string'
+    
     input = source
-    source = yaml.load source, schema: @genSchema opts if typeof source is 'string'
+    source = switch opts.format
+      when 'yang' then super source
+      when 'json' then JSON.parse source
+      else yaml.load source, schema: @genSchema opts
+
     unless source? and typeof source is 'object'
       throw @error "unable to parse requested source data: #{input}"
-    unless source.schema instanceof Object
-      source.schema = super source.schema if source.schema?
+
+    # XXX - below doesn't belong here...
     if source.dependencies?
       source.require = (arg) -> @dependencies[arg]
     return source
 
-  preprocess: (source, opts) ->
+  preprocess: (source, opts={}) ->
     source = @parse source, opts if typeof source is 'string'
-    return unless source?
-    source.parent = @source
-    source.schema = super source.schema, source if source.schema?
-    delete source.parent
+    return source unless source instanceof Object
+    
+    # determine whether source is YAML or YANG output... a bit hackish
+    # but YANG parse output always has ONE primary root element
+    # need a better way to know the actual VALUE of the source
+    if Object.keys(source).length is 1
+      source = schema: source
+
+    if source.schema?
+      source.parent = @source
+      source.pkgdir = opts.pkgdir ? @source?.pkgdir
+      source.schema = super source.schema, source if source.schema?
+      delete source.parent
     return source
 
   compile: (source, opts={}) ->
@@ -201,7 +214,7 @@ class Forge extends Compiler
         url.protocol = 'file:'
         url.pathname
     tag = switch (path.extname source)
-      when '.yang' then 'schema: !yang/schema'
+      when '.yang' then '!yang/schema'
       when '.json' then '!json'
       when '.yaml' then '!yaml/schema'
       else '!yfx'

@@ -13,14 +13,11 @@ name: express
 description: Fast, unopionated, minimalist web framework (HTTP/HTTPS)
 config:
   port: 5000
-dependencies:
-  express:      !npm/require express
-  errorhandler: !npm/require errorhandler
 
 run: !coffee/function |
   (model, options) ->
-    express = @require 'express'
-    errorhandler = @require 'errorhandler'
+    express = model.parent.require 'express'
+    errorhandler = model.parent.require 'errorhandler'
     port = options.express ? @config.port
     app = (->
       env = process.env.NODE_ENV ? 'development'

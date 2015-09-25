@@ -11,18 +11,14 @@
 name: restjson
 description: REST/JSON web services interface generator
 
-dependencies:
-  express: !npm/require express
-  synth:   !npm/require data-synth
-  body-parser: !npm/require body-parser
-  passport: !npm/require passport
-
 # TODO - componentize various routers
+routers:
+  
 run: !coffee/function |
   (model, options) ->
     console.log "generating REST/JSON interface..."
-    express = @require 'express'
-    synth   = @require 'synth'
+    express = model.parent.require 'express'
+    synth   = require 'data-synth'
 
     router = (->
       @all '*', (req, res, next) ->
@@ -165,8 +161,8 @@ run: !coffee/function |
     # Nested Loopback to itself if additional target in the URL
     router.use '/:target', router
 
-    bp = @require 'body-parser'
-    passport = @require 'passport'
+    bp = model.parent.require 'body-parser'
+    passport = model.parent.require 'passport'
     restjson = (->
       @use bp.urlencoded(extended:true), bp.json(strict:true), passport.initialize()
 

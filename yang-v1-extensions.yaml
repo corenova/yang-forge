@@ -24,19 +24,19 @@ keywords:
 # 
 extension:
   augment: !yang/extension
-    anyxml: 0..n
-    case: 0..n
-    choice: 0..n
-    container: 0..n
+    anyxml:      0..n
+    case:        0..n
+    choice:      0..n
+    container:   0..n
     description: 0..1
-    if-feature: 0..n
-    leaf: 0..n
-    leaf-list: 0..n
-    list: 0..n
-    reference: 0..1
-    status: 0..1
-    uses: 0..n
-    when: 0..1
+    if-feature:  0..n
+    leaf:        0..n
+    leaf-list:   0..n
+    list:        0..n
+    reference:   0..1
+    status:      0..1
+    uses:        0..n
+    when:        0..1
 
   belongs-to: !yang/extension
     prefix: 1
@@ -105,7 +105,9 @@ extension:
     uses: 0..n
     when: 0..1
     construct: !coffee/function |
-      (arg, params, children) -> (@Synth.Object params).bind children
+      (arg, params, children) -> 
+        synth = @require 'data-synth'
+        (synth.Object params).bind children
 
   # TODO
   deviate: !yang/extension
@@ -193,12 +195,21 @@ extension:
     prefix: 1
     revision-date: 0..1
     preprocess: !coffee/function |
-      (arg, params, ctx) -> 
-        m = @preprocess (@resolve 'dependencies', arg)
+      (arg, params, ctx) ->
+        synth = @require 'data-synth'
+        m  = @preprocess (@resolve 'dependencies', arg)
+        m ?= @preprocess "!yang/schema #{arg}.yang", @source
+        unless m?
+          throw @error "unable to resolve '#{arg}' in dependencies", 'import'
         rev = params['revision-date']
         if rev? and not (rev of m.revision)
-          throw @error "[import] requested #{rev} not available in #{arg}", ctx
-        @define 'extension', k, v for k, v of m.extension when v.override is true
+          throw @error "requested #{rev} not available in #{arg}", 'import'
+        for k, v of m.extension when v.override is true
+          # we make a copy of v because we don't want importers of
+          # THIS module to ALSO override when importing this module
+          copy = synth.copy {}, v
+          delete copy.override
+          @define 'extension', k, copy
         @source[params.prefix] = m
 
   include: !yang/extension
@@ -215,7 +226,9 @@ extension:
     typedef: 0..n
     uses: 0..n
     construct: !coffee/function |
-      (arg, params, children) -> (@Synth.Object params).bind children
+      (arg, params, children) -> 
+        synth = @require 'data-synth'
+        (synth.Object params).bind children
 
   leaf: !yang/extension
     config: 0..1
@@ -231,7 +244,8 @@ extension:
     when: 0..1
     construct: !coffee/function |
       (arg, params, children) -> 
-        @Synth.Property params, -> @set type: children.type if children.type?
+        synth = @require 'data-synth'
+        synth.Property params, -> @set type: children.type if children.type?
 
   leaf-list: !yang/extension
     config: 0..1
@@ -247,7 +261,9 @@ extension:
     units: 0..1
     when: 0..1
     construct: !coffee/function |
-      (arg, params) -> (@Synth.List params)
+      (arg, params) -> 
+        synth = @require 'data-synth'
+        synth.List params
 
   list: !yang/extension
     anyxml: 0..n
@@ -273,8 +289,9 @@ extension:
     when: 0..1
     construct: !coffee/function |
       (arg, params, children) -> 
-        item = (@Synth.Object null).bind children
-        (@Synth.List params).set type: item
+        synth = @require 'data-synth'
+        item = (synth.Object null).bind children
+        (synth.List params).set type: item
 
   mandatory: !yang/extension
     preprocess: !coffee/function |
@@ -309,14 +326,16 @@ extension:
     yang-version: 0..1
     preprocess: !coffee/function |
       (arg, params, ctx) ->
+        synth = @require 'data-synth'
         for target, changes of params.augment
           match = @locate ctx, target
           continue unless match?
-          @Synth.copy match, changes
+          synth.copy match, changes
         delete @source[params.prefix]
     construct: !coffee/function |
       (arg, params, children) -> 
-        (@Synth.Model params, -> @set name: arg).bind children
+        synth = @require 'data-synth'
+        (synth.Model params, -> @set name: arg).bind children
 
   # TODO
   must: !yang/extension
@@ -354,7 +373,9 @@ extension:
     typedef: 0..n
     uses: 0..n
     construct: !coffee/function |
-      (arg, params, children) -> (@Synth.Object params).bind children
+      (arg, params, children) ->
+        synth = @require 'data-synth'
+        (synth.Object params).bind children
 
   pattern: !yang/extension
     construct: !coffee/function |
@@ -399,10 +420,11 @@ extension:
     typedef: 0..n
     construct: !coffee/function |
       (arg, params, children) ->
+        synth = @require 'data-synth'
         func = @resolve 'rpc', arg, false
         return unless func instanceof Function
-        request  = children.input  ? @Synth.Meta
-        response = children.output ? @Synth.Meta
+        request  = children.input  ? synth.Meta
+        response = children.output ? synth.Meta
         (data, resolve, reject) ->
           console.log "executing rpc #{arg}..."
           input = new request data
@@ -459,13 +481,14 @@ extension:
 
     construct: !coffee/function |
       (arg, params, children, ctx) ->
+        synth = @require 'data-synth'
         basis = @resolve 'typedef', arg
         return unless basis?
         for own key, value of basis.type
           basis = @resolve 'typedef', key
           params = value
           break;
-        options = @Synth.copy {}, params
+        options = synth.copy {}, params
         options.patterns = []
         options.patterns.push new RegExp params.pattern if params.pattern?
         ctx.type = class
@@ -504,7 +527,8 @@ extension:
     when: 0..1
     preprocess: !coffee/function |
       (arg, params, ctx) ->
-        @Synth.copy ctx, (@resolve 'grouping', arg)
+        synth = @require 'data-synth'
+        synth.copy ctx, (@resolve 'grouping', arg)
         for target, changes of params.refine
           match = @locate ctx, target
           continue unless match?
@@ -512,7 +536,7 @@ extension:
         for target, changes of params.augment
           match = @locate ctx, target
           continue unless match?
-          @Synth.copy match, changes
+          synth.copy match, changes
 
 # YANG v1.0 built-in TYPE DEFINITIONS
 typedef:

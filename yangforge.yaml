@@ -1,7 +1,10 @@
 name: yangforge
 description: YANG driven JS application builder
-version: 0.10.2
+author: Peter K. Lee <peter@intercloud.net>
+version: 0.10.5
 license: Apache-2.0
+homepage: http://github.com/saintkepha/yangforge
+repository: git://github.com/saintkepha/yangforge.git
 registry: https://yangforge.intercloud.net
 keywords:
   - build
@@ -29,9 +32,10 @@ config: !json yangforge.json
 
 dependencies:
   yang-v1-extensions: !yaml/schema yang-v1-extensions.yaml
-  ietf-yang-types: { schema: !yang/schema ietf-yang-types.yang }
-  ietf-inet-types: { schema: !yang/schema ietf-inet-types.yang }
-  iana-crypt-hash: { schema: !yang/schema iana-crypt-hash.yang }
+  complex-types:      !yaml/schema complex-types.yaml
+  ietf-yang-types:    !yang/schema ietf-yang-types.yang
+  ietf-inet-types:    !yang/schema ietf-inet-types.yang
+  iana-crypt-hash:    !yang/schema iana-crypt-hash.yang
 
 extension:
   module: !yang/extension
@@ -84,11 +88,10 @@ rpc:
 
   schema: !coffee/function |
     (input, output, done) ->
-      schema = (input.get 'arguments')[0]
       options = input.get 'options'
-
+      schema = (input.get 'arguments')[0]
       schema = options.eval if options.eval?
-      schema = (@parent.preprocess "schema: !yang/schema #{schema}").schema
+      schema = @parent.preprocess "!yang/schema #{schema}"
       schema = @parent.render schema, options
       # TODO handle options.output to write to a file
       output.set schema
