@@ -36,11 +36,23 @@ extension:
       (arg, params) ->
         synth = @require 'data-synth'
         @define 'complex-type', arg, switch
-          when params.extends? 
-            ctype = @resolve 'complex-type', params.extends
+          when params.ctype?
+            ctype = params.ctype
+            delete params.ctype
             (synth ctype) params, -> @set name: arg
           else 
             synth.Model params, -> @set name: arg
+    construct: !coffee/function |
+      (arg, params, children) ->
+        #console.info "COMPLEX-TYPE #{arg}"
+        ct = (@resolve 'complex-type', arg)
+        if children.ctype?
+          # XXX - the children.ctype does NOT YET have bindings!
+          #console.info children.ctype
+          ct.bind (children.ctype.get 'bindings')
+          delete children.ctype
+        ct.bind children
+        null
 
   abstract: !yang/extension
 
@@ -50,9 +62,13 @@ extension:
     status:      0..1
     preprocess: !coffee/function |
       (arg, params, ctx) ->
-        ctype = @resolve 'complex-type', arg
-        unless ctype?
+        ctx.ctype = @resolve 'complex-type', arg
+        unless ctx.ctype?
           throw @error "unable to resolve dependent complex-type '#{arg}'", 'extends'
+    construct:  !coffee/function |
+      (arg, params, children, ctx) ->
+        ctx.ctype = @resolve 'complex-type', arg
+        null
 
   instance: !yang/extension
     augment:       0..n
