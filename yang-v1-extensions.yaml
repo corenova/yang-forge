@@ -297,6 +297,14 @@ extension:
     preprocess: !coffee/function |
       (arg, p, ctx) -> ctx.mandatory = (arg is 'true')
 
+  # max-elements: !yang/extension
+  #   preprocess: !coffee/function |
+  #     (arg, params, ctx) -> ctx['max-elements'] = arg
+
+  min-elements: !yang/extension
+    preprocess: !coffee/function |
+      (arg, params, ctx) -> ctx['min-elements'] = (Number) arg
+
   module: !yang/extension
     anyxml: 0..n
     augment: 0..n

@@ -283,6 +283,7 @@ module yangforge {
         refine arguments {
           config true;
           units "file";
+          min-elements 1;
           max-elements 1;
         }
         augment options {
