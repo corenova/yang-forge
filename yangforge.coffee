@@ -172,10 +172,16 @@ class Forge extends Compiler
       try
         source.parent = @source
         model = super source.schema, source if source.schema?
+        delete source.parent
         for own name of model
           source.main = name
           break; # should only be ONE here
-        source = ((synth Spark, opts.hook) source).bind model
+        # metadata = synth.extract.apply source, [
+        #   'name', 'description', 'license', 'keywords', 'schema',
+        #   'extension', 'feature', 'typedef', 'main'
+        # ]
+        metadata = source # need to FIX...
+        source = ((synth Spark, opts.hook) metadata).bind model
       finally
         delete source.parent
     return source

@@ -31,11 +31,15 @@ extension:
     reference:     0..1
     refine:        0..n
     rpc:           0..n
-    construct: !coffee/function |
-      (arg, params, children, ctx) -> 
+    uses:          0..n
+    preprocess: !coffee/function |
+      (arg, params) ->
+        synth = @require 'data-synth'
         @define 'complex-type', arg, switch
-          when params.extends? then class extends params.extends
-        null
+          when params.extends? 
+            ctype = @resolve 'complex-type', params.extends
+            (synth ctype) params
+          else (synth.Model params)
 
   abstract: !yang/extension
 
@@ -45,8 +49,8 @@ extension:
     status:      0..1
     preprocess: !coffee/function |
       (arg, params, ctx) ->
-        ctx.extends = @resolve 'complex-type', arg
-        unless ctx.extends?
+        ctype = @resolve 'complex-type', arg
+        unless ctype?
           throw @error "unable to resolve dependent complex-type '#{arg}'", 'extends'
 
   instance: !yang/extension
@@ -70,8 +74,8 @@ extension:
     construct: !coffee/function |
       (arg, params, children) -> 
         synth = @require 'data-synth'
-        Model = children.type
-        delete children.type
+        Model = children.ctype
+        delete children.ctype
         ((synth Model) params).bind children
 
   instance-list: !yang/extension
@@ -96,19 +100,18 @@ extension:
     construct: !coffee/function |
       (arg, params, children) -> 
         synth = @require 'data-synth'
-        item = (synth.Model null).bind children
+        Model = children.ctype
+        delete children.ctype
+        item = ((synth Model) null).bind children
         (synth.List params).set type: item
 
   instance-type: !yang/extension
     construct: !coffee/function |
       (arg, params, children, ctx) ->
-        ct = (@resolve 'complex-type', arg, false)
-        unless ct?
-          console.log "creating temporary complex-type for: #{arg}"
-          #ct = @Synth.Model temporary: true
-          ct = {}
-          @define 'complex-type', arg, ct
-        ctx.type = synth.Model ct
+        ctx.ctype = (@resolve 'complex-type', arg)
+        unless ctx.ctype?
+          throw @error "unable to resolve '#{arg}' complex-type instance"
+        null
 
   # OVERRIDE various existing version 1.0 extensions
   # ---
@@ -133,16 +136,30 @@ extension:
     override: true
     instance:      0..n
     instance-list: 0..n
+  input:
+    override: true
+    instance:      0..n
+    instance-list: 0..n
+  output:
+    override: true
+    instance:      0..n
+    instance-list: 0..n
   type:
     override: true
     instance-type: 0..1
-  
+    construct: !coffee/function |
+      (arg, params, children, ctx) ->
+        if params['instance-type']?
+          ctx.type = children.ctype
+          null
+        else
+          @source.parent.extension.type.construct.apply this, arguments
   leaf:
     override: true
     construct: !coffee/function |
       (arg, params, children) -> 
         synth = @require 'data-synth'
-        if params.type.hasOwnProperty 'instance-type'
+        if params.type['instance-identifier']?
           synth.BelongsTo params, -> @set type: children.type
         else
           # the below is a bit fragile...
@@ -153,7 +170,7 @@ extension:
     construct: !coffee/function |
       (arg, params, children) -> 
         synth = @require 'data-synth'
-        if params.type.hasOwnProperty 'instance-type'
+        if params.type['instance-identifier']?
           synth.HasMany params, -> @set type: children.type
         else
           # the below is a bit fragile...

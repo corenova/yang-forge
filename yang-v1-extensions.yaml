@@ -197,7 +197,7 @@ extension:
     preprocess: !coffee/function |
       (arg, params, ctx) ->
         synth = @require 'data-synth'
-        m  = @preprocess (@resolve 'dependencies', arg)
+        m  = @preprocess (@resolve 'dependencies', arg, false)
         m ?= @preprocess "!yang/schema #{arg}.yang", @source
         unless m?
           throw @error "unable to resolve '#{arg}' in dependencies", 'import'
@@ -537,6 +537,10 @@ extension:
           match = @locate ctx, target
           continue unless match?
           synth.copy match, changes
+        if typeof ctx.uses is 'object'
+          delete ctx.uses[arg]
+        else
+          delete ctx.uses
 
 # YANG v1.0 built-in TYPE DEFINITIONS
 typedef:

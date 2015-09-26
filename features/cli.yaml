@@ -27,7 +27,7 @@ run: !coffee/function |
 
       status = rpc.status
       command = "#{action}"
-      if rpc.input?.uses['cli-command']?
+      if rpc.input?['leaf-list']?.arguments?
         args = rpc.input['leaf-list'].arguments
         if args?.config is true
           argstring = args.units ? args.type
@@ -43,7 +43,7 @@ run: !coffee/function |
         when 'obsolete' then "#{rpc.description} (#{status.red})"
         else rpc.description
 
-      if rpc.input?.uses['cli-command']?
+      if rpc.input?.container?.options?
         for k, v of rpc.input.container.options when typeof v is 'object'
           for key, option of v
             optstring = "--#{key}"

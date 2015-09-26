@@ -23,6 +23,8 @@ which implements the version 1.0 of the YANG language specifications.
             else
               base = @source
             synth.copy base, synth.objectify "#{type}.#{key}", value
+          when synth.instanceof exists
+            exists.merge value
           when exists.constructor is Object
             synth.copy exists, value
         return undefined
