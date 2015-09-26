@@ -25,13 +25,13 @@ class Forge extends Compiler
   class Spark extends synth.Store
     render: (data, opts={}) ->
       switch opts.format
-        when 'json' then JSON.stringify data, 2
+        when 'json' then JSON.stringify data, null, opts.space
         when 'yaml' then prettyjson.render data, opts
         else data
 
     info: (options={}) ->
       summarize = (what) ->
-        (synth.objectify k, v.description for k, v of what)
+        (synth.objectify k, (v.description ? null) for k, v of what)
         .reduce ((a,b) -> synth.copy a, b), {}
       
       info = @constructor.extract 'name', 'description', 'license', 'keywords'
@@ -176,11 +176,10 @@ class Forge extends Compiler
         for own name of model
           source.main = name
           break; # should only be ONE here
-        # metadata = synth.extract.apply source, [
-        #   'name', 'description', 'license', 'keywords', 'schema',
-        #   'extension', 'feature', 'typedef', 'main'
-        # ]
-        metadata = source # need to FIX...
+        metadata = synth.extract.apply source, [
+          'name', 'description', 'license', 'keywords', 'schema',
+          'extension', 'feature', 'typedef', 'main', 'pkgdir', 'dependencies'
+        ]
         source = ((synth Spark, opts.hook) metadata).bind model
       finally
         delete source.parent

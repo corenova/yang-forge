@@ -50,6 +50,13 @@ run: !coffee/function |
             if option.units?
               optstring = "-#{option.units}, #{optstring}"
             type = option.type
+            if type instanceof Object
+              for tname, params of type
+                if tname is 'enumeration'
+                  type = Object.keys(params.enum).join '|'
+                else
+                  type = tname
+                break;
             optstring += switch type
               when 'boolean','empty' then ''
               else

@@ -200,9 +200,18 @@ module yangforge {
         augment options {
           leaf format {
             description "specify output format (yaml, json)";
-            type string;
+            type enumeration {
+              enum yaml;
+              enum json;
+            }
             units f;
             default yaml;
+          }
+          leaf space {
+            description "number of spaces to use for JSON output";
+            type number;
+            units s;
+            default 2;
           }
           leaf verbose {
             description "increase verbosity";
@@ -287,6 +296,12 @@ module yangforge {
             type string;
             units f;
             default yaml;
+          }
+          leaf space {
+            description "number of spaces to use for JSON output";
+            type number;
+            units s;
+            default 1;
           }
           leaf output {
             description "set the output filename for compiled schema";

@@ -38,8 +38,9 @@ extension:
         @define 'complex-type', arg, switch
           when params.extends? 
             ctype = @resolve 'complex-type', params.extends
-            (synth ctype) params
-          else (synth.Model params)
+            (synth ctype) params, -> @set name: arg
+          else 
+            synth.Model params, -> @set name: arg
 
   abstract: !yang/extension
 
@@ -149,7 +150,7 @@ extension:
     instance-type: 0..1
     construct: !coffee/function |
       (arg, params, children, ctx) ->
-        if params['instance-type']?
+        if children.ctype?
           ctx.type = children.ctype
           null
         else
@@ -160,7 +161,7 @@ extension:
       (arg, params, children) -> 
         synth = @require 'data-synth'
         if params.type['instance-identifier']?
-          synth.BelongsTo params, -> @set type: children.type
+          synth.BelongsTo params, -> @set model: children.type
         else
           # the below is a bit fragile...
           @source.parent.extension.leaf.construct.apply this, arguments
@@ -171,7 +172,7 @@ extension:
       (arg, params, children) -> 
         synth = @require 'data-synth'
         if params.type['instance-identifier']?
-          synth.HasMany params, -> @set type: children.type
+          synth.HasMany params, -> @set model: children.type
         else
           # the below is a bit fragile...
           @source.parent.extension['leaf-list'].construct.apply this, arguments

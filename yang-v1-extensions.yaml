@@ -425,12 +425,17 @@ extension:
         return unless func instanceof Function
         request  = children.input  ? synth.Meta
         response = children.output ? synth.Meta
-        (data, resolve, reject) ->
+        method = (data, resolve, reject) ->
           console.log "executing rpc #{arg}..."
-          input = new request data
-          output = new response
+          try
+            input = new request data
+            output = new response
+          catch e then console.error e
           func.call this, input, output, (e) ->
             unless e? then resolve output else reject e
+        method.input  = request
+        method.output = response
+        return method
         
   submodule: !yang/extension
     argument: name

@@ -6,12 +6,10 @@ keywords:
   - yangforge
   - ping
   - example
-dependencies:
-  system: !npm/require child_process
 rpc:
   send-echo: !coffee/function |
     (input, output, done) ->
-      sys = @parent.meta 'dependencies.system'
+      sys = @parent.require 'child_process'
       destination = input.get 'destination'
       unless destination?
         console.error "cannot issue ping without destination address"
