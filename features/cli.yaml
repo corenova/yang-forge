@@ -23,7 +23,7 @@ run: !coffee/function |
       .option '--no-color', 'disable color output'
 
     for action, rpc of (model.meta 'rpc')
-      continue unless rpc['if-feature']?.cli is true
+      continue unless rpc['if-feature'] is 'cli'
 
       status = rpc.status
       command = "#{action}"

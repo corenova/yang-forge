@@ -205,9 +205,9 @@ return instantiated copy.
           continue unless ext.construct instanceof Function
 
           unless ext.argument?
-            console.log "[compile:#{source.name}] #{key} " + if val? then "{ #{Object.keys val} }" else ''
+            console.log "[compile:#{source.name}] #{key} " + if val instanceof Object then "{ #{Object.keys val} }" else val
             children = YangCompiler::compile.call this, val, source, ext
-            output[key] = ext.construct.call this, key, val, children, output
+            output[key] = ext.construct.call this, key, val, children, output, ext
             delete output[key] unless output[key]?
           else
             for arg in (extractKeys val)
@@ -216,7 +216,7 @@ return instantiated copy.
               params ?= {}
               children = YangCompiler::compile.call this, params, source, ext
               try
-                output[arg] = ext.construct.call this, arg, params, children, output
+                output[arg] = ext.construct.call this, arg, params, children, output, ext
                 delete output[arg] unless output[arg]?
               catch e
                 console.error e

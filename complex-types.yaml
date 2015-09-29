@@ -33,7 +33,7 @@ extension:
     rpc:           0..n
     uses:          0..n
     preprocess: !coffee/function |
-      (arg, params) ->
+      (arg, params, ctx) ->
         synth = @require 'data-synth'
         @define 'complex-type', arg, switch
           when params.ctype?
@@ -44,11 +44,8 @@ extension:
             synth.Model params, -> @set name: arg
     construct: !coffee/function |
       (arg, params, children) ->
-        #console.info "COMPLEX-TYPE #{arg}"
         ct = (@resolve 'complex-type', arg)
         if children.ctype?
-          # XXX - the children.ctype does NOT YET have bindings!
-          #console.info children.ctype
           ct.bind (children.ctype.get 'bindings')
           delete children.ctype
         ct.bind children
@@ -165,30 +162,29 @@ extension:
     override: true
     instance-type: 0..1
     construct: !coffee/function |
-      (arg, params, children, ctx) ->
+      (arg, params, children, ctx, self) ->
         if children.ctype?
           ctx.type = children.ctype
           null
         else
-          @source.parent.extension.type.construct.apply this, arguments
+          self.origin.construct.apply this, arguments
   leaf:
     override: true
     construct: !coffee/function |
-      (arg, params, children) -> 
+      (arg, params, children, ctx, self) ->
         synth = @require 'data-synth'
         if params.type['instance-identifier']?
           synth.BelongsTo params, -> @set model: children.type
         else
-          # the below is a bit fragile...
-          @source.parent.extension.leaf.construct.apply this, arguments
+          self.origin.construct.apply this, arguments
 
   leaf-list:
     override: true
     construct: !coffee/function |
-      (arg, params, children) -> 
+      (arg, params, children, ctx, self) ->
         synth = @require 'data-synth'
         if params.type['instance-identifier']?
           synth.HasMany params, -> @set model: children.type
         else
           # the below is a bit fragile...
-          @source.parent.extension['leaf-list'].construct.apply this, arguments
+          self.origin.construct.apply this, arguments

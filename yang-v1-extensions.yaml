@@ -149,7 +149,8 @@ extension:
     status: 0..1
     preprocess: !coffee/function |
       (arg, params, ctx) ->
-        unless ((v for k, v of params['if-feature']).every (e) -> e is true)
+        if params.status is 'unavailable'
+          console.warn "feature #{arg} is unavailable"
           if typeof ctx.feature is 'object'
             delete ctx.feature[arg]
           else
@@ -187,9 +188,8 @@ extension:
   if-feature: !yang/extension
     preprocess: !coffee/function |
       (arg, params, ctx) -> 
-        unless typeof ctx['if-feature'] is 'object'
-          ctx['if-feature'] = {}
-        ctx['if-feature'][arg] = (@resolve 'feature', arg)?
+        unless (@resolve 'feature', arg)?
+          ctx.status = 'unavailable'
 
   import: !yang/extension
     prefix: 1
@@ -205,12 +205,18 @@ extension:
         if rev? and not (rev of m.revision)
           throw @error "requested #{rev} not available in #{arg}", 'import'
         for k, v of m.extension when v.override is true
+          original = @resolve 'extension', k
           # we make a copy of v because we don't want importers of
           # THIS module to ALSO override when importing this module
           copy = synth.copy {}, v
+          # ALSO preserve a copy of the original definition
+          copy.origin = synth.copy {}, (original.origin ? original)
           delete copy.override
           @define 'extension', k, copy
         @source[params.prefix] = m
+    construct: !coffee/function |
+      (arg, params, children, ctx) ->
+        @compile (@source[params.prefix]), @source
 
   include: !yang/extension
     revision-date: 0..1
@@ -343,7 +349,12 @@ extension:
     construct: !coffee/function |
       (arg, params, children) -> 
         synth = @require 'data-synth'
-        (synth.Model params, -> @set name: arg).bind children
+        modules = {}
+        for k, v of params.import
+          modules[k] = children[k]
+          delete children[k]
+        (synth.Model params, -> @set name: arg, modules: modules)
+        .bind children
 
   # TODO
   must: !yang/extension
@@ -441,6 +452,7 @@ extension:
           catch e then console.error e
           func.call this, input, output, (e) ->
             unless e? then resolve output else reject e
+        method.params = params
         method.input  = request
         method.output = response
         return method
@@ -476,6 +488,10 @@ extension:
       (arg, params, ctx) ->
         ctx[k] = v for k, v of params
         delete ctx.submodule
+
+  status: !yang/extension
+    preprocess: !coffee/function |
+      (arg, params, ctx) -> ctx.status ?= arg
 
   type: !yang/extension
     base: 0..1
