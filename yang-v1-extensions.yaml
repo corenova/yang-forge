@@ -580,6 +580,10 @@ typedef:
             when typeof value is 'string' then value is 'true'
             else Boolean value
 
+  decimal64:
+    construct: !coffee/function |
+      (params) -> (value) -> value
+
   empty:
     construct: !coffee/function |
       (params) -> 'empty'
@@ -606,6 +610,10 @@ typedef:
             "[#{@type}] identityref is invalid for #{value}"
           # TODO - need to figure out how to return namespace value...
           value
+
+  leafref:
+    construct: !coffee/function |
+      (params) -> (value) -> value
 
   int8:   !yang/schema 'type number { range -128..127; }'
   int16:  !yang/schema 'type number { range -32768..32767; }'
