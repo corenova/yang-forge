@@ -49,7 +49,7 @@ extension:
           ct.bind (children.ctype.get 'bindings')
           delete children.ctype
         ct.bind children
-        null
+        return ct
 
   abstract: !yang/extension
 
@@ -116,7 +116,7 @@ extension:
         synth = @require 'data-synth'
         Model = children.ctype
         delete children.ctype
-        item = ((synth Model) null).bind children
+        item = (class extends Model).bind children
         (synth.List params).set type: item
 
   instance-type: !yang/extension
@@ -137,6 +137,14 @@ extension:
     complex-type:  0..n
     instance:      0..n
     instance-list: 0..n
+    construct: !coffee/function |
+      (arg, params, children, ctx, self) ->
+        models = {}
+        # TODO: should NOT have ct:complex-type...
+        for k, v of params['ct:complex-type']
+          models[k] = children[k]
+          delete children[k]
+        (self.origin.construct.apply this, arguments).merge models: models
   submodule:
     override: true
     complex-type:  0..n

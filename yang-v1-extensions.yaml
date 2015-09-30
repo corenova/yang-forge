@@ -353,7 +353,7 @@ extension:
         for k, v of params.import
           modules[k] = children[k]
           delete children[k]
-        (synth.Model params, -> @set name: arg, modules: modules)
+        (synth.Store params, -> @set name: arg, modules: modules)
         .bind children
 
   # TODO
@@ -449,7 +449,7 @@ extension:
           try
             input = new request data
             output = new response
-          catch e then console.error e
+          catch e then return reject e
           func.call this, input, output, (e) ->
             unless e? then resolve output else reject e
         method.params = params
@@ -511,30 +511,25 @@ extension:
     construct: !coffee/function |
       (arg, params, children, ctx) ->
         synth = @require 'data-synth'
-        basis = @resolve 'typedef', arg
-        return unless basis?
-        for own key, value of basis.type
-          basis = @resolve 'typedef', key
-          params = value
-          break;
-        options = synth.copy {}, params
-        options.patterns = []
-        options.patterns.push new RegExp params.pattern if params.pattern?
-        ctx.type = class
-          @type = arg
-          @valueOf  = -> @type
-          @toString = -> @type
-          constructor: (value) ->
-            @name = arg
-            value = (basis.normalize? value, options) ? value
-            if basis.validate?
-              #console.log "VALIDATE: #{arg}"
-              console.assert (basis.validate? value, options),
-                "unable to validate passed-in '#{value}' as '#{arg}'"
-            @value = value
-          get:      -> @value
-          valueOf:  -> @value
-          toString: -> @constructor.type
+        typedef = @resolve 'typedef', arg
+        unless typedef?
+          throw @error "unable to resolve typedef for #{arg}"
+
+        switch
+          # handle built-in typedefs with construct
+          when typedef.construct?
+            ctx.type = typedef.construct params, this
+
+          when typeof typedef.type is 'object'
+            for own key, value of typedef.type
+              mparams = synth.copy {}, value
+              synth.copy mparams, params
+              arguments.callee.call this, key, mparams, children, ctx
+
+          when typeof typedef.type is 'string'
+            arguments.callee.call this, typedef.type, params, children, ctx
+
+        ctx.type?.toString = -> arg
         null
 
   typedef: !yang/extension
@@ -573,49 +568,100 @@ extension:
 
 # YANG v1.0 built-in TYPE DEFINITIONS
 typedef:
-  int8:
-    type: { number: { range: -128..127 } }
+  binary:
+    construct: !coffee/function |
+      (params) -> 'binary'
 
-  int16: !yang/schema |
-    type number {
-      range "-32768..32767";
-    }
+  boolean:
+    construct: !coffee/function |
+      (params) ->
+        (value) ->
+          switch
+            when typeof value is 'string' then value is 'true'
+            else Boolean value
 
-  number:
+  empty:
+    construct: !coffee/function |
+      (params) -> 'empty'
 
   enumeration:
-    normalize: !coffee/function |
-      (value, opts) -> 
-        if typeof value is 'number'
-          for key, val of opts.enum when val.value is value or val.value is "#{value}"
-            return key
-        value
-    validate: !coffee/function |
-      (value, opts) -> opts.enum.hasOwnProperty value
+    construct: !coffee/function |
+      (params) ->
+        (value) ->
+          if typeof value is 'number'
+            for key, val of params.enum when val.value is value or val.value is "#{value}"
+              return key
+          console.assert (params.enum.hasOwnProperty value),
+            "[#{@type}] enumeration type violation for #{value} on #{Object.keys params.enum}"
+          value
 
-  # boolean:
-  #   normalize: !coffee/function |
-  #     (value) -> 
-  #       console.log "normalizing boolean!"
-  #       unless typeof value is 'boolean' then value is 'true' else value
-  #   validate: !coffee/function |
-  #     (value) -> typeof value is 'boolean'
+  identityref:
+    construct: !coffee/function |
+      (params, source) ->
+        console.assert typeof params.base is 'string',
+          "identityref must reference 'base' identity"
+        (value) ->
+          match = source.resolve 'identity', value
+          assert (match? and params.base is match.base),
+            "[#{@type}] identityref is invalid for #{value}"
+          # TODO - need to figure out how to return namespace value...
+          value
+
+  int8:   !yang/schema 'type number { range -128..127; }'
+  int16:  !yang/schema 'type number { range -32768..32767; }'
+  int32:  !yang/schema 'type number { range -2147483648..2147483647; }'
+  int64:  !yang/schema 'type number { range -9223372036854775808..9223372036854775807; }'
+  uint8:  !yang/schema 'type number { range 0..255; }'
+  uint16: !yang/schema 'type number { range 0..65535; }'
+  uint32: !yang/schema 'type number { range 0..4294967295; }'
+  uint64: !yang/schema 'type number { range 0..18446744073709551615; }'
+
+  number:
+    construct: !coffee/function |
+      (params) ->
+        if params.range?
+          ranges = params.range.split '|'
+          ranges = ranges.map (e) ->
+            [ min, max ] = e.split '..'
+            if max is 'max'
+              console.warn "max keyword on range not yet supported"
+            min = (Number) min
+            max = (Number) max
+            (v) -> (not min? or v >= min) and (not max? or v <= max)
+        (value) ->
+          value = (Number) value
+          console.assert (not ranges? or ranges.some (test) -> test? value),
+            "[#{@type}] range violation for #{value} on #{params.range}"
+          value
 
   string:
-    normalize: !coffee/function |
-      (value) -> "#{value}"
-    validate: !coffee/function |
-      (value, opts) ->
-        tests = [ (v) -> typeof v is 'string' ]
-        if opts.patterns?
-          tests.push (v) -> opts.patterns.every (regex) -> regex.test v
-        if opts.length?
-          tests.push (v) ->
-            checks = opts.length.split '|'
-            checks.some (cond) -> 
-              [ x, y ] = cond.split '..'
-              if y? and y isnt 'max'
-                (Number) x <= v.length <= (Number) y
-              else
-                v.length >= (Number) x
-        tests.every (test) -> test? value
+    construct: !coffee/function |
+      (params) ->
+        patterns = []
+        if params.pattern instanceof Object
+          patterns.push (new RegExp regex) for regex of params.pattern
+        else
+          patterns.push (new RegExp params.pattern) if params.pattern?
+
+        if params.length?
+          ranges = params.length.split '|'
+          ranges = ranges.map (e) ->
+            [ min, max ] = e.split '..'
+            if max is 'max'
+              console.warn "max keyword on range not yet supported"
+            min = (Number) min
+            max = (Number) max
+            (v) -> (not min? or v >= min) and (not max? or v <= max)
+        (value) ->
+          value = String value
+          console.assert (not ranges? or ranges.some (test) -> test? value),
+            "[#{@type}] length violation for #{value} on #{params.length}"
+          console.assert (not patterns? or patterns.every (regex) -> regex.test value),
+            "[#{@type}] pattern violation for #{value}"
+          value
+
+  union:
+    construct: !coffee/function  |
+      (params) ->
+        console.warn "UNION not-yet supported, treating as 'string'"
+        'string'

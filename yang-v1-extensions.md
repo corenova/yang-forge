@@ -26,7 +26,7 @@ extension | behavior | status
 --- | --- | ---
 anyxml | TBD | unsupported
 augment | schema merge | supported
-base | TBD | unsupported
+base | TBD | supported
 belongs-to | define prefix | supported
 bit | TBD | unsupported
 case | TBD | unsupported
@@ -69,7 +69,7 @@ pattern | TBD | supported
 position | TBD | unsupported
 prefix | module meta | supported
 presence | meta data | unsupported
-range | property meta | unsupported
+range | property meta | supported
 reference | meta data | supported
 refine | merge | supported
 require-instance | TBD | unsupported
@@ -78,7 +78,7 @@ revision-date | conditional | supported
 rpc | Forge.Action | supported
 status | meta data | supported
 submodule | preprocess | supported
-type | property meta | partial
+type | property meta | supported
 typedef | TBD | supported
 unique | property meta | supported
 units | property meta | supported

@@ -1,5 +1,5 @@
 {
-  "version": "0.10.7",
+  "version": "0.10.8",
   "name": "yangforge",
   "description": "YANG driven JS application builder",
   "keywords": [
@@ -43,7 +43,7 @@
     "clim": "^1.1.1",
     "colors": "^1.1.2",
     "commander": "^2.8.1",
-    "data-synth": "^0.6.25",
+    "data-synth": "^0.6.26",
     "errorhandler": "^1.4.1",
     "express": "^4.13.1",
     "indent-string": "^2.1.0",

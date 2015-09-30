@@ -22,7 +22,9 @@ Compiler   = require './yang-compiler'
 class Forge extends Compiler
   require: require
 
-  class Spark extends synth.Store
+  class Source extends synth.Meta
+    require: require
+
     render: (data, opts={}) ->
       switch opts.format
         when 'json' then JSON.stringify data, null, opts.space
@@ -65,7 +67,7 @@ class Forge extends Compiler
       (@access @meta 'main').invoke 'run', options: options
       .catch (e) -> console.error e
 
-    toString: -> "Spark:#{@meta 'name'}"
+    toString: -> "Source:#{@meta 'name'}"
 
   # NOT the most efficient way to do it...
   genSchema: (options={}) ->
@@ -180,7 +182,7 @@ class Forge extends Compiler
           'name', 'description', 'license', 'keywords', 'schema',
           'extension', 'feature', 'typedef', 'main', 'pkgdir', 'dependencies'
         ]
-        source = ((synth Spark, opts.hook) metadata).bind model
+        source = ((synth Source, opts.hook) metadata).bind model
       finally
         delete source.parent
     return source
@@ -203,7 +205,7 @@ class Forge extends Compiler
     return promise.all (@import x, opts for x in source) if source instanceof Array
     return @invoke arguments.callee, source, opts unless resolve? and reject?
 
-    return resolve source if source instanceof Spark
+    return resolve source if source instanceof Source
 
     opts.async = true
     url = url.parse source if typeof source is 'string'

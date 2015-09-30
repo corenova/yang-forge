@@ -13,12 +13,34 @@ description: REST/JSON web services interface generator
 
 # TODO - componentize various routers
 routers:
+  source: !coffee/function |
+    (router) ->
+      (->
+        @route '/'
+        .all (req, res, next) ->
+          if (req.target.meta 'synth') is 'source'
+            console.log "Source: #{req.originalUrl}"
+            next()
+          else next 'route'
+        .options (req, res, next) ->
+          res.send
+            REPORT:
+              description: 'get detailed information about this module'
+            GET:
+              description: 'get serialized output for this module'
+            PUT:
+              description: 'update configuration for this module'
+            COPY:
+              description: 'get a copy of this module for cloning it elsewhere'
+        .report (req, res, next) -> res.locals.result = req.target.report?(); next()
+        return this
+      ).call router
   
 run: !coffee/function |
   (model, options) ->
     console.log "generating REST/JSON interface..."
     express = model.parent.require 'express'
-    synth   = require 'data-synth'
+    synth   = model.parent.require 'data-synth'
 
     router = (->
       @all '*', (req, res, next) ->
@@ -36,14 +58,14 @@ run: !coffee/function |
       return this
     ).call express.Router()
 
-    #Primary Module routing endpoint
+    #Source routing endpoint
 
-    console.log "generating Spark Router..."
-    sparkRouter = (->
+    console.log "generating Source Router..."
+    sourceRouter = (->
       @route '/'
       .all (req, res, next) ->
-        if (req.target.meta 'synth') is 'store'
-          console.log "Spark: #{req.originalUrl}"
+        if (req.target.meta 'synth') is 'source'
+          console.log "Source: #{req.originalUrl}"
           next()
         else next 'route'
       .options (req, res, next) ->
@@ -60,19 +82,33 @@ run: !coffee/function |
       return this
     ).call express.Router()
 
-    #Active Data Model processing routing endpoint
+    #Store routing endpoint
 
-    console.log "generating Model Router..."
-    modelRouter = (->
+    console.log "generating Store Router..."
+    storeRouter = (->
       @route '/'
       .all (req, res, next) ->
-        if (req.target.meta 'synth') is 'model'
-          console.log "Model: #{req.originalUrl}"
+        if (req.target.meta 'synth') is 'store'
+          console.log "Store: #{req.originalUrl}"
           next()
         else next 'route'
       .report (req, res, next) -> 
         res.locals.result = req.target.parent.info()
         next()
+
+      return this
+    ).call express.Router()
+
+    #Model routing endpoint
+
+    console.log "generating Model Router..."
+    modelRouter = (->
+      @route '/'
+      .all (req, res, next) ->
+        if (req.target.meta 'synth') in [ 'store', 'model' ]
+          console.log "Store: #{req.originalUrl}"
+          next()
+        else next 'route'
       .put (req, res, next) ->
         (req.target.set req.body).save()
         .then (result) ->
@@ -142,6 +178,10 @@ run: !coffee/function |
           model.rollback()
           next err
 
+      @get '/:key', (req, res, next) ->
+        res.locals.result = req.target.get req.params.key
+        next()
+
       @delete '/:key', (req, res, next) ->
         req.target.remove req.params.key
         req.target.parent.save()
@@ -157,7 +197,7 @@ run: !coffee/function |
 
     #Main REST/JSON routing endpoint
 
-    router.use sparkRouter, modelRouter, objRouter, listRouter
+    router.use sourceRouter, storeRouter, modelRouter, objRouter, listRouter
     # Nested Loopback to itself if additional target in the URL
     router.use '/:target', router
 
