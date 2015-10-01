@@ -13,18 +13,27 @@ which implements the version 1.0 of the YANG language specifications.
     class YangCompiler
 
       define: (type, key, value) ->
+        _define = (to, type, key, value) ->
+          [ prefix..., key ] = key.split ':'
+          if prefix.length > 0
+            to[prefix[0]] ?= {}
+            base = to[prefix[0]]
+          else
+            base = to
+          synth.copy base, synth.objectify "#{type}.#{key}", value
         exists = @resolve type, key, false
         switch
           when not exists?
-            [ prefix..., key ] = key.split ':'
-            if prefix.length > 0
-              @source[prefix[0]] ?= {}
-              base = @source[prefix[0]]
-            else
-              base = @source
-            synth.copy base, synth.objectify "#{type}.#{key}", value
+            _define @source, arguments...
           when synth.instanceof exists
             exists.merge value
+          when synth.instanceof value # special treatment
+            for k, v of exists
+              if v instanceof Function
+                value.rebind k, v
+              else
+                value.bind k, v
+            _define @source, type, key, value
           when exists.constructor is Object
             synth.copy exists, value
         return undefined

@@ -11,40 +11,13 @@
 name: restjson
 description: REST/JSON web services interface generator
 
-# TODO - componentize various routers
+# Routers 
+# when called with an instance context will attach various handlers
 routers:
-  source: !coffee/function |
-    (router) ->
-      (->
-        @route '/'
-        .all (req, res, next) ->
-          if (req.target.meta 'synth') is 'source'
-            console.log "Source: #{req.originalUrl}"
-            next()
-          else next 'route'
-        .options (req, res, next) ->
-          res.send
-            REPORT:
-              description: 'get detailed information about this module'
-            GET:
-              description: 'get serialized output for this module'
-            PUT:
-              description: 'update configuration for this module'
-            COPY:
-              description: 'get a copy of this module for cloning it elsewhere'
-        .report (req, res, next) -> res.locals.result = req.target.report?(); next()
-        return this
-      ).call router
-  
-run: !coffee/function |
-  (model, options) ->
-    console.log "generating REST/JSON interface..."
-    express = model.parent.require 'express'
-    synth   = model.parent.require 'data-synth'
-
-    router = (->
+  loop: !coffee/function |
+    (target) ->
       @all '*', (req, res, next) ->
-        req.target ?= model.parent
+        req.target ?= target
         next()
 
       @param 'target', (req, res, next, target) ->
@@ -56,57 +29,53 @@ run: !coffee/function |
         next()
 
       return this
-    ).call express.Router()
 
-    #Source routing endpoint
-
-    console.log "generating Source Router..."
-    sourceRouter = (->
+  source: !coffee/function |
+    (target) ->
       @route '/'
       .all (req, res, next) ->
-        if (req.target.meta 'synth') is 'source'
-          console.log "Source: #{req.originalUrl}"
+        req.target ?= target
+        if (req.target?.meta? 'synth') is 'source'
+          console.log "source router: #{req.originalUrl}"
           next()
         else next 'route'
       .options (req, res, next) ->
         res.send
           REPORT:
-            description: 'get detailed information about this module'
+            description: 'get detailed information about this source'
           GET:
-            description: 'get serialized output for this module'
+            description: 'get serialized output for this source'
           PUT:
-            description: 'update configuration for this module'
+            description: 'update configuration for this source'
           COPY:
-            description: 'get a copy of this module for cloning it elsewhere'
-      .report (req, res, next) -> res.locals.result = req.target.report?(); next()
+            description: 'get a copy of this source for cloning it elsewhere'
+      .report (req, res, next) -> 
+        res.locals.result = req.target.info(); next()
+
       return this
-    ).call express.Router()
 
-    #Store routing endpoint
-
-    console.log "generating Store Router..."
-    storeRouter = (->
+  store: !coffee/function |
+    (target) ->
       @route '/'
       .all (req, res, next) ->
-        if (req.target.meta 'synth') is 'store'
-          console.log "Store: #{req.originalUrl}"
+        req.target ?= target
+        if (req.target?.meta? 'synth') is 'store'
+          console.log "store router: #{req.originalUrl}"
           next()
         else next 'route'
-      .report (req, res, next) -> 
+      .report (req, res, next) ->
         res.locals.result = req.target.parent.info()
         next()
 
       return this
-    ).call express.Router()
 
-    #Model routing endpoint
-
-    console.log "generating Model Router..."
-    modelRouter = (->
+  model: !coffee/function |
+    (target) ->
       @route '/'
       .all (req, res, next) ->
-        if (req.target.meta 'synth') in [ 'store', 'model' ]
-          console.log "Store: #{req.originalUrl}"
+        req.target ?= target
+        if (req.target?.meta? 'synth') in [ 'store', 'model' ]
+          console.log "model router: #{req.originalUrl}"
           next()
         else next 'route'
       .put (req, res, next) ->
@@ -123,46 +92,50 @@ run: !coffee/function |
 
       @route '/:action'
       .options (req, res, next) ->
-        meta = req.target.meta "rpc.#{req.params.action}"
-        rpc = synth.extract.call meta, 'description', 'status', 'reference', 'input', 'output'
-        delete rpc.input?.uses
-        delete rpc.input?.typedef
-        delete rpc.output?.uses
-        delete rpc.output?.typedef
+        method = req.target.methods[req.params.action]
+        input  = method.input.extract()
+        output = method.output.extract()
+        # need to do something better...
+        delete input?.uses
+        delete input?.typedef
+        delete input?.bindings
+        delete output?.uses
+        delete output?.typedef
+        delete output?.bindings
         res.send
-          POST: rpc
+          POST:
+            description: method.params.description
+            status:      method.params.status
+            reference:   method.params.reference
+            input:  input
+            output: output
       .post (req, res, next) ->
         console.info "restjson: invoking rpc operation '#{req.params.action}'".grey
         req.target.invoke req.params.action, req.body
           .then  (output) -> res.locals.result = output.get(); next()
           .catch (err) -> next err
       return this
-    ).call express.Router()
 
-    #Object Container processing routing endpoint
-
-    console.log "generating Object Router..."
-    objRouter = (->
+  object: !coffee/function |
+    (target) ->
       @route '/'
       .all (req, res, next) ->
-        if (req.target.meta 'synth') is 'object'
-          console.log "Object: #{req.originalUrl}"
+        req.target ?= target
+        if (req.target?.meta? 'synth') is 'object'
+          console.log "object router: #{req.originalUrl}"
           next()
         else next 'route'
 
       # Add any special logic for handling 'container' here
-
       return this
-    ).call express.Router()
 
-    #List Collection processing routing endpoint
-
-    console.log "generating List Router..."
-    listRouter = (->
+  list: !coffee/function |
+    (target) ->
       @route '/'
       .all (req, res, next) ->
-        if (req.target.meta 'synth') is 'list'
-          console.log "List: #{req.originalUrl}"
+        req.target ?= target
+        if (req.target?.meta? 'synth') is 'list'
+          console.log "list router: #{req.originalUrl}"
           next()
         else next 'route'
       .post (req, res, next) ->
@@ -193,20 +166,30 @@ run: !coffee/function |
           next err
 
       return this
-    ).call express.Router()
 
-    #Main REST/JSON routing endpoint
+run: !coffee/function |
+  (model, options) ->
+    console.log "generating REST/JSON interface..."
+    source  = model.parent
+    express = source.require 'express'
 
-    router.use sourceRouter, storeRouter, modelRouter, objRouter, listRouter
+    loopRouter   = @routers.loop.call   express.Router(), source
+    sourceRouter = @routers.source.call express.Router(), source
+    storeRouter  = @routers.store.call  express.Router(), model
+    modelRouter  = @routers.model.call  express.Router(), model
+    objectRouter = @routers.object.call express.Router()
+    listRouter   = @routers.list.call   express.Router()
+
+    loopRouter.use sourceRouter, storeRouter, modelRouter, objectRouter, listRouter
     # Nested Loopback to itself if additional target in the URL
-    router.use '/:target', router
+    loopRouter.use '/:target', loopRouter
 
-    bp = model.parent.require 'body-parser'
-    passport = model.parent.require 'passport'
+    bp = source.require 'body-parser'
+    passport = source.require 'passport'
     restjson = (->
       @use bp.urlencoded(extended:true), bp.json(strict:true), passport.initialize()
 
-      @use router, (req, res, next) ->
+      @use loopRouter, (req, res, next) ->
         # always send back contents of 'result' if available
         unless res.locals.result? then return next 'route'
         res.setHeader 'Expires','-1'

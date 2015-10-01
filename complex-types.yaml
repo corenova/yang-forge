@@ -36,9 +36,10 @@ extension:
       (arg, params, ctx) ->
         synth = @require 'data-synth'
         @define 'complex-type', arg, switch
-          when params.ctype?
-            ctype = params.ctype
-            delete params.ctype
+          when params.extends?
+            ctype = params.extends
+            delete params.extends
+            delete params.key if (ctype.get 'key')?
             (synth ctype) params, -> @set name: arg
           else 
             synth.Model params, -> @set name: arg
@@ -59,8 +60,8 @@ extension:
     status:      0..1
     preprocess: !coffee/function |
       (arg, params, ctx) ->
-        ctx.ctype = @resolve 'complex-type', arg
-        unless ctx.ctype?
+        ctx.extends = @resolve 'complex-type', arg
+        unless ctx.extends?
           throw @error "unable to resolve dependent complex-type '#{arg}'", 'extends'
     construct:  !coffee/function |
       (arg, params, children, ctx) ->
@@ -116,8 +117,10 @@ extension:
         synth = @require 'data-synth'
         Model = children.ctype
         delete children.ctype
+        unless (Model.get 'key')?
+          throw @error "missing 'key' for #{Model.get 'name'} used in instance-list"
         item = (class extends Model).bind children
-        (synth.List params).set type: item
+        (synth.List params).set type: item, key: (item.get 'key')
 
   instance-type: !yang/extension
     construct: !coffee/function |

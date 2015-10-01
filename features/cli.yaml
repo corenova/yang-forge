@@ -12,15 +12,23 @@ name: cli
 description: Command Line Interface
 run: !coffee/function |
   (model) ->
-    program = model.parent.require 'commander'
-    colors  = model.parent.require 'colors'
+    source = model.parent
+    program = source.require 'commander'
+    colors  = source.require 'colors'
 
     # 1. Setup some default execution context
-    version = (model.parent.meta 'version')
+    version = (source.meta 'version')
     program
       .version version
-      .description (model.parent.meta 'description')
+      .description (source.meta 'description')
       .option '--no-color', 'disable color output'
+
+    # for action, rpc of model.methods
+    #   continue unless (model.meta "rpc.#{action}.if-feature") is 'cli'
+    #   meta = model.meta "rpc.#{action}"
+      
+    #   status = meta.status
+    #   command = "#{action}"
 
     for action, rpc of (model.meta 'rpc')
       continue unless rpc['if-feature'] is 'cli'

@@ -353,8 +353,9 @@ extension:
         for k, v of params.import
           modules[k] = children[k]
           delete children[k]
-        (synth.Store params, -> @set name: arg, modules: modules)
-        .bind children
+        m = (synth.Store params, -> @set name: arg, modules: modules).bind children
+        @define 'module', arg, m
+        return m
 
   # TODO
   must: !yang/extension
