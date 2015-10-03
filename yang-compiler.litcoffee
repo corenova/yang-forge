@@ -27,13 +27,8 @@ which implements the version 1.0 of the YANG language specifications.
             _define @source, arguments...
           when synth.instanceof exists
             exists.merge value
-          when synth.instanceof value # special treatment
-            for k, v of exists
-              if v instanceof Function
-                value.rebind k, v
-              else
-                value.bind k, v
-            _define @source, type, key, value
+          when synth.instanceof value
+            _define @source, type, key, (value.set 'overrides', exists)
           when exists.constructor is Object
             synth.copy exists, value
         return undefined

@@ -22,7 +22,7 @@ Compiler   = require './yang-compiler'
 class Forge extends Compiler
   require: require
 
-  class Source extends synth.Meta
+  class Source extends synth.Object
     require: require
 
     render: (data, opts={}) ->
