@@ -448,8 +448,8 @@ extension:
         method = (data, resolve, reject) ->
           console.log "executing rpc #{arg}..."
           try
-            input = new request data
-            output = new response
+            input = new request data, this
+            output = new response null, this
           catch e then return reject e
           func.call this, input, output, (e) ->
             unless e? then resolve output else reject e
