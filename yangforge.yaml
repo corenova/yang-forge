@@ -28,6 +28,7 @@ keywords:
 schema: !yang yangforge.yang
 
 # config - contains the initial configuration of the application
+# it can be from a !json, !yaml or even directly defined here
 config: !json yangforge.json
 
 dependencies:
