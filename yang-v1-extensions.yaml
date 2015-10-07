@@ -16,7 +16,7 @@
 
 name: yang-v1-extensions
 license: MIT
-schema: !yang/schema yang-v1-extensions.yang
+schema: !yang yang-v1-extensions.yang
 keywords:
   - yang
   - rfc6020
@@ -198,7 +198,7 @@ extension:
       (arg, params, ctx) ->
         synth = @require 'data-synth'
         m  = @preprocess (@resolve 'dependencies', arg, false)
-        m ?= @preprocess "!yang/schema #{arg}.yang", @source
+        m ?= @preprocess "!yang #{arg}.yang", @source
         unless m?
           throw @error "unable to resolve '#{arg}' in dependencies", 'import'
         rev = params['revision-date']
@@ -620,14 +620,14 @@ typedef:
     construct: !coffee/function |
       (params) -> (value) -> value
 
-  int8:   !yang/schema 'type number { range -128..127; }'
-  int16:  !yang/schema 'type number { range -32768..32767; }'
-  int32:  !yang/schema 'type number { range -2147483648..2147483647; }'
-  int64:  !yang/schema 'type number { range -9223372036854775808..9223372036854775807; }'
-  uint8:  !yang/schema 'type number { range 0..255; }'
-  uint16: !yang/schema 'type number { range 0..65535; }'
-  uint32: !yang/schema 'type number { range 0..4294967295; }'
-  uint64: !yang/schema 'type number { range 0..18446744073709551615; }'
+  int8:   !yang 'type number { range -128..127; }'
+  int16:  !yang 'type number { range -32768..32767; }'
+  int32:  !yang 'type number { range -2147483648..2147483647; }'
+  int64:  !yang 'type number { range -9223372036854775808..9223372036854775807; }'
+  uint8:  !yang 'type number { range 0..255; }'
+  uint16: !yang 'type number { range 0..65535; }'
+  uint32: !yang 'type number { range 0..4294967295; }'
+  uint64: !yang 'type number { range 0..18446744073709551615; }'
 
   number:
     construct: !coffee/function |
@@ -664,7 +664,7 @@ typedef:
               console.warn "max keyword on range not yet supported"
             min = (Number) min
             max = (Number) max
-            (v) -> (not min? or v >= min) and (not max? or v <= max)
+            (v) -> (not min? or v.length >= min) and (not max? or v.length <= max)
         (value) ->
           value = String value
           console.assert (not ranges? or ranges.some (test) -> test? value),

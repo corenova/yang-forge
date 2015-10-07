@@ -13,7 +13,7 @@ description: YANG language extensions (RFV-6095)
 author: Peter K. Lee <peter@intercloud.net>
 license: Apache-2.0
 
-schema: !yang/schema complex-types.yang
+schema: !yang complex-types.yang
 
 extension:
   complex-type: !yang/extension
@@ -30,7 +30,7 @@ extension:
     leaf-list:     0..n
     reference:     0..1
     refine:        0..n
-    rpc:           0..n
+    rpc:           0..n # do we want this deviation?
     uses:          0..n
     preprocess: !coffee/function |
       (arg, params, ctx) ->
@@ -50,6 +50,9 @@ extension:
           ct.bind (children.ctype.get 'bindings')
           delete children.ctype
         ct.bind children
+        for target, changes of params.refine
+          target = target.replace '/','.'
+          ct.rebind target, (prev) -> prev.merge changes
         return ct
 
   abstract: !yang/extension

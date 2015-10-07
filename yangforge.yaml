@@ -25,17 +25,17 @@ keywords:
   - yfc
 
 # schema - describes the data model of the application
-schema: !yang/schema yangforge.yang
+schema: !yang yangforge.yang
 
 # config - contains the initial configuration of the application
 config: !json yangforge.json
 
 dependencies:
-  yang-v1-extensions: !yaml/schema yang-v1-extensions.yaml
-  complex-types:      !yaml/schema complex-types.yaml
-  ietf-yang-types:    !yang/schema ietf-yang-types.yang
-  ietf-inet-types:    !yang/schema ietf-inet-types.yang
-  iana-crypt-hash:    !yang/schema iana-crypt-hash.yang
+  yang-v1-extensions: !yaml yang-v1-extensions.yaml
+  complex-types:      !yaml complex-types.yaml
+  ietf-yang-types:    !yang ietf-yang-types.yang
+  ietf-inet-types:    !yang ietf-inet-types.yang
+  iana-crypt-hash:    !yang iana-crypt-hash.yang
 
 extension:
   module: !yang/extension
@@ -56,9 +56,9 @@ extension:
         ctx[k] = v for k, v of m.schema
 
 feature:
-  cli:      !yaml/schema features/cli.yaml
-  express:  !yaml/schema features/express.yaml
-  restjson: !yaml/schema features/restjson.yaml
+  cli:      !yaml features/cli.yaml
+  express:  !yaml features/express.yaml
+  restjson: !yaml features/restjson.yaml
 
 route:
   /runtime/features: !coffee/function |
@@ -91,7 +91,7 @@ rpc:
       options = input.get 'options'
       schema = (input.get 'arguments')[0]
       schema = options.eval if options.eval?
-      schema = (@parent.preprocess "!yang/schema #{schema}").schema
+      schema = (@parent.preprocess "!yang #{schema}").schema
       schema = (@parent.render schema, options)
       # TODO handle options.output to write to a file
       output.set schema

@@ -220,7 +220,7 @@ console.log hello.get()
 
 yaml = """
   name: hello
-  schema: !yang/schema |
+  schema: !yang |
     module embedded-world { leaf wow { type number; default 0; } }
   config: !json |
     { "embedded-world": { "wow": 2 } }
@@ -239,7 +239,7 @@ Forging a new module/application for build/publish using YAML
 (see also [complex-types](complex-types.yaml)):
 ```coffeescript
 name: some-new-application
-schema: !yang/schema some-new-application.yang
+schema: !yang some-new-application.yang
 rpc:
   something-useful: !coffee/function
     (input, output, done) ->

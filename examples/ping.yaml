@@ -1,7 +1,7 @@
 name: ping
 description: An example ping module from ODL
 license: MIT
-schema: !yang/schema ping.yang
+schema: !yang ping.yang
 keywords:
   - yangforge
   - ping

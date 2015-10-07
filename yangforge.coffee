@@ -90,17 +90,6 @@ class Forge extends Compiler
         construct: (data) -> coffee.eval data
         predicate: (obj) -> obj instanceof Function
         represent: (obj) -> obj.toString()
-      new yaml.Type '!yang',
-        kind: 'mapping'
-        resolve:   (data={}) ->
-          # preprocessing should also validate if context available
-          #@preprocess data
-          typeof data.module is 'object'
-        construct: (data) -> data
-      new yaml.Type '!yang/extension',
-        kind: 'mapping'
-        resolve:   (data={}) -> true
-        construct: (data) -> data
       new yaml.Type '!json',
         kind: 'scalar'
         resolve:   (data) -> typeof data is 'string'
@@ -108,22 +97,33 @@ class Forge extends Compiler
           console.log "processing !json using: #{data}"
           [ data, pkgdir ] = fetch data, options
           @parse data, format: 'json'
-      new yaml.Type '!yang/schema',
-        kind: 'scalar'
-        resolve:   (data) -> typeof data is 'string' 
-        construct: (data) =>
-          console.log "processing !yang/schema using: #{data}"
-          [ data, pkgdir ] = fetch data, options
-          options.pkgdir ?= pkgdir if pkgdir?
-          @parse data, format: 'yang', options
-      new yaml.Type '!yaml/schema',
+      new yaml.Type '!yaml',
         kind: 'scalar'
         resolve:   (data) -> typeof data is 'string'
         construct: (data) =>
-          console.log "processing !yaml/schema using: #{data}"
+          console.log "processing !yaml using: #{data}"
           [ data, pkgdir ] = fetch data, options
           options.pkgdir ?= pkgdir if pkgdir?
           @parse data, format: 'yaml', pkgdir: pkgdir
+      new yaml.Type '!yang',
+        kind: 'scalar'
+        resolve:   (data) -> typeof data is 'string' 
+        construct: (data) =>
+          console.log "processing !yang using: #{data}"
+          [ data, pkgdir ] = fetch data, options
+          options.pkgdir ?= pkgdir if pkgdir?
+          @parse data, format: 'yang', options
+      new yaml.Type '!yang/extension',
+        kind: 'mapping'
+        resolve:   (data={}) -> true
+        construct: (data) -> data
+      new yaml.Type '!yang/schema',
+        kind: 'mapping'
+        resolve:   (data={}) ->
+          # preprocessing should also validate if context available
+          #@preprocess data
+          typeof data.module is 'object'
+        construct: (data) -> data
       new yaml.Type '!yfx',
         kind: 'scalar'
         resolve:   (data) -> typeof data is 'string'
@@ -221,9 +221,9 @@ class Forge extends Compiler
         url.protocol = 'file:'
         url.pathname
     tag = switch (path.extname source)
-      when '.yang' then '!yang/schema'
+      when '.yang' then '!yang'
       when '.json' then '!json'
-      when '.yaml' then '!yaml/schema'
+      when '.yaml' then '!yaml'
       else '!yfx'
 
     switch url.protocol
@@ -274,7 +274,7 @@ class Forge extends Compiler
 #
 # self-forge using the yangforge.yaml schema
 # 
-module.exports = (new Forge).load '!yaml/schema yangforge.yaml',
+module.exports = (new Forge).load '!yaml yangforge.yaml',
   async: false
   pkgdir: __dirname
   hook: ->
