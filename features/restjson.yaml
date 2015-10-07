@@ -142,7 +142,7 @@ routers:
         next "cannot add a new entry without data" unless req.body?
         req.target.push req.body
 
-        model = req.target.seek synth: 'model'
+        model = req.target.seek synth: (v) -> v in [ 'store', 'model' ]
         model.save()
         .then (result) ->
           res.locals.result = req.target.serialize()

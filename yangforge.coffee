@@ -33,7 +33,7 @@ class Forge extends Compiler
 
     info: (options={}) ->
       summarize = (what) ->
-        (synth.objectify k, (v.description ? null) for k, v of what)
+        (synth.objectify k, (v?.description ? null) for k, v of what)
         .reduce ((a,b) -> synth.copy a, b), {}
       
       info = @constructor.extract 'name', 'description', 'license', 'keywords'

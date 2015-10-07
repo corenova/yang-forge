@@ -301,7 +301,7 @@ extension:
 
   mandatory: !yang/extension
     preprocess: !coffee/function |
-      (arg, p, ctx) -> ctx.mandatory = (arg is 'true')
+      (arg, p, ctx) -> ctx.mandatory = (arg is true or arg is 'true')
 
   # max-elements: !yang/extension
   #   preprocess: !coffee/function |
@@ -592,6 +592,10 @@ typedef:
   enumeration:
     construct: !coffee/function |
       (params) ->
+        unless params.enum instanceof Object
+          name = params.enum
+          params.enum = {}
+          params.enum[name] = value: 0
         (value) ->
           if typeof value is 'number'
             for key, val of params.enum when val.value is value or val.value is "#{value}"
