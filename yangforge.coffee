@@ -117,13 +117,17 @@ class Forge extends Compiler
         kind: 'mapping'
         resolve:   (data={}) -> true
         construct: (data) -> data
+      # deprecated
       new yaml.Type '!yang/schema',
-        kind: 'mapping'
+        kind: 'scalar'
         resolve:   (data={}) ->
-          # preprocessing should also validate if context available
-          #@preprocess data
-          typeof data.module is 'object'
-        construct: (data) -> data
+          console.warn "DEPRECATION: !yang/schema custom-tag is now just !yang"
+          false
+      new yaml.Type '!yaml/schema',
+        kind: 'scalar'
+        resolve:   (data={}) ->
+          console.warn "DEPRECATION: !yaml/schema custom-tag is now just !yaml"
+          false
       new yaml.Type '!yfx',
         kind: 'scalar'
         resolve:   (data) -> typeof data is 'string'
