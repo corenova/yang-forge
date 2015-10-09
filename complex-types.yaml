@@ -53,7 +53,7 @@ extension:
         for target, changes of params.refine
           target = target.replace '/','.'
           ct.rebind target, (prev) -> prev.merge changes
-        return ct
+        null
 
   abstract: !yang/extension
 
@@ -145,12 +145,8 @@ extension:
     instance-list: 0..n
     construct: !coffee/function |
       (arg, params, children, ctx, self) ->
-        models = {}
-        # TODO: should NOT have ct:complex-type...
-        for k, v of params['ct:complex-type']
-          models[k] = children[k]
-          delete children[k]
-        (self.origin.construct.apply this, arguments).merge models: models
+        (self.origin.construct.apply this, arguments)
+        .merge models: (@resolve 'complex-type')
   submodule:
     override: true
     complex-type:  0..n

@@ -34,8 +34,12 @@ which implements the version 1.0 of the YANG language specifications.
         return undefined
         
       resolve: (type, key, warn=true) ->
-        [ prefix..., key ] = key.split ':'
         source = @source
+        unless key?
+          # TODO: we may want to grab other definitions from imported modules here
+          return source?[type] 
+
+        [ prefix..., key ] = key.split ':'
         while source?
           base = if prefix.length > 0 then source[prefix[0]] else source
           match = base?[type]?[key]

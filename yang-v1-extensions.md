@@ -33,7 +33,7 @@ case | TBD | unsupported
 choice | TBD | unsupported
 config | property meta | supported
 contact | meta data | supported
-container | Forge.Object | supported
+container | synth.Object | supported
 default | property meta | supported
 description | meta data | supported
 deviate | merge/alter | unsupported
@@ -50,14 +50,14 @@ import | preprocess | supported
 include | preprocess | supported
 input | rpc schema | supported
 key | property meta | supported
-leaf | Forge.Property | supported
-leaf-list | Forge.List | supported
+leaf | synth.Property | supported
+leaf-list | synth.List | supported
 length | property meta | supported
-list | Forge.List | supported
+list | synth.List | supported
 mandatory | property meta | supported
 max-elements | property meta | supported
 min-elements | property meta | supported
-module | Forge.Store | supported
+module | synth.Store | supported
 must | conditional | unsupported
 namespace | module meta | supported
 notification | TBD | unsupported
@@ -72,10 +72,10 @@ presence | meta data | unsupported
 range | property meta | supported
 reference | meta data | supported
 refine | merge | supported
-require-instance | TBD | unsupported
+require-instance | relationship prop meta | supported
 revision | meta data | supported
 revision-date | conditional | supported
-rpc | Forge.Action | supported
+rpc | synth.Action | supported
 status | meta data | supported
 submodule | preprocess | supported
 type | property meta | supported

@@ -84,7 +84,7 @@ extension:
 
   config: !yang/extension
     preprocess: !coffee/function |
-      (arg, p, ctx) -> ctx.config = (arg is 'true')
+      (arg, p, ctx) -> ctx.config = (arg is true or arg is 'true')
 
   container: !yang/extension
     anyxml: 0..n
@@ -421,7 +421,7 @@ extension:
 
   require-instance: !yang/extension
     preprocess: !coffee/function |
-      (arg, params, ctx) -> ctx['require-instance'] = (arg is 'true')
+      (arg, params, ctx) -> ctx['require-instance'] = (arg is true or arg is 'true')
 
   revision: !yang/extension
     description: 0..1
