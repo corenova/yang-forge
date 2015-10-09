@@ -19,7 +19,7 @@ and runs on [Node.js](http://nodejs.org).
 This software is **sponsored** by
 [ClearPath Networks](http://www.clearpathnet.com) on behalf of the
 [OPNFV](http://opnfv.org) (Open Platform for Network Functions
-Virtualization) community.
+Virtualization) community. For a reference implementation created entirely utilizing `YangForge`, please take a look at [OPNFV Promise](http://github.com/opnfv/promise) which provides future resource/capacity management (reservations/allocations) for virtualized infrastructure.
 
 Please note that this project is under **active development**. Be sure
 to check back often as new updates are being pushed regularly.
