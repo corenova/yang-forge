@@ -30,7 +30,6 @@ extension:
     leaf-list:     0..n
     reference:     0..1
     refine:        0..n
-    rpc:           0..n # do we want this deviation?
     uses:          0..n
     preprocess: !coffee/function |
       (arg, params, ctx) ->
