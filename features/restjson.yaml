@@ -140,7 +140,9 @@ routers:
         else next 'route'
       .post (req, res, next) ->
         return next "cannot add a new entry without supplying data" unless Object.keys(req.body).length
-        req.target.push req.body
+        try req.target.push req.body...
+        catch then req.target.push req.body
+
         model = req.target.seek synth: (v) -> v in [ 'store', 'model' ]
         model.save()
         .then (result) ->

@@ -249,7 +249,7 @@ extension:
     units: 0..1
     when: 0..1
     construct: !coffee/function |
-      (arg, params, children) -> 
+      (arg, params, children) ->
         synth = @require 'data-synth'
         synth.Property params, -> @set type: children.type if children.type?
 
@@ -267,9 +267,9 @@ extension:
     units: 0..1
     when: 0..1
     construct: !coffee/function |
-      (arg, params) -> 
+      (arg, params, children) ->
         synth = @require 'data-synth'
-        synth.List params
+        synth.List params, -> @set type: children.type if children.type?
 
   list: !yang/extension
     anyxml: 0..n
@@ -519,7 +519,7 @@ extension:
         switch
           # handle built-in typedefs with construct
           when typedef.construct?
-            ctx.type = typedef.construct params, this
+            ctx.type = typedef.construct params, this, arguments.callee
 
           when typeof typedef.type is 'object'
             for own key, value of typedef.type
@@ -591,7 +591,7 @@ typedef:
 
   enumeration:
     construct: !coffee/function |
-      (params) ->
+      (params={}) ->
         unless params.enum instanceof Object
           name = params.enum
           params.enum = {}
@@ -606,7 +606,7 @@ typedef:
 
   identityref:
     construct: !coffee/function |
-      (params, source) ->
+      (params={}, source) ->
         console.assert typeof params.base is 'string',
           "identityref must reference 'base' identity"
         (value) ->
@@ -631,7 +631,7 @@ typedef:
 
   number:
     construct: !coffee/function |
-      (params) ->
+      (params={}) ->
         if params.range?
           ranges = params.range.split '|'
           ranges = ranges.map (e) ->
@@ -649,7 +649,7 @@ typedef:
 
   string:
     construct: !coffee/function |
-      (params) ->
+      (params={}) ->
         patterns = []
         if params.pattern instanceof Object
           patterns.push (new RegExp regex) for regex of params.pattern
@@ -675,6 +675,14 @@ typedef:
 
   union:
     construct: !coffee/function  |
-      (params) ->
-        console.warn "UNION not-yet supported, treating as 'string'"
-        'string'
+      (params={}, source, callee) ->
+        types = (for key, value of params.type
+          result = {}
+          callee.call source, key, value, null, result
+          result.type
+        ).filter (e) -> e?
+        (value) ->
+          for type in types
+            try return type value
+            catch then continue
+          throw new Error "[#{@type}] unable to find matching type for '#{value}' within: #{types}"

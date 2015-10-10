@@ -1,0 +1,20 @@
+module state-of-the-union {
+
+  typedef economy {
+    type union {
+      type uint8;
+      type string {
+        pattern "^gold";
+        length 0..255;
+      }
+      type enumeration {
+        enum "bull";
+        enum "bear";
+      }
+    }
+  }
+
+  leaf-list economics {
+    type economy;
+  }
+}
