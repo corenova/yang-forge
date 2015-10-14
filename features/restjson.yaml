@@ -51,6 +51,8 @@ routers:
             description: 'get a copy of this source for cloning it elsewhere'
       .report (req, res, next) -> 
         res.locals.result = req.target.info(); next()
+      .copy (req, res, next) ->
+        res.locals.result = req.target.export(); next()
 
       return this
 

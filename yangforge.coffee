@@ -23,6 +23,8 @@ class Forge extends Compiler
   require: require
 
   class Source extends synth.Object
+    @set synth: 'source'
+
     require: require
 
     render: (data, opts={}) ->
@@ -66,6 +68,11 @@ class Forge extends Compiler
 
       (@access @meta 'main').invoke 'run', options: options
       .catch (e) -> console.error e
+
+    export: ->
+      meta = @constructor.extract()
+      console.log meta
+      return meta
 
     toString: -> "Source:#{@meta 'name'}"
 
@@ -253,7 +260,7 @@ class Forge extends Compiler
           if err? or res.statusCode isnt 200 then reject err
           else resolve @load "#{tag} |\n#{indent res.body, ' ', 2}" 
 
-  export: (input) ->
+  export: (input=this) ->
     console.assert input instanceof Object, "invalid input to export module"
     console.assert typeof input.name is 'string' and !!input.name,
       "need to pass in 'name' of the module to export"
