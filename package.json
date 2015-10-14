@@ -43,7 +43,7 @@
     "clim": "^1.1.1",
     "colors": "^1.1.2",
     "commander": "^2.8.1",
-    "data-synth": "^0.7.3",
+    "data-synth": "^0.7.4",
     "errorhandler": "^1.4.1",
     "express": "^4.13.1",
     "indent-string": "^2.1.0",
