@@ -76,7 +76,7 @@ rpc:
       .then (app) =>
         result = app.constructor.toSource format: 'yaml'
         if options.gzip
-          #zlib = @parent.require 'zlib'
+          zlib = @parent.require 'zlib'
           #result = zlib.deflate result
 
         unless options.output?
