@@ -68,10 +68,25 @@ route:
 rpc:
   build: !coffee/function |
     (input, output, done) ->
-      @parent.import (input.get 'arguments')
-      .then (apps) =>
-        console.info app.info format: 'yaml' for app in apps
-        done()
+      target = (input.get 'arguments')[0]
+      options = input.get 'options'
+      return done "must specify target input file to build" unless target?
+
+      @parent.import target
+      .then (app) =>
+        result = app.constructor.toSource format: 'yaml'
+        if options.gzip
+          #zlib = @parent.require 'zlib'
+          #result = zlib.deflate result
+
+        unless options.output?
+          output.set result
+          return done()
+
+        fs = @parent.require 'fs'
+        fs.writeFile options.output, result, 'utf8', (err) ->
+          output.set "output saved to '#{options.output}'"
+          if err? then done err else done()
       .catch (err) -> done err
   
   config: !coffee/function |
@@ -92,11 +107,19 @@ rpc:
       options = input.get 'options'
       schema = (input.get 'arguments')[0]
       schema = options.eval if options.eval?
-      schema = (@parent.preprocess "!yang #{schema}").schema
-      schema = (@parent.render schema, options)
-      # TODO handle options.output to write to a file
-      output.set schema
-      done()
+      result = switch
+        when options.compile then @parent.compile "!yang #{schema}"
+        when options.preprocess then (@parent.preprocess "!yang #{schema}").schema
+        else @parent.parse "!yang #{schema}"
+      result = (@parent.render result, options)
+      unless options.output?
+        output.set result
+        return done()
+
+      output.set "output saved to '#{options.output}'"
+      fs = @parent.require 'fs'
+      fs.writeFile options.output, result, 'utf8', (err) ->
+        if err? then done err else done()
 
   infuse: !coffee/function |
     (input, output, done) ->

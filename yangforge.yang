@@ -98,7 +98,7 @@ module yangforge {
   
   rpc build {
     if-feature cli;
-    description "package the application for deployment";
+    description "package the application for deployment/publishing";
     input {
       uses cli-command {
         refine arguments {
@@ -107,12 +107,19 @@ module yangforge {
           max-elements 1;
         }
         augment options {
-          leaf save { type empty; }
-          leaf force { type boolean; }
+          leaf output {
+            description "set the output filename for generated build";
+            type string;
+            units o;
+          }
+          leaf gzip {
+            description "gzip compress the build output";
+            type boolean;
+            units z;
+          }
         }
       }
     }
-    status planned;
   }
 
   rpc config {
@@ -248,6 +255,16 @@ module yangforge {
           max-elements 1;
         }
         augment options {
+          leaf preprocess {
+            description "perform preprocess operation on the input";
+            type boolean;
+            units p;
+          }
+          leaf compile {
+            description "perform compile operation on the input";
+            type boolean;
+            units c;
+          }
           leaf eval {
             description "pass a string from the command line as input";
             type string;

@@ -16,6 +16,8 @@ url     = require 'url'
 needle  = require 'needle'
 indent  = require 'indent-string'
 
+traverse   = require 'traverse'
+tosource   = require 'tosource'
 prettyjson = require 'prettyjson'
 Compiler   = require './yang-compiler'
 
@@ -25,9 +27,22 @@ class Forge extends Compiler
   class Source extends synth.Object
     @set synth: 'source'
 
+    @toSource: (opts={}) ->
+      source = @extract()
+      delete source.bindings
+      return yaml.dump source if opts.format is 'yaml'
+      opts.space ?= 2
+      source = (traverse source).map (x) -> switch
+        when x instanceof Function then synth.objectify '!!js/function', tosource x
+        else x
+      return JSON.stringify source, null, opts.space if opts.format is 'json'
+      source
+
     require: require
 
     render: (data, opts={}) ->
+      return data.toSource opts if Source.instanceof data
+
       switch opts.format
         when 'json' then JSON.stringify data, null, opts.space
         when 'yaml' then prettyjson.render data, opts

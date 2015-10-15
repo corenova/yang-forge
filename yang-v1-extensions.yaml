@@ -567,6 +567,10 @@ extension:
         else
           delete ctx.uses
 
+  when: !yang/extension
+    description: 0..1
+    reference: 0..1
+
 # YANG v1.0 built-in TYPE DEFINITIONS
 typedef:
   binary:

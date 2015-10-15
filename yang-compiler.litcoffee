@@ -98,7 +98,7 @@ ensures syntax correctness and building the JS object tree structure.
         unless params?
           synth.objectify "#{normalize input}", input.arg
         else
-          input.arg = input.arg.replace '.','_'
+          input.arg = input.arg.replace /[.]/g, '_'
           synth.objectify "#{normalize input}.#{input.arg}", params
 
 The `preprocess` function is the intermediary method of the compiler

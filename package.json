@@ -1,5 +1,5 @@
 {
-  "version": "0.10.19",
+  "version": "0.10.20",
   "name": "yangforge",
   "description": "YANG driven JS application builder",
   "keywords": [
@@ -52,6 +52,8 @@
     "passport": "^0.2.2",
     "prettyjson": "^1.1.2",
     "promise": "^7.0.4",
+    "tosource": "^1.0.0",
+    "traverse": "^0.6.6",
     "yang-parser": "^0.1.0"
   },
   "bundleDependencies": [
