@@ -615,7 +615,7 @@ typedef:
           "identityref must reference 'base' identity"
         (value) ->
           match = source.resolve 'identity', value
-          assert (match? and params.base is match.base),
+          console.assert (match? and params.base is match.base),
             "[#{@type}] identityref is invalid for #{value}"
           # TODO - need to figure out how to return namespace value...
           value

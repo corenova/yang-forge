@@ -127,6 +127,16 @@ routers:
           console.log "object router: #{req.originalUrl}"
           next()
         else next 'route'
+      .put (req, res, next) ->
+        req.target.set req.body
+        model = req.target.seek synth: (v) -> v in [ 'store', 'model' ]
+        model.save()
+        .then (result) ->
+          res.locals.result = req.target.serialize();
+          next()
+        .catch (err) ->
+          req.target.rollback()
+          next err
 
       # Add any special logic for handling 'container' here
       return this
