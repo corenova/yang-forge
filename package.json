@@ -1,5 +1,5 @@
 {
-  "version": "0.10.22",
+  "version": "0.10.23",
   "name": "yangforge",
   "description": "YANG driven JS application builder",
   "keywords": [
@@ -41,6 +41,7 @@
   "dependencies": {
     "body-parser": "^1.13.2",
     "clim": "^1.1.1",
+    "coffee-script": ">=1.7",
     "colors": "^1.1.2",
     "commander": "^2.8.1",
     "data-synth": "^0.7.4",
@@ -66,9 +67,6 @@
     "prettyjson",
     "yang-parser"
   ],
-  "devDependencies": {
-    "coffee-script": ">=1.7"
-  },
   "engines": {
     "node": ">=0.10.28"
   },
