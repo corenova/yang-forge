@@ -50,11 +50,23 @@ which implements the version 1.0 of the YANG language specifications.
         return undefined
 
       locate: (inside, path) ->
-        return unless typeof inside is 'object' and typeof path is 'string'
+        return unless inside? and typeof path is 'string'
         if /^\//.test path
           console.warn "[locate] absolute-schema-nodeid is not yet supported, ignoring #{path}"
           return
         [ target, rest... ] = path.split '/'
+
+        #console.log "locating #{path}"
+        if inside.access instanceof Function
+          return switch
+            when target is '..'
+              if (inside.parent.meta 'synth') is 'list'
+                @locate inside.parent.parent, rest.join '/'
+              else
+                @locate inside.parent, rest.join '/'
+            when rest.length > 0 then @locate (inside.access target), rest.join '/'
+            else inside.access target
+
         for key, val of inside when val.hasOwnProperty target
           return switch
             when rest.length > 0 then @locate val[target], rest.join '/'

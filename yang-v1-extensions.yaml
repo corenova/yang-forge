@@ -397,6 +397,10 @@ extension:
         synth = @require 'data-synth'
         (synth.Object params).bind children
 
+  path: !yang/extension
+    preprocess: !coffee/function |
+      (arg, params, ctx) -> ctx.path = arg.replace /[_]/g, '.'
+
   pattern: !yang/extension
     construct: !coffee/function |
       (arg, params, children, ctx) -> 
@@ -622,7 +626,25 @@ typedef:
 
   leafref:
     construct: !coffee/function |
-      (params) -> (value) -> value
+      (params={}, source) ->
+        console.assert typeof params.path is 'string',
+          "leafref must contain 'path' statement"
+        (value) ->
+          self = this
+          value: value
+          path: params.path
+          validate: -> true
+          get: ->
+            ref = source.locate self, @path
+            match = switch
+              when ref instanceof Array then @value in ref
+              else @value is ref
+            if match is true
+              @value
+            else
+              'error-tag': 'data-missing'
+              'error-app-tag': 'instance-required'
+              'error-path': @path
 
   int8:   !yang 'type number { range -128..127; }'
   int16:  !yang 'type number { range -32768..32767; }'
