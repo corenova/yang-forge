@@ -57,14 +57,11 @@ extension:
         ctx[k] = v for k, v of m.schema
 
 feature:
+  browser:  !yaml features/browser.yaml
   cli:      !yaml features/cli.yaml
   express:  !yaml features/express.yaml
   restjson: !yaml features/restjson.yaml
 
-route:
-  /runtime/features: !coffee/function |
-    (input, output, next) ->
-      
 rpc:
   build: !coffee/function |
     (input, output, done) ->

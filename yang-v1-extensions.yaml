@@ -303,9 +303,9 @@ extension:
     preprocess: !coffee/function |
       (arg, p, ctx) -> ctx.mandatory = (arg is true or arg is 'true')
 
-  # max-elements: !yang/extension
-  #   preprocess: !coffee/function |
-  #     (arg, params, ctx) -> ctx['max-elements'] = arg
+  max-elements: !yang/extension
+    preprocess: !coffee/function |
+      (arg, params, ctx) -> ctx['max-elements'] = (Number) arg unless arg is 'unbounded'
 
   min-elements: !yang/extension
     preprocess: !coffee/function |
@@ -526,7 +526,7 @@ extension:
             ctx.type = typedef.construct params, this, arguments.callee
 
           when typeof typedef.type is 'object'
-            for own key, value of typedef.type
+            for key, value of typedef.type
               mparams = synth.copy {}, value
               synth.copy mparams, params
               arguments.callee.call this, key, mparams, children, ctx
@@ -557,7 +557,9 @@ extension:
     preprocess: !coffee/function |
       (arg, params, ctx) ->
         synth = @require 'data-synth'
-        synth.copy ctx, (@resolve 'grouping', arg)
+        grouping = @resolve 'grouping', arg
+        delete grouping.description
+        synth.copy ctx, grouping
         for target, changes of params.refine
           match = @locate ctx, target
           continue unless match?

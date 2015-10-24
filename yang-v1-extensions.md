@@ -64,8 +64,8 @@ notification | TBD | unsupported
 ordered-by | property meta | unsupported
 organization | module meta | supported
 output | rpc schema | supported
-path | TBD | unsupported
-pattern | TBD | supported
+path | tree traversal | supported (relative nodes)
+pattern | regexp | supported
 position | TBD | unsupported
 prefix | module meta | supported
 presence | meta data | unsupported

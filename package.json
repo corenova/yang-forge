@@ -1,5 +1,5 @@
 {
-  "version": "0.10.27",
+  "version": "0.10.28",
   "name": "yangforge",
   "description": "YANG driven JS application builder",
   "keywords": [
@@ -40,6 +40,7 @@
   },
   "dependencies": {
     "body-parser": "^1.13.2",
+    "browserify": "^11.2.0",
     "clim": "^1.1.1",
     "coffee-script": ">=1.7",
     "colors": "^1.1.2",
@@ -47,14 +48,17 @@
     "data-synth": "^0.7.8",
     "errorhandler": "^1.4.1",
     "express": "^4.13.1",
+    "express-handlebars": "^2.0.1",
     "indent-string": "^2.1.0",
     "js-yaml": "^3.4.2",
     "needle": "^0.10.0",
     "passport": "^0.2.2",
     "prettyjson": "^1.1.2",
     "promise": "^7.0.4",
+    "stream-buffers": "^2.2.0",
     "tosource": "^1.0.0",
     "traverse": "^0.6.6",
+    "uglifyify": "^3.0.1",
     "yang-parser": "^0.1.0"
   },
   "bundleDependencies": [

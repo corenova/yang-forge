@@ -1,0 +1,37 @@
+module yang-transformation {
+  prefix yt;
+  
+  organization
+    "ClearPath Networks NFV R&D Group";
+
+  contact
+    "Web:  <http://www.clearpathnet.com>
+     Code: <http://github.com/saintkepha/yangforge>
+
+     Author: Peter K. Lee <mailto:plee@clearpathnet.com>";
+
+  description
+    "This module provides YANG language extensions for transforming data
+     models and chaining transformations.";
+
+  extension transformation {
+    argument name;
+    description "Define a data model transformation provided by the module";
+  }
+  extension transform-input {
+    argument model-name;
+    description "Define a specific data model expected as input into the transformation operation";
+  }
+  extension transform-output {
+    argument model-name;
+    description "Define a specific data model generated as output by the transformation operation";
+  }
+  extension transform {
+    argument transformation-name;
+    description "An instance of transformation that will be invoked with a given transform-input";
+  }
+  extension matrix {
+    argument name;
+    description "An instance of real-time state machine containing set of transforms";
+  }
+}

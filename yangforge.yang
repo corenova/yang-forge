@@ -233,10 +233,10 @@ module yangforge {
             type boolean;
             default true;
           }
-          leaf autodoc {
-            description "enables auto-generated documentation interface";
+          leaf browser {
+            description "enables web client interface";
             type boolean;
-            default false;
+            default true;
           }
         }
       }

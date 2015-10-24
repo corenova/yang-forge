@@ -14,7 +14,7 @@ It also utilizes YAML with custom tags to construct a portable module
 with embedded code.
 
 It is written primarily using [CoffeeScript](http://coffeescript.org)
-and runs on [Node.js](http://nodejs.org).
+and runs on [Node.js](http://nodejs.org) and the web browser.
 
 This software is **sponsored** by
 [ClearPath Networks](http://www.clearpathnet.com) on behalf of the
@@ -132,7 +132,7 @@ name | description | dependency
 [cli](features/cli.yaml) | generates command-line interface | none
 [express](features/express.yaml) | generates HTTP/HTTPS web server instance | none
 [restjson](features/restjson.yaml) | generates REST/JSON web services interface | express
-[autodoc](features/autodoc.yaml) | generates self-documentation interface | express
+[browser](features/browser.yaml) | generates web client application interface | express
 
 You can click on the *name* entry above for reference documentation on
 each feature module.

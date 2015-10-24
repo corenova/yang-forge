@@ -1,0 +1,51 @@
+# 
+#
+# This feature add-on module enables generation of a web-based client
+# application based on the underlying [express](express.litcoffee) and
+# [restjson](restjson.litcoffee) feature add-ons to dynamically generate
+# user friendly documentation browsing capability.
+
+name: browser
+description: web client interface for interacting with YF instance
+config: 
+  uglify: false
+
+run: !coffee/function |
+  (model, options) -> 
+    source = model.parent
+    pkgdir = source.meta 'pkgdir'
+
+    express = source.require 'express'
+    exphbs  = source.require 'express-handlebars'
+    browser = (->
+      @engine 'hbs', exphbs 
+        defaultLayout: 'main'
+        extname: 'hbs'
+        layoutsDir: "#{pkgdir}/views"
+      @set 'view engine', 'hbs'
+      @set 'views', "#{pkgdir}/views"
+
+    ).call express()
+
+    browserify = source.require 'browserify'
+    sbuf = source.require 'stream-buffers'
+    yfx = new sbuf.ReadableStreamBuffer initialSize: 1024
+    yfx.put "window.Forge = require('#{pkgdir}');", 'utf8'
+    b = browserify yfx, basedir: pkgdir
+    b.ignore x for x in [ 'clim', 'needle', 'prettyjson' ]
+    if @config.uglify is true
+      b.transform global: true, sourcemap: false, (source.require 'uglifyify')
+    b.bundle (err, js) ->
+      console.info "browser: yangforge browserification complete"
+      browser.get '/', (req, res, next) -> 
+        res.locals.source  = source.constructor.toSource format: 'yaml', encoding: 'base64'
+        res.locals.forgery = js
+        setImmediate next
+      browser.get '/', (req, res) -> res.render 'index', layout: 'browser'
+    yfx.destroySoon()
+      
+    if options.express?
+      console.info "browser: binding forgery to /browser".grey
+      options.express.use "/browser", browser
+
+    return browser

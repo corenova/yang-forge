@@ -223,7 +223,7 @@ run: !coffee/function |
           else JSON.stringify err
 
       return this
-    ).call express.Router()
+    ).call express()
 
     if options.express?
       console.info "restjson: binding forgery to /restjson".grey

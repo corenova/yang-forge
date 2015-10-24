@@ -143,6 +143,7 @@ found in the parsed output in order to prepare the context for the
         for key, val of schema
           [ prf..., kw ] = key.split ':'
           unless kw of scope
+            console.log scope
             throw @error "invalid '#{kw}' extension found during preprocess operation", schema
 
           if key is 'extension'

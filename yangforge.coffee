@@ -24,19 +24,28 @@ Compiler   = require './yang-compiler'
 class Forge extends Compiler
   require: require
 
-  class Source extends synth.Object
+  @Source = class Source extends synth.Object
     @set synth: 'source'
 
     @toSource: (opts={}) ->
       source = @extract()
       delete source.bindings
-      return yaml.dump source if opts.format is 'yaml'
-      opts.space ?= 2
-      source = (traverse source).map (x) -> switch
-        when x instanceof Function then synth.objectify '!!js/function', tosource x
-        else x
-      return JSON.stringify source, null, opts.space if opts.format is 'json'
-      source
+      source = switch opts.format
+        when 'yaml' then yaml.dump source
+        when 'json'
+          opts.space ?= 2
+          source = (traverse source).map (x) -> switch
+            when x instanceof Function then synth.objectify '!js/function', tosource x
+            else x
+          JSON.stringify source, null, opts.space
+        else
+          source
+
+      fs.writeFile 'source.out', source, 'utf8'
+          
+      switch opts.encoding
+        when 'base64' then (new Buffer source).toString 'base64'
+        else source
 
     require: require
 
@@ -109,7 +118,7 @@ class Forge extends Compiler
       new yaml.Type '!coffee/function',
         kind: 'scalar'
         resolve:   (data) -> typeof data is 'string'
-        construct: (data) -> coffee.eval data
+        construct: (data) -> coffee.eval? data
         predicate: (obj) -> obj instanceof Function
         represent: (obj) -> obj.toString()
       new yaml.Type '!json',
@@ -139,6 +148,14 @@ class Forge extends Compiler
         kind: 'mapping'
         resolve:   (data={}) -> true
         construct: (data) -> data
+      new yaml.Type '!yfx',
+        kind: 'scalar'
+        resolve:   (data) -> typeof data is 'string'
+        construct: (data) =>
+          console.log "processing !yfx executable archive (just treat as YAML for now)"
+          [ data, pkgdir ] = fetch data, options
+          options.pkgdir ?= pkgdir if pkgdir?
+          @parse data, format: 'yaml', pkgdir: pkgdir
       # deprecated
       new yaml.Type '!yang/schema',
         kind: 'scalar'
@@ -150,14 +167,6 @@ class Forge extends Compiler
         resolve:   (data={}) ->
           console.warn "DEPRECATION: !yaml/schema custom-tag is now just !yaml"
           false
-      new yaml.Type '!yfx',
-        kind: 'scalar'
-        resolve:   (data) -> typeof data is 'string'
-        construct: (data) =>
-          console.log "processing !yfx executable archive (just treat as YAML for now)"
-          [ data, pkgdir ] = fetch data, options
-          options.pkgdir ?= pkgdir if pkgdir?
-          @parse data, format: 'yaml', pkgdir: pkgdir
     ]
 
   parse: (source, opts={}) ->
@@ -222,7 +231,9 @@ class Forge extends Compiler
     else resolve = (x) -> x
     source = @compile source, opts unless synth.instanceof source
     resolve switch
-      when (synth.instanceof source) then new source (source.get 'config')
+      when (synth.instanceof source)
+        console.log "[load:#{source.get 'name'}] creating a new instance"
+        new source (source.get 'config')
       else source
 
   # performs async import of a target source path, accepts 'source' as array
@@ -299,8 +310,10 @@ class Forge extends Compiler
 
 #
 # self-forge using the yangforge.yaml schema
-# 
-module.exports = (new Forge).load '!yaml yangforge.yaml',
+#
+
+source = window?.source ? '!yaml yangforge.yaml'
+module.exports = (new Forge).load source,
   async: false
   pkgdir: __dirname
   hook: ->
