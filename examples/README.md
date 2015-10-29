@@ -16,8 +16,11 @@ $ yfc schema -h
   Options:
 
     -h, --help             output usage information
+    -p, --preprocess       perform preprocess operation on the input
+    -c, --compile          perform compile operation on the input
     -e, --eval [string]    pass a string from the command line as input
     -f, --format [string]  specify output format (yaml, json) (default: yaml)
+    -s, --space [uint8]    number of spaces to use for JSON output (default: 1)
     -o, --output [string]  set the output filename for compiled schema
 ```
 
@@ -54,12 +57,22 @@ $ yfc schema -e 'module hello-world { description "a test"; leaf hello { type st
 }
 ```
 
-The `schema` command performs `preprocess` stages on the passed in
-YANG schema *file* which includes any `include/import` statements
-found within the schema and performing all schema manipulations such
-as *grouping*, *uses*, *refine*, *augment*, etc. Basically, it will
-flag any validation errors while producing an output that should
-represent what the schema would look like just before `compile`.
+The `schema` command by default performs `parse` on the passed in
+schema content (string or file).
+
+If you run the command with `--preprocess`, the utility will perform
+`preprocess` stages on the passed in YANG schema content which
+retrieves any `include/import` statements found within the schema and
+perform all schema manipulations such as *grouping*, *uses*, *refine*,
+*augment*, etc. Basically, it will flag any validation errors while
+producing an output that should represent what the schema would look
+like just before `compile`.
+
+If you run the command with `--compile`, the utility will perform
+`parse`, `preprocess`, and proceed to construct all elements. If any
+errors occur during *construction* it will be flagged and when
+successfully compiled, it will produce an output which will be ready
+for direct instantiation without further compilation by `yfc`.
 
 ## Using the `run` command
 
