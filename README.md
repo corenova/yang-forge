@@ -133,6 +133,7 @@ name | description | dependency
 [express](features/express.yaml) | generates HTTP/HTTPS web server instance | none
 [restjson](features/restjson.yaml) | generates REST/JSON web services interface | express
 [browser](features/browser.yaml) | generates web client application interface | express
+[websocket](features/websocket.yaml) | generates socket.io interface | express
 
 You can click on the *name* entry above for reference documentation on
 each feature module.

@@ -225,11 +225,19 @@ module yangforge {
           }
           leaf express {
             description "enables express web server on a specified port";
-            type uint16;
+            type union {
+              type uint16;
+              type binary;
+            }
             default 5000;
           }
           leaf restjson {
             description "enables REST/JSON interface";
+            type boolean;
+            default true;
+          }
+          leaf websocket {
+            description "enables socket.io interface";
             type boolean;
             default true;
           }

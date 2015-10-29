@@ -581,7 +581,10 @@ extension:
 typedef:
   binary:
     construct: !coffee/function |
-      (params) -> 'binary'
+      (params) -> (value) -> 
+        console.assert value instanceof Function,
+          "[#{@type}] not a binary instance"
+        value
 
   boolean:
     construct: !coffee/function |

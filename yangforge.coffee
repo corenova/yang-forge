@@ -40,16 +40,21 @@ class Forge extends Compiler
           JSON.stringify source, null, opts.space
         else
           source
-
-      fs.writeFile 'source.out', source, 'utf8'
-          
       switch opts.encoding
         when 'base64' then (new Buffer source).toString 'base64'
         else source
 
     require: require
+    constructor: ->
+      @attach 'connect', (namespace, resolve, reject) ->
+        # this runs on the client-side
+        socket = (require 'socket.io-client') namespace
+        socket.on 'connect', ->
+          socket.on 'modules', (data) -> socket.emit 'join', data
+          resolve socket
+      super
 
-    render: (data, opts={}) ->
+    render: (data=this, opts={}) ->
       return data.toSource opts if Source.instanceof data
 
       switch opts.format
@@ -87,18 +92,25 @@ class Forge extends Compiler
 
     run: (features...) ->
       options = features
-        .map (e) -> synth.objectify e, on
+        .map (e) ->
+          unless typeof e is 'object'
+            synth.objectify e, on
+          else e
         .reduce ((a, b) -> synth.copy a, b, true), {}
 
       (@access @meta 'main').invoke 'run', options: options
       .catch (e) -> console.error e
 
-    export: ->
-      meta = @constructor.extract()
-      console.log meta
-      return meta
-
     toString: -> "Source:#{@meta 'name'}"
+
+  constructor: (source) ->
+    return super unless source?
+    return @load source,
+      async: false
+      pkgdir: __dirname
+      hook: ->
+        @mixin Forge
+        @include source: @extract()
 
   # NOT the most efficient way to do it...
   genSchema: (options={}) ->
@@ -312,11 +324,4 @@ class Forge extends Compiler
 # self-forge using the yangforge.yaml schema
 #
 
-source = window?.source ? '!yaml yangforge.yaml'
-module.exports = (new Forge).load source,
-  async: false
-  pkgdir: __dirname
-  hook: ->
-    @mixin Forge
-    @include source: @extract()
-
+module.exports = new Forge (window?.source ? '!yaml yangforge.yaml')

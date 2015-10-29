@@ -16,8 +16,13 @@ config:
 
 run: !coffee/function |
   (model, options) ->
-    express = model.parent.require 'express'
-    errorhandler = model.parent.require 'errorhandler'
+    source = model.parent
+    if options.express instanceof Function
+      console.info "express: re-using passed-in instance".grey
+      return options.express
+
+    express = source.require 'express'
+    errorhandler = source.require 'errorhandler'
     port = options.express ? @config.port
     app = (->
       env = process.env.NODE_ENV ? 'development'
@@ -35,5 +40,5 @@ run: !coffee/function |
     ).call express()
 
     console.info "express: listening on #{port}".grey
-    app.listen port
+    app.server = app.listen port
     return app

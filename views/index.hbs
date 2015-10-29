@@ -1,10 +1,46 @@
-<div id="loading"></div>
+<div id="main" class="container">Loading...</div>
+<script type="text/coffeescript">
+  Forge.invoke 'connect', window.location.origin + '/browser'
+  .then (io) ->
+    console.log 'connected to /browser'
+  Forge.render();
+</script>
+<script type="text/coffeescript">
+  { section, div, a, ul, ol, li, dl, dt, dd, label } = React.DOM
+  { h1, h2, h3, h4, h5, h6 } = React.DOM
+  traverse = Forge.require 'traverse'
+  source = React.createFactory class extends React.Component
+    constructor: (props) ->
+      super
+      @model = props.model
+      @state =
+        meta: @model.constructor.extract()
+        data: @model.get()
+    render: ->
+      meta = (traverse @state.meta).map (x) ->
+        if @isLeaf
+          if @parent.node instanceof Array
+            @update (li className: 'leaf', x), true
+          else
+            @update (li className: 'leaf', [
+              (dt {}, @key), (dd {}, x)
+            ]), true
+        else
+          @after (y) ->
+            children = (v for k,v of y).sort (a, b) -> switch
+              when /leaf/.test a.props?.className then -1
+              when /leaf/.test b.props?.className then 1
+              else 0
+            item = li {}, [
+              label className: 'nav-header', @key
+              ul className: 'nav nav-list tree', children
+            ]
+            unless @key?
+              @update (ul className: 'nav nav-list', item), true
+            else
+              @update item, true
+      return meta
+      
+  React.render (source model: Forge), document.getElementById 'main'
 
-<script>
-  (function () {
-    console.log("yangforge self-forgery initiated...");
-    source = atob("{{{source}}}");
-    {{{forgery}}};
-    console.log("yangforge is ready");
-  }(this));
 </script>

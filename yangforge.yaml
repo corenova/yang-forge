@@ -38,6 +38,13 @@ dependencies:
   ietf-inet-types:    !yang ietf-inet-types.yang
   iana-crypt-hash:    !yang iana-crypt-hash.yang
 
+feature:
+  browser:   !yaml features/browser.yaml
+  cli:       !yaml features/cli.yaml
+  express:   !yaml features/express.yaml
+  restjson:  !yaml features/restjson.yaml
+  websocket: !yaml features/websocket.yaml
+
 extension:
   module: !yang/extension
     argument: name
@@ -55,12 +62,6 @@ extension:
         @define 'extension', k, v for k, v of m.extension
         @define 'typedef', k, v for k, v of m.typedef
         ctx[k] = v for k, v of m.schema
-
-feature:
-  browser:  !yaml features/browser.yaml
-  cli:      !yaml features/cli.yaml
-  express:  !yaml features/express.yaml
-  restjson: !yaml features/restjson.yaml
 
 rpc:
   build: !coffee/function |

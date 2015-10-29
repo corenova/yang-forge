@@ -1,9 +1,18 @@
-# 
+# web browser interface feature module
 #
 # This feature add-on module enables generation of a web-based client
-# application based on the underlying [express](express.litcoffee) and
-# [restjson](restjson.litcoffee) feature add-ons to dynamically generate
-# user friendly documentation browsing capability.
+# application based on the underlying [express](express.yaml) and
+# [websocket](websocket.yaml) feature add-ons to dynamically generate
+# user friendly YF runtime browsing capability.
+#
+# It makes use of following web frameworks:
+#
+# bootstrap (css)
+# handlebars (template)
+# coffeescript (language)
+# react (facebook UI library)
+# socket.io (websocket)
+# browserify (generate client-side js bundle)
 
 name: browser
 description: web client interface for interacting with YF instance
@@ -30,22 +39,45 @@ run: !coffee/function |
     browserify = source.require 'browserify'
     sbuf = source.require 'stream-buffers'
     yfx = new sbuf.ReadableStreamBuffer initialSize: 1024
-    yfx.put "window.Forge = require('#{pkgdir}');", 'utf8'
+    yfx.put "source = atob('#{source.constructor.toSource format: 'yaml', encoding: 'base64'}');", 'utf8'
+    yfx.put "Forge = require('#{pkgdir}');", 'utf8'
     b = browserify yfx, basedir: pkgdir
+    b.add source.require.resolve 'coffee-script/lib/coffee-script/browser'
     b.ignore x for x in [ 'clim', 'needle', 'prettyjson' ]
     if @config.uglify is true
       b.transform global: true, sourcemap: false, (source.require 'uglifyify')
+
+    console.info "browser: yangforge browserification started (will take a few seconds)".grey
     b.bundle (err, js) ->
-      console.info "browser: yangforge browserification complete"
-      browser.get '/', (req, res, next) -> 
-        res.locals.source  = source.constructor.toSource format: 'yaml', encoding: 'base64'
-        res.locals.forgery = js
-        setImmediate next
+      console.info "browser: yangforge browserification complete".grey
       browser.get '/', (req, res) -> res.render 'index', layout: 'browser'
+      browser.get '/yangforge.js', (req, res) ->
+        res.type 'application/javascript'
+        res.send js
     yfx.destroySoon()
-      
+
     if options.express?
-      console.info "browser: binding forgery to /browser".grey
+      console.info "browser: binding to express /browser".grey
       options.express.use "/browser", browser
 
+    if options.websocket?
+      console.info "browser: binding to websocket /browser".grey
+      io = options.websocket.of '/browser'
+      io.on 'connection', (socket) ->
+        console.log 'User connected. socket id %s', socket.id
+        socket.on 'join', (rooms) ->
+          if Array.isArray rooms
+            socket.join room for room in rooms
+          else
+            socket.join rooms
+        socket.on 'leave', (rooms) ->
+          if Array.isAray rooms
+            socket.leave room for room in rooms
+          else
+            socket.leave rooms
+        socket.emit 'modules', Object.keys(source.properties)
+      # watch source and send events
+      # source.on 'change', (room, type, message) ->
+      #   io.to(room).emit type, message
+      
     return browser
