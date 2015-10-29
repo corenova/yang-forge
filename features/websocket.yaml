@@ -8,5 +8,5 @@ run: !coffee/function |
   (model, options) ->
     source = model.parent
     io = source.require 'socket.io'
-    console.info "websocket: binding forgery to socket.io".grey
+    console.info "websocket: binding forgery to /socket.io".grey
     return (io options.express?.server)
