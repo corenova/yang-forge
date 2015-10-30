@@ -226,8 +226,8 @@ class Forge extends Compiler
           source.main = name
           break; # should only be ONE here
         metadata = synth.extract.apply source, [
-          'name', 'description', 'license', 'keywords', 'schema', 'config',
-          'extension', 'feature', 'typedef', 'main', 'pkgdir', 'dependencies'
+          'name', 'version', 'description', 'license', 'schema', 'config', 'dependencies',
+          'extension', 'feature', 'keywords', 'rpc', 'typedef', 'main', 'pkgdir'
         ]
         source = ((synth Source, opts.hook) metadata).bind model
       finally

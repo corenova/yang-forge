@@ -1,46 +1,154 @@
-<div id="main" class="container">Loading...</div>
+<div class="container">
+  <div class="page-header">
+	<h1>YangForge Browser <small>real-time data model viewer</small></h1>
+  </div>
+  <div id="main">Loading...</div>
+</div>
 <script type="text/coffeescript">
   Forge.invoke 'connect', window.location.origin + '/browser'
   .then (io) ->
     console.log 'connected to /browser'
-  Forge.render();
 </script>
 <script type="text/coffeescript">
-  { section, div, a, ul, ol, li, dl, dt, dd, label } = React.DOM
+  { section, div, span, p, a, ul, ol, li, dl, dt, dd } = React.DOM
+  { label, pre, code, input, textarea } = React.DOM
   { h1, h2, h3, h4, h5, h6 } = React.DOM
-  traverse = Forge.require 'traverse'
-  source = React.createFactory class extends React.Component
+
+  TreeLeaf = React.createFactory class extends React.Component
+    constructor: ->
+      super
+      @state = value: @props.value, editing: false
+      
+    edit: ->
+      # TODO
+      #@setState editing: true
+      
+    update: (event) -> @setState value: event.target.value
+
+    render: ->
+      li className: 'tree-leaf', switch
+        when @props.parent instanceof Array
+          (code {}, @props.value)
+        else div className: 'form-horizontal row', [
+          label className: 'control-label col-sm-3', "#{@props.name}:"
+          (span className: 'col-sm-9', onClick: (@edit.bind this), switch
+            when @state.editing then [
+              (input
+                className: 'form-control'
+                value: @state.value
+                onChange: (@update.bind this)
+              )
+            ]
+            when @props.value instanceof Function
+              (pre className: 'pre-scrollable',  @props.value.toString())
+            else (pre {}, @props.value)
+          )
+        ]
+
+  TreeNode = React.createFactory class extends React.Component
+    @defaultProps =
+      collapsed: true
+      
+    constructor: ->
+      super
+      @state = collapsed: @props.collapsed
+      
+    toggle: -> @setState collapsed: !@state.collapsed
+      
+    render: ->
+      if typeof @props.value is 'object'
+        icon = if @state.collapsed then 'plus' else 'minus'
+        li className: 'tree-node', [
+          a className: 'nav-header', onClick: (@toggle.bind this), [
+            span className: "glyphicon glyphicon-#{icon}"
+            ' '
+            @props.name
+          ]
+          (TreeView
+            value: @props.value
+            parent: this
+            sort: @props.sort
+            collapsed: @state.collapsed)
+        ]
+      else (TreeLeaf @props)
+        
+  TreeView = React.createFactory class extends React.Component
+    @defaultProps =
+      sort: true
+      
+    render: ->
+      return (ul {}) if @props.collapsed is true
+      collapsed = Object.keys(@props.value).length isnt 1
+      nodes = (for own k, v of @props.value
+        (TreeNode
+          name: k
+          value: v
+          parent: @props.value
+          collapsed: collapsed
+          sort: @props.sort)
+      )
+      if @props.sort
+        nodes.sort (a, b) ->
+          switch
+            when typeof a.props.value isnt 'object' then -1
+            when typeof b.props.value isnt 'object' then 1
+            else 0
+      callout = if @props.parent? then 'bs-callout' else ''
+      (ul className: "nav nav-list #{callout}", nodes)
+
+  ListView = React.createFactory class extends React.Component
+    constructor: -> super; @state = selected: @props.selected
+    selectItem: (idx) ->
+      @setState selected: idx
+      @props.parent?.setState selected: idx
+      
+    render: ->
+      leafs = []
+      nodes = (for own k, v of @props.value
+        active = if @state.selected is k then 'list-group-item-info' else ''
+        switch
+          when v instanceof Object
+            (a className: "list-group-item #{active}", onClick: (@selectItem.bind this, k), [
+              span className: 'badge', (Object.keys v).length
+              k
+            ])
+          else
+            leafs.push v
+            undefined
+      )
+      (div className: 'list-group', nodes.filter (e) -> e?)
+        
+  PanelView = React.createFactory class extends React.Component
+    render: ->
+      (div className: 'panel panel-primary', [
+        (div className: 'panel-heading', @props.heading)
+        (div className: 'panel-body', (p {}, @props.body))
+        @props.children...
+      ])
+        
+  Source = React.createFactory class extends React.Component
     constructor: (props) ->
       super
       @model = props.model
       @state =
         meta: @model.constructor.extract()
         data: @model.get()
-    render: ->
-      meta = (traverse @state.meta).map (x) ->
-        if @isLeaf
-          if @parent.node instanceof Array
-            @update (li className: 'leaf', x), true
-          else
-            @update (li className: 'leaf', [
-              (dt {}, @key), (dd {}, x)
-            ]), true
-        else
-          @after (y) ->
-            children = (v for k,v of y).sort (a, b) -> switch
-              when /leaf/.test a.props?.className then -1
-              when /leaf/.test b.props?.className then 1
-              else 0
-            item = li {}, [
-              label className: 'nav-header', @key
-              ul className: 'nav nav-list tree', children
-            ]
-            unless @key?
-              @update (ul className: 'nav nav-list', item), true
-            else
-              @update item, true
-      return meta
-      
-  React.render (source model: Forge), document.getElementById 'main'
+        selected: 'schema'
 
+    render: ->
+      selected = @state.meta[@state.selected]
+      div className: 'source', [
+        div className: 'row', [
+          (div className: 'col-sm-3',
+            (PanelView
+              heading: @state.meta.name
+              body: @state.meta.description
+              [ (ListView value: @state.meta, selected: @state.selected, parent: this) ]
+            )
+          )
+          div className: 'col-sm-9', (TreeView value: selected, auto: true)
+        ]
+      ]
+      
+  React.render (Source model: Forge), document.getElementById 'main'
 </script>
