@@ -294,7 +294,7 @@ class Forge extends Compiler
     return reject 'must pass in string(s) for import' unless typeof source is 'string'
     
     opts.async = true
-    return resolve @load source, opts if /\n|\r/.test source
+    return resolve @load source if /\n|\r/.test source
     
     url = url.parse source
     source = switch url.protocol
@@ -316,7 +316,7 @@ class Forge extends Compiler
 
     switch url.protocol
       when 'file:'
-        try resolve @load "#{tag} #{source}", opts
+        try resolve @load "#{tag} #{source}"
         catch err then reject err
       when 'forge:'
         # we initiate a TWO stage sequence, get metadata and then get binary
@@ -329,13 +329,13 @@ class Forge extends Compiler
             if err? or res.statusCode isnt 200
               return reject err ? "unable to retrieve #{source} binary data"
             # TODO: verify checksum
-            resolve @load "#{tag} |\n#{indent res.body, ' ', 2}", opts
+            resolve @load "#{tag} |\n#{indent res.body, ' ', 2}"
       else
         # here we use needle to get the remote content
         console.log "fetching remote content at: #{source}"
         needle.get source, (err, res) =>
           if err? or res.statusCode isnt 200 then reject err
-          else resolve @load "#{tag} |\n#{indent res.body, ' ', 2}", opts
+          else resolve @load "#{tag} |\n#{indent res.body, ' ', 2}"
 
   export: (input=this) ->
     console.assert input instanceof Object, "invalid input to export module"
