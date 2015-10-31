@@ -197,8 +197,19 @@ extension:
     preprocess: !coffee/function |
       (arg, params, ctx) ->
         synth = @require 'data-synth'
-        m  = @preprocess (@resolve 'dependencies', arg, false)
-        m ?= @preprocess "!yang #{arg}.yang", @source
+        schema = (@resolve 'dependencies', arg, false)
+        unless schema?
+          console.warn "no explicit dependency for #{arg} defined, searching local filesystem"
+          schema = @parse "!yang #{arg}.yang", @source
+          if schema?
+            @define 'dependencies', arg, schema
+            # this is hackish, but append this dep into the top-level source
+            source = @source.parent
+            while source.parent? and source.parent.name isnt 'yangforge'
+              source = source.parent
+            source.dependencies ?= {}
+            source.dependencies[arg] = schema
+        m  = @preprocess schema
         unless m?
           throw @error "unable to resolve '#{arg}' in dependencies", 'import'
         rev = params['revision-date']
@@ -557,8 +568,9 @@ extension:
     preprocess: !coffee/function |
       (arg, params, ctx) ->
         synth = @require 'data-synth'
-        grouping = @resolve 'grouping', arg
+        grouping = synth.copy {}, @resolve 'grouping', arg
         delete grouping.description
+        delete grouping.reference
         synth.copy ctx, grouping
         for target, changes of params.refine
           match = @locate ctx, target

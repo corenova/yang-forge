@@ -28,20 +28,23 @@
     render: ->
       li className: 'tree-leaf', switch
         when @props.parent instanceof Array
-          (code {}, @props.value)
+          (code {}, "#{@props.value}")
         else div className: 'form-horizontal row', [
           label className: 'control-label col-sm-3', "#{@props.name}:"
           (span className: 'col-sm-9', onClick: (@edit.bind this), switch
-            when @state.editing then [
-              (input
-                className: 'form-control'
-                value: @state.value
-                onChange: (@update.bind this)
-              )
-            ]
+            when @state.editing
+              # TODO if @state.value is multi-line show a textarea
+              [
+                (input
+                  className: 'form-control'
+                  value: @state.value
+                  onChange: (@update.bind this)
+                )
+              ]
             when @props.value instanceof Function
-              (pre className: 'pre-scrollable',  @props.value.toString())
-            else (pre {}, @props.value)
+              (pre className: 'pre-scrollable', "#{@props.value}")
+            else
+              (pre {}, "#{@props.value}")
           )
         ]
 
@@ -78,6 +81,7 @@
       
     render: ->
       return (ul {}) if @props.collapsed is true
+      # should make this optional (but good as default)
       collapsed = Object.keys(@props.value).length isnt 1
       nodes = (for own k, v of @props.value
         (TreeNode
@@ -126,13 +130,13 @@
         @props.children...
       ])
         
-  Source = React.createFactory class extends React.Component
+  SourceView = React.createFactory class extends React.Component
     constructor: (props) ->
       super
-      @model = props.model
+      source = props.source
       @state =
-        meta: @model.constructor.extract()
-        data: @model.get()
+        meta: source.constructor.extract()
+        data: source.get()
         selected: 'schema'
 
     render: ->
@@ -146,9 +150,11 @@
               [ (ListView value: @state.meta, selected: @state.selected, parent: this) ]
             )
           )
-          div className: 'col-sm-9', (TreeView value: selected, auto: true)
+          (div className: 'col-sm-9',
+            (TreeView value: selected, auto: true)
+          )
         ]
       ]
       
-  React.render (Source model: Forge), document.getElementById 'main'
+  React.render (SourceView source: Forge), document.getElementById 'main'
 </script>

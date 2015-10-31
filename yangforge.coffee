@@ -30,13 +30,30 @@ class Forge extends Compiler
     @toSource: (opts={}) ->
       source = @extract()
       delete source.bindings
+
+      source = (traverse source).map (x) ->
+        if synth.instanceof x
+          obj = x.extract 'overrides'
+          synth.copy obj, x.get 'bindings'
+          @update obj
+          @after (y) ->
+            for k, v of y when k isnt 'overrides'
+              unless v?
+                delete y[k]
+                continue
+              # TODO: checking for b to be Array is hackish
+              for a, b of v when b instanceof Array
+                y.overrides ?= {}
+                y.overrides["#{k}.#{a}"] = b
+            @update y.overrides, true
+          
       source = switch opts.format
         when 'yaml' then yaml.dump source
         when 'json'
           opts.space ?= 2
-          source = (traverse source).map (x) -> switch
-            when x instanceof Function then synth.objectify '!js/function', tosource x
-            else x
+          source = (traverse source).map (x) ->
+            if x instanceof Function
+              @update synth.objectify '!js/function', tosource x
           JSON.stringify source, null, opts.space
         else
           source
@@ -49,9 +66,27 @@ class Forge extends Compiler
       @attach 'connect', (namespace, resolve, reject) ->
         # this runs on the client-side
         socket = (require 'socket.io-client') namespace
-        socket.on 'connect', ->
-          socket.on 'modules', (data) -> socket.emit 'join', data
+        socket.on 'connect', =>
+          modules = Object.keys(@properties)
+          console.log '[socket:%s] connected', socket.id
+          socket.once 'rooms', (rooms) ->
+            rooms = rooms.filter (x) -> typeof x is 'string'
+            console.log 'got rooms: %s', rooms
+            # 1. join known rooms
+            socket.emit 'join', rooms.filter (room) -> room in modules
+
+            newRooms = rooms.filter (room) -> room not in modules
+            if newRooms.length > 0
+              # 2. request access for new rooms
+              socket.emit 'knock', newRooms
           resolve socket
+        socket.on 'enter', (keys) =>
+          forge = @access 'yangforge'
+          # infuse the modules using keys
+          forge?.invoke 'infuse', targets: keys
+          .then (res) -> socket.emit 'join', res.get 'modules'
+          .catch (err) -> console.error err
+            
       super
 
     render: (data=this, opts={}) ->
@@ -227,7 +262,8 @@ class Forge extends Compiler
           break; # should only be ONE here
         metadata = synth.extract.apply source, [
           'name', 'version', 'description', 'license', 'schema', 'config', 'dependencies',
-          'extension', 'feature', 'keywords', 'rpc', 'typedef', 'main', 'pkgdir'
+          'extension', 'feature', 'keywords', 'rpc', 'typedef', 'complex-type', 'main', 'pkgdir',
+          'module'
         ]
         source = ((synth Source, opts.hook) metadata).bind model
       finally
@@ -255,9 +291,12 @@ class Forge extends Compiler
     return @invoke arguments.callee, source, opts unless resolve? and reject?
 
     return resolve source if source instanceof Source
-
+    return reject 'must pass in string(s) for import' unless typeof source is 'string'
+    
     opts.async = true
-    url = url.parse source if typeof source is 'string'
+    return resolve @load source, opts if /\n|\r/.test source
+    
+    url = url.parse source
     source = switch url.protocol
       when 'forge:'
         forgery = opts.forgery ? (@get 'yangforge.runtime.forgery') ? (@meta 'forgery')
@@ -277,7 +316,7 @@ class Forge extends Compiler
 
     switch url.protocol
       when 'file:'
-        try resolve @load "#{tag} #{source}"
+        try resolve @load "#{tag} #{source}", opts
         catch err then reject err
       when 'forge:'
         # we initiate a TWO stage sequence, get metadata and then get binary
@@ -290,13 +329,13 @@ class Forge extends Compiler
             if err? or res.statusCode isnt 200
               return reject err ? "unable to retrieve #{source} binary data"
             # TODO: verify checksum
-            resolve @load "#{tag} #{res.body}"
+            resolve @load "#{tag} |\n#{indent res.body, ' ', 2}", opts
       else
         # here we use needle to get the remote content
         console.log "fetching remote content at: #{source}"
         needle.get source, (err, res) =>
           if err? or res.statusCode isnt 200 then reject err
-          else resolve @load "#{tag} |\n#{indent res.body, ' ', 2}" 
+          else resolve @load "#{tag} |\n#{indent res.body, ' ', 2}", opts
 
   export: (input=this) ->
     console.assert input instanceof Object, "invalid input to export module"

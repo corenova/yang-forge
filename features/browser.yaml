@@ -65,17 +65,35 @@ run: !coffee/function |
       io = options.websocket.of '/browser'
       io.on 'connection', (socket) ->
         console.log 'User connected. socket id %s', socket.id
+        socket.on 'knock', (rooms) ->
+          rooms = [ rooms ] unless Array.isArray rooms
+          console.log '[socket:%s] Knocking on %s', socket.id, rooms
+          keys = (
+            rooms
+            .map (room) ->
+              # ok this is kinda long and ugly... haha
+              (source.access room)?.parent.constructor.toSource? format: 'yaml'
+            .filter (x) -> x?
+            .map (x) -> source: x
+          )
+          socket.emit 'enter', keys
+
         socket.on 'join', (rooms) ->
+          console.log '[socket:%s] Joining %s', socket.id, rooms
           if Array.isArray rooms
             socket.join room for room in rooms
           else
             socket.join rooms
         socket.on 'leave', (rooms) ->
+          console.log '[socket:%s] Leaving %s', socket.id, rooms
           if Array.isAray rooms
             socket.leave room for room in rooms
           else
             socket.leave rooms
-        socket.emit 'modules', Object.keys(source.properties)
+
+        console.log Object.keys(source.properties)
+        socket.emit 'rooms', Object.keys(source.properties)
+        
       # watch source and send events
       # source.on 'change', (room, type, message) ->
       #   io.to(room).emit type, message

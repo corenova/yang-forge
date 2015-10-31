@@ -121,7 +121,8 @@ extension:
         delete children.ctype
         unless (Model.get 'key')?
           throw @error "missing 'key' for #{Model.get 'name'} used in instance-list"
-        item = (class extends Model).bind children
+        item = ((synth Model) null).bind children
+        #item = (class extends Model).bind children
         (synth.List params).set type: item, key: (item.get 'key')
 
   instance-type: !yang/extension
