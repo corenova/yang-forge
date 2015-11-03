@@ -461,11 +461,13 @@ extension:
         request  = children.input  ? synth.Meta
         response = children.output ? synth.Meta
         method = (data, resolve, reject) ->
-          console.log "executing rpc #{arg}..."
+          console.info "executing rpc #{arg}..."
+          console.info data
           try
             input = new request data, this
             output = new response null, this
           catch e then return reject e
+          console.info input.get()
           func.call this, input, output, (e) ->
             unless e? then resolve output else reject e
         method.params = params

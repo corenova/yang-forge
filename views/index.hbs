@@ -8,10 +8,11 @@
   Forge.invoke 'connect', window.location.origin + '/browser'
   .then (io) ->
     console.log 'connected to /browser'
+    console.log = ->
 </script>
 <script type="text/coffeescript">
-  { section, div, span, p, a, ul, ol, li, dl, dt, dd } = React.DOM
-  { label, pre, code, input, textarea } = React.DOM
+  { nav, section, div, span, p, a, ul, ol, li, dl, dt, dd } = React.DOM
+  { form, label, pre, code, input, textarea, button, img } = React.DOM
   { h1, h2, h3, h4, h5, h6 } = React.DOM
 
   TreeLeaf = React.createFactory class extends React.Component
@@ -60,8 +61,10 @@
       
     render: ->
       if typeof @props.value is 'object'
+        if (Object.keys @props.value).length is 0
+          return (li {})
         icon = if @state.collapsed then 'plus' else 'minus'
-        li className: 'tree-node', [
+        (li className: 'tree-node', [
           a className: 'nav-header', onClick: (@toggle.bind this), [
             span className: "glyphicon glyphicon-#{icon}"
             ' '
@@ -72,7 +75,7 @@
             parent: this
             sort: @props.sort
             collapsed: @state.collapsed)
-        ]
+        ])
       else (TreeLeaf @props)
         
   TreeView = React.createFactory class extends React.Component
@@ -97,23 +100,27 @@
             when typeof a.props.value isnt 'object' then -1
             when typeof b.props.value isnt 'object' then 1
             else 0
-      callout = if @props.parent? then 'bs-callout' else ''
-      (ul className: "nav nav-list #{callout}", nodes)
+      tree = if @props.parent? then 'tree' else 'top'
+      (ul className: "nav nav-list #{tree}", nodes)
 
   ListView = React.createFactory class extends React.Component
     constructor: -> super; @state = selected: @props.selected
+
+    @defaultProps =
+      showBadge: false
+
     selectItem: (idx) ->
       @setState selected: idx
-      @props.parent?.setState selected: idx
+      @props.selectItem? idx
       
     render: ->
       leafs = []
       nodes = (for own k, v of @props.value
-        active = if @state.selected is k then 'list-group-item-info' else ''
+        active = if @props.selected is k then 'list-group-item-info' else ''
         switch
           when v instanceof Object
             (a className: "list-group-item #{active}", onClick: (@selectItem.bind this, k), [
-              span className: 'badge', (Object.keys v).length
+              (span className: 'badge', (Object.keys v).length) if @props.showBadge
               k
             ])
           else
@@ -123,38 +130,245 @@
       (div className: 'list-group', nodes.filter (e) -> e?)
         
   PanelView = React.createFactory class extends React.Component
+    @defaultProps =
+      panelType: 'default'
+      
     render: ->
-      (div className: 'panel panel-primary', [
+      (div className: "panel panel-#{@props.panelType}", [
         (div className: 'panel-heading', @props.heading)
-        (div className: 'panel-body', (p {}, @props.body))
+        (div className: 'panel-body', (p {}, @props.body)) if @props.body?
         @props.children...
       ])
-        
+
+  SliderView = React.createFactory class extends React.Component
+    constructor: ->
+      super
+      @state =
+        selected: @props.selected
+        interval: @props.interval
+
+    @defaultProps =
+      selectItem: (idx) -> console.warn 'ignoring update to callee: %s', idx
+
+    componentDidMount: ->
+      $('#slider').on 'slid.bs.carousel', (e) => @props.selectItem e.relatedTarget.id
+    
+    render: ->
+      items = @props.children.map (x) =>
+        active = if x.props.id is @state.selected then 'active' else ''
+        (div id: x.props.id, className: "item #{active}", [
+          x
+          (div className: 'carousel-caption', [
+            (h3 {}, x.props.name)
+            (p {}, x.props.description)
+          ])
+        ])
+      (div
+        id: 'slider'
+        className: 'carousel slide'
+        'data-interval': @state.interval
+        'data-ride': 'carousel'
+        [
+          (ol className: 'carousel-indicators',
+            items.map (x, idx) =>
+              active = if x.props.id is @state.selected then 'active' else ''
+              (li className: active, 'data-target': '#slider', 'data-slide-to': idx))
+          (div className: 'carousel-inner', role: 'listbox', items)
+          (a
+            className: 'left carousel-control'
+            href: '#slider'
+            role: 'button'
+            'data-slide': 'prev'
+            (span className: 'glyphicon glyphicon-chevron-left', 'aria-hidden': true)
+          )
+          (a
+            className: 'right carousel-control'
+            href: '#slider'
+            role: 'button'
+            'data-slide': 'next'
+            (span className: 'glyphicon glyphicon-chevron-right', 'aria-hidden': true)
+          )
+        ]
+      )
+      
   SourceView = React.createFactory class extends React.Component
     constructor: (props) ->
       super
-      source = props.source
       @state =
-        meta: source.constructor.extract()
-        data: source.get()
-        selected: 'schema'
+        selected: props.selected
+        
+    @defaultProps =
+      selected: 'schema'
+
+    updateSelection: (idx) -> @setState selected: idx
 
     render: ->
-      selected = @state.meta[@state.selected]
-      div className: 'source', [
+      selected = @state.selected
+      unless @props.source[selected]?
+        selected = 'schema'
+      data = @props.source[selected]
+      console.log "rendering SourceView: #{selected}"
+      (div className: 'source', [
         div className: 'row', [
           (div className: 'col-sm-3',
-            (PanelView
-              heading: @state.meta.name
-              body: @state.meta.description
-              [ (ListView value: @state.meta, selected: @state.selected, parent: this) ]
+            (ListView
+              value: @props.source
+              selected: selected
+              showBadge: true
+              selectItem: @updateSelection.bind this)
+          )
+          (div className: 'col-sm-9', [
+            (TreeView value: data, auto: true)
+          ])
+        ]
+      ])
+      
+  MenubarView = React.createFactory class extends React.Component
+    render: ->
+      (nav className: 'navbar navbar-default',
+        (div className: 'container',
+          (ul className: 'nav navbar-nav',
+            @props.children.map (x) =>
+              active = if @props.active is x.props.name then 'active' else ''
+              (li className: active, x)
+          )
+        )
+      )
+
+  synth    = Forge.require 'data-synth'
+  traverse = Forge.require 'traverse'
+  OperationView = React.createFactory class extends React.Component
+
+    invoke: (e) ->
+      e.preventDefault()
+      obj = {}
+      for own key, item of e.target.elements when item?.value? and !!item.value
+        synth.copy obj, synth.objectify item.name, item.value
+      @props.invoke obj.input
+      .then (res) ->
+        console.info res.get()
+      .catch (err) ->
+        console.error err
+  
+    render: ->
+      params = @props.method.params
+      unless params? and params.input?
+        return (div className: 'bs-callout bs-callout-warning', [
+          (h4 {}, "Interative Operation not available")
+          (p {}, "This operation does not have any associated schema information")
+        ])
+
+      
+      inSchema = new (@props.method.input)
+      inList = (traverse inSchema.get()).reduce ((a, b) ->
+        if @isLeaf
+          key = [ @key ]
+          parent = @parent
+          while (pkey = parent?.key)
+            key.unshift pkey
+            parent = parent.parent
+          key = key.join '.'
+          a.push name: key, value: b, type: (inSchema.access key)
+        return a
+      ), []
+          
+      (div className: 'operation',
+        (h3 {}, params.description)
+        (form className: 'form-horizontal', onSubmit: (@invoke.bind this), [
+          (inList.map (x) ->
+            (div className: 'form-group', [
+              (label className: 'col-sm-3 control-label', x.name)
+              (div className: 'col-sm-5', 
+                (input name: "input.#{x.name}", className: 'form-control', defaultValue: x.value)
+              )
+              (div className: 'col-sm-2',
+                (div className: 'form-control-static', x.type.meta 'type')
+              )
+            ])
+          )...
+          (div className: 'form-group',
+            (div className: 'col-sm-offset-3 col-sm-10',
+              (button type: 'submit', className: 'btn btn-default', 'Invoke')
             )
           )
-          (div className: 'col-sm-9',
-            (TreeView value: selected, auto: true)
-          )
-        ]
-      ]
+        ])
+      )
+
+  InteractiveView = React.createFactory class extends React.Component
+    constructor: ->
+      super
+      @state = operation: null
       
-  React.render (SourceView source: Forge), document.getElementById 'main'
+    showOperation: (name) -> @setState operation: name
+
+    render: ->
+      methods = @props.module.methods
+      (div className: 'interactive row', [
+        (div className: 'col-sm-3',
+          (PanelView
+            panelType: 'primary'
+            heading: 'Interactive Operations'
+            [
+              (ListView value: methods, selected: @state.operation, selectItem: @showOperation.bind this)
+            ]
+          )
+        )
+        if @state.operation of methods
+          (div className: 'col-sm-9',
+            (OperationView
+              name: @state.operation
+              method: methods[@state.operation]
+              invoke: (@props.module.invoke.bind @props.module, @state.operation)
+            )
+          )
+      ])
+      
+  MainView = React.createFactory class extends React.Component
+    constructor: ->
+      super
+      @app = @props.app
+      @state =
+        modules:  Object.keys @app.properties
+        selected: 'yangforge'
+        view: 'interactive'
+        views:
+          source: 'View Source'
+          interactive: 'Live Interaction'
+          
+      @app.on 'attach', =>
+        @setState modules: Object.keys @app.properties
+
+    updateSelection: (id) -> @setState selected: id
+    selectView: (view) -> @setState view: view
+
+    render: ->
+      module = (@app.access @state.selected)
+      app = module.parent
+      source = app.constructor.extract()
+      delete source.module
+      delete source.bindings
+      
+      console.log "rendering MainView: #{@state.selected}"
+      (section className: 'yf-main', [
+        (SliderView
+          selected: @state.selected
+          interval: 0
+          selectItem: @updateSelection.bind this
+          (@state.modules.map (x) =>
+            target = @app.access x
+            meta = target.parent.constructor.extract()
+            (p id: x, name: meta.name, description: meta.description, "a"))
+        )
+        (MenubarView
+          active: @state.view
+          for name, link of @state.views
+            (a name: name, onClick: (@selectView.bind this, name), link)
+        )
+        switch @state.view
+          when 'source'      then (SourceView source: source)
+          when 'interactive' then (InteractiveView module: module)
+      ])
+
+  React.render (MainView app: Forge), document.getElementById 'main'
+      
 </script>

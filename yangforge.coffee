@@ -26,6 +26,7 @@ class Forge extends Compiler
 
   @Source = class Source extends synth.Object
     @set synth: 'source'
+    @mixin (require 'events').EventEmitter
 
     @toSource: (opts={}) ->
       source = @extract()
@@ -88,6 +89,10 @@ class Forge extends Compiler
           .catch (err) -> console.error err
             
       super
+
+    attach: ->
+      super
+      @emit 'attach', arguments...
 
     render: (data=this, opts={}) ->
       return data.toSource opts if Source.instanceof data
