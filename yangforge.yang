@@ -338,6 +338,7 @@ module yangforge {
           description "initial configuration data for the source module";
         }
       }
+      leaf-list sources { type string; }
     }
     output {
       leaf message { type string; }

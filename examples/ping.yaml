@@ -10,6 +10,8 @@ rpc:
   send-echo: !coffee/function |
     (input, output, done) ->
       sys = @parent.require 'child_process'
+      unless sys?.exec?
+        return done "cannot issue ping without sys.exec capability"
       destination = input.get 'destination'
       unless destination?
         console.error "cannot issue ping without destination address"

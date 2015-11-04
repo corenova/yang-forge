@@ -15,15 +15,15 @@ config:
   port: 5000
 
 run: !coffee/function |
-  (model, options) ->
+  (model, runtime) ->
     source = model.parent
-    if options.express instanceof Function
+    if runtime.express instanceof Function
       console.info "express: re-using passed-in instance".grey
-      return options.express
+      return runtime.express
 
     express = source.require 'express'
     errorhandler = source.require 'errorhandler'
-    port = options.express ? @config.port
+    port = runtime.express ? @config.port
     app = (->
       env = process.env.NODE_ENV ? 'development'
       if env is 'production'
@@ -40,5 +40,4 @@ run: !coffee/function |
     ).call express()
 
     console.info "express: listening on #{port}".grey
-    app.server = app.listen port
-    return app
+    return app: app, server: app.listen port

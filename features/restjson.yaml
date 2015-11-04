@@ -181,7 +181,7 @@ routers:
       return this
 
 run: !coffee/function |
-  (model, options) ->
+  (model, runtime) ->
     console.log "generating REST/JSON interface..."
     source  = model.parent
     express = source.require 'express'
@@ -225,8 +225,8 @@ run: !coffee/function |
       return this
     ).call express()
 
-    if options.express?
+    if runtime.express?.app?
       console.info "restjson: binding forgery to /restjson".grey
-      options.express.use "/restjson", restjson
+      runtime.express.app.use "/restjson", restjson
 
     return restjson

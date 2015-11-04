@@ -20,7 +20,7 @@ config:
   uglify: false
 
 run: !coffee/function |
-  (model, options) -> 
+  (model, runtime) -> 
     source = model.parent
     pkgdir = source.meta 'pkgdir'
 
@@ -43,26 +43,35 @@ run: !coffee/function |
     yfx.put "Forge = require('#{pkgdir}');", 'utf8'
     b = browserify yfx, basedir: pkgdir
     b.add source.require.resolve 'coffee-script/lib/coffee-script/browser'
-    b.ignore x for x in [ 'clim', 'needle', 'prettyjson' ]
+    b.add (source.require.resolve 'react'), expose: 'react'
+    b.add (source.require.resolve 'zingchart-react'), expose: 'zingchart-react'
+    b.add (source.require.resolve 'react-highlight'), expose: 'react-highlight'
+    b.ignore x for x in [ 'clim', 'prettyjson' ]
     if @config.uglify is true
       b.transform global: true, sourcemap: false, (source.require 'uglifyify')
 
     console.info "browser: yangforge browserification started (will take a few seconds)".grey
     b.bundle (err, js) ->
       console.info "browser: yangforge browserification complete".grey
-      browser.get '/', (req, res) -> res.render 'index', layout: 'browser'
+      browser.get '/', (req, res) -> res.render 'index', layout: 'browser', version: source.meta 'version'
       browser.get '/yangforge.js', (req, res) ->
         res.type 'application/javascript'
         res.send js
+      highlight = (source.require 'path').resolve pkgdir, 'node_modules/highlight.js/styles'
+      browser.get '/highlight/:style.css', (req, res, next) ->
+        (source.require 'fs').readFile "#{highlight}/#{req.params.style}.css", (err, data) ->
+          return next err if err?
+          res.type 'text/css'
+          res.send data
     yfx.destroySoon()
 
-    if options.express?
+    if runtime.express?
       console.info "browser: binding to express /browser".grey
-      options.express.use "/browser", browser
+      runtime.express.app.use "/browser", browser
 
-    if options.websocket?
+    if runtime.websocket?
       console.info "browser: binding to websocket /browser".grey
-      io = options.websocket.of '/browser'
+      io = runtime.websocket.of '/browser'
       io.on 'connection', (socket) ->
         console.log 'User connected. socket id %s', socket.id
         socket.on 'knock', (rooms) ->

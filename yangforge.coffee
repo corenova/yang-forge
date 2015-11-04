@@ -6,27 +6,19 @@ if /bin\/yfc$/.test require?.main?.filename
   else
     console.log = ->
 
-promise = require 'promise'
-synth   = require 'data-synth'
-yaml    = require 'js-yaml'
-coffee  = require 'coffee-script'
-path    = require 'path'
-fs      = require 'fs'
-url     = require 'url'
-needle  = require 'needle'
-indent  = require 'indent-string'
-
-traverse   = require 'traverse'
-tosource   = require 'tosource'
+{ promise, synth, yaml, coffee, path, fs }  = require './bundle'
+{ request, url, indent, traverse, tosource } = require './bundle'
+{ events } = require './bundle'
+      
 prettyjson = require 'prettyjson'
 Compiler   = require './yang-compiler'
 
 class Forge extends Compiler
-  require: require
+  require: (require './bundle').require
 
-  @Source = class Source extends synth.Object
+  class App extends synth.Object
     @set synth: 'source'
-    @mixin (require 'events').EventEmitter
+    @mixin events.EventEmitter
 
     @toSource: (opts={}) ->
       source = @extract()
@@ -62,7 +54,7 @@ class Forge extends Compiler
         when 'base64' then (new Buffer source).toString 'base64'
         else source
 
-    require: require
+    require: (require './bundle').require
     constructor: ->
       @attach 'connect', (namespace, resolve, reject) ->
         # this runs on the client-side
@@ -90,12 +82,12 @@ class Forge extends Compiler
             
       super
 
-    attach: ->
+    attach: (key, val) ->
       super
       @emit 'attach', arguments...
 
     render: (data=this, opts={}) ->
-      return data.toSource opts if Source.instanceof data
+      return data.toSource opts if App.instanceof data
 
       switch opts.format
         when 'json' then JSON.stringify data, null, opts.space
@@ -141,7 +133,7 @@ class Forge extends Compiler
       (@access @meta 'main').invoke 'run', options: options
       .catch (e) -> console.error e
 
-    toString: -> "Source:#{@meta 'name'}"
+    toString: -> "App:#{@meta 'name'}"
 
   constructor: (source) ->
     return super unless source?
@@ -167,6 +159,10 @@ class Forge extends Compiler
       return [ data, pkgdir ]
     
     yaml.Schema.create [
+      new yaml.Type '!coffee',
+        kind: 'scalar'
+        resolve:   (data) -> typeof data is 'string'
+        construct: (data) -> coffee.eval? data
       new yaml.Type '!coffee/function',
         kind: 'scalar'
         resolve:   (data) -> typeof data is 'string'
@@ -270,7 +266,7 @@ class Forge extends Compiler
           'extension', 'feature', 'keywords', 'rpc', 'typedef', 'complex-type', 'main', 'pkgdir',
           'module'
         ]
-        source = ((synth Source, opts.hook) metadata).bind model
+        source = ((synth App, opts.hook) metadata).bind model
       finally
         delete source.parent
     return source
@@ -295,7 +291,7 @@ class Forge extends Compiler
     return promise.all (@import x, opts for x in source) if source instanceof Array
     return @invoke arguments.callee, source, opts unless resolve? and reject?
 
-    return resolve source if source instanceof Source
+    return resolve source if source instanceof App
     return reject 'must pass in string(s) for import' unless typeof source is 'string'
     
     opts.async = true
@@ -325,23 +321,30 @@ class Forge extends Compiler
         catch err then reject err
       when 'forge:'
         # we initiate a TWO stage sequence, get metadata and then get binary
-        needle.get source, (err, res) =>
-          if err? or res.statusCode isnt 200
-            return reject err ? "unable to retrieve #{source}"
-          console.info res.body
+        request
+        .head source
+        .end (err, res) =>
+          if err? or !res.ok
+            return reject err ? "unable to retrieve #{source} metadata"
           chksum = res.body.checksum
-          needle.get "#{source}/data", (err, res) =>
-            if err? or res.statusCode isnt 200
+          request
+          .get source
+          .end (err, res) =>
+            if err? or !res.ok
               return reject err ? "unable to retrieve #{source} binary data"
             # TODO: verify checksum
-            resolve @load "#{tag} |\n#{indent res.body, ' ', 2}"
+            resolve @load "#{tag} |\n#{indent res.text, ' ', 2}"
       else
         # here we use needle to get the remote content
         console.log "fetching remote content at: #{source}"
-        needle.get source, (err, res) =>
-          if err? or res.statusCode isnt 200 then reject err
-          else resolve @load "#{tag} |\n#{indent res.body, ' ', 2}"
+        request
+        .get source
+        .end (err, res) =>
+          console.info res
+          if err? or !res.ok then reject err
+          else resolve @load "#{tag} |\n#{indent res.text, ' ', 2}"
 
+  # TBD
   export: (input=this) ->
     console.assert input instanceof Object, "invalid input to export module"
     console.assert typeof input.name is 'string' and !!input.name,
@@ -352,8 +355,6 @@ class Forge extends Compiler
       else @resolve 'module', input.name
     console.assert (synth.instanceof m),
       "unable to retrieve requested module #{input.name} for export"
-
-    tosource = require 'tosource'
 
     obj = m.extract 'name', 'schema', 'map', 'extensions', 'importers', 'exporters', 'procedures'
     for key in [ 'extensions', 'importers', 'procedures' ]

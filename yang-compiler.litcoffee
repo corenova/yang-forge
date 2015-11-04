@@ -98,8 +98,8 @@ ensures syntax correctness and building the JS object tree structure.
           offender = offender.replace /\s\s+/g, ' '
           throw @error "[yang-compiler:parse] invalid YANG syntax detected (file not found?)", offender
 
-        console.assert input instanceof Object,
-          "must pass in proper input to parse"
+        unless input instanceof Object
+          throw @error "[yang-compiler:parse] must pass in proper input to parse"
 
         params = 
           (YangCompiler::parse.call this, stmt for stmt in input.substmts)
@@ -128,14 +128,14 @@ found in the parsed output in order to prepare the context for the
           # first merge source extension using parent extensions if available
           basis = synth.copy {}, source.parent?.extension
           source.extension = synth.copy basis, source.extension
-          console.assert (Object.keys source.extension).length > 0,
-            "cannot preprocess requested schema without source.extension scope"
+          unless (Object.keys source.extension).length > 0
+            throw @error "cannot preprocess requested schema without source.extension scope"
           return @fork arguments.callee, schema, source, source.extension
 
         @source = source
         schema = (YangCompiler::parse.call this, schema) if typeof schema is 'string'
-        console.assert schema instanceof Object,
-          "must pass in proper 'schema' to preprocess"
+        unless schema instanceof Object
+          throw @error "must pass in proper 'schema' to preprocess"
         
         # Here we go through each of the keys of the schema object and
         # validate the extension keywords and resolve these keywords
@@ -211,8 +211,8 @@ return instantiated copy.
         
         schema = (schema.call this) if schema instanceof Function
         schema = (YangCompiler::preprocess.call this, schema, source) unless source.extension?
-        console.assert schema instanceof Object,
-          "must pass in proper 'schema' to compile"
+        unless schema instanceof Object
+          throw @error "must pass in proper 'schema' to compile"
 
         output = {}
         for key, val of schema

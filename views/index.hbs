@@ -1,6 +1,6 @@
 <div class="container">
   <div class="page-header">
-	<h1>YangForge Browser <small>real-time data model viewer</small></h1>
+	<h1>YF Browser <small>real-time data model viewer</small></h1>
   </div>
   <div id="main">Loading...</div>
 </div>
@@ -11,11 +11,47 @@
     console.log = ->
 </script>
 <script type="text/coffeescript">
+  React = Forge.require 'react'
   { nav, section, div, span, p, a, ul, ol, li, dl, dt, dd } = React.DOM
-  { form, label, pre, code, input, textarea, button, img } = React.DOM
+  { form, label, input, textarea, select, option, button } = React.DOM
+  { pre, code, img, em, i, b, strong } = React.DOM
   { h1, h2, h3, h4, h5, h6 } = React.DOM
 
-  TreeLeaf = React.createFactory class extends React.Component
+  Reactor = (-> (React.createFactory this) arguments... )
+
+  ZingChart = Forge.require 'zingchart-react'
+  LineChart = Reactor.bind ZingChart.line
+  AreaChart = Reactor.bind ZingChart.area
+  BarChart  = Reactor.bind ZingChart.bar
+  PieChart  = Reactor.bind ZingChart.pie
+
+  Highlight = Reactor.bind Forge.require 'react-highlight'
+
+  Alert = Reactor.bind class extends React.Component
+    @defaultProps =
+      dismissible: false
+      status: 'info'
+    render: ->
+      { title, status, message, dismissible } = @props
+      (div
+        className: "alert alert-#{status} #{if dismissible then 'alert-dismissible'}"
+        role: 'alert'
+        (button type: 'button', className: 'close', 'data-dismiss': 'alert', 'aria-label': 'Close',
+          (span 'aria-hidden': true, "x")) if dismissible?
+        (strong {}, title) if title?
+        ' '
+        message)
+
+  Callout = Reactor.bind class extends React.Component
+    @defaultProps =
+      status: 'default'
+    render: ->
+      { title, status } = @props
+      (div className: "bs-callout bs-callout-#{status}",
+        (h4 {}, title) if title?
+        @props.children...)
+
+  TreeLeaf = Reactor.bind class extends React.Component
     constructor: ->
       super
       @state = value: @props.value, editing: false
@@ -43,13 +79,13 @@
                 )
               ]
             when @props.value instanceof Function
-              (pre className: 'pre-scrollable', "#{@props.value}")
+              (Highlight className: 'js', "#{@props.value}")
             else
-              (pre {}, "#{@props.value}")
+              (Highlight className: '', "#{@props.value}")
           )
         ]
 
-  TreeNode = React.createFactory class extends React.Component
+  TreeNode = Reactor.bind class extends React.Component
     @defaultProps =
       collapsed: true
       
@@ -60,7 +96,7 @@
     toggle: -> @setState collapsed: !@state.collapsed
       
     render: ->
-      if typeof @props.value is 'object'
+      if @props.value? and typeof @props.value is 'object'
         if (Object.keys @props.value).length is 0
           return (li {})
         icon = if @state.collapsed then 'plus' else 'minus'
@@ -78,12 +114,12 @@
         ])
       else (TreeLeaf @props)
         
-  TreeView = React.createFactory class extends React.Component
+  TreeView = Reactor.bind class extends React.Component
     @defaultProps =
       sort: true
       
     render: ->
-      return (ul {}) if @props.collapsed is true
+      return (ul {}) if @props.collapsed is true or not @props.value?
       # should make this optional (but good as default)
       collapsed = Object.keys(@props.value).length isnt 1
       nodes = (for own k, v of @props.value
@@ -103,7 +139,7 @@
       tree = if @props.parent? then 'tree' else 'top'
       (ul className: "nav nav-list #{tree}", nodes)
 
-  ListView = React.createFactory class extends React.Component
+  ListView = Reactor.bind class extends React.Component
     constructor: -> super; @state = selected: @props.selected
 
     @defaultProps =
@@ -129,7 +165,7 @@
       )
       (div className: 'list-group', nodes.filter (e) -> e?)
         
-  PanelView = React.createFactory class extends React.Component
+  PanelView = Reactor.bind class extends React.Component
     @defaultProps =
       panelType: 'default'
       
@@ -140,7 +176,7 @@
         @props.children...
       ])
 
-  SliderView = React.createFactory class extends React.Component
+  SliderView = Reactor.bind class extends React.Component
     constructor: ->
       super
       @state =
@@ -172,7 +208,7 @@
           (ol className: 'carousel-indicators',
             items.map (x, idx) =>
               active = if x.props.id is @state.selected then 'active' else ''
-              (li className: active, 'data-target': '#slider', 'data-slide-to': idx))
+              (li key: idx, className: active, 'data-target': '#slider', 'data-slide-to': idx))
           (div className: 'carousel-inner', role: 'listbox', items)
           (a
             className: 'left carousel-control'
@@ -191,7 +227,7 @@
         ]
       )
       
-  SourceView = React.createFactory class extends React.Component
+  SourceView = Reactor.bind class extends React.Component
     constructor: (props) ->
       super
       @state =
@@ -223,7 +259,7 @@
         ]
       ])
       
-  MenubarView = React.createFactory class extends React.Component
+  MenubarView = Reactor.bind class extends React.Component
     render: ->
       (nav className: 'navbar navbar-default',
         (div className: 'container',
@@ -237,30 +273,119 @@
 
   synth    = Forge.require 'data-synth'
   traverse = Forge.require 'traverse'
-  OperationView = React.createFactory class extends React.Component
+  FormView = Reactor.bind class extends React.Component
+    constructor: (props) ->
+      super
+      @state = name: props.name, data: props.data, disabled: false
 
-    invoke: (e) ->
+    @defaultProps =
+      submitLabel: 'Submit'
+
+    componentWillReceiveProps: (nextProps) ->
+      if @state.name isnt nextProps.name
+        @setState name: nextProps.name, data: nextProps.data, disabled: false
+
+    onSubmit: (e) ->
       e.preventDefault()
-      obj = {}
-      for own key, item of e.target.elements when item?.value? and !!item.value
-        synth.copy obj, synth.objectify item.name, item.value
-      @props.invoke obj.input
-      .then (res) ->
-        console.info res.get()
-      .catch (err) ->
-        console.error err
-  
+      data = {}
+      for own key, obj of @state.data
+        value = switch typeof obj.value
+          when 'string'
+            if !!obj.value then obj.value else undefined
+          else obj.value
+        value = switch obj.type
+          when 'array'
+            if Array.isArray value then value else [ value ]
+          else value
+        synth.copy data, synth.objectify key, value
+      @setState disabled: true
+      @props.onSubmit data
+      .then (res) =>
+        @setState disabled: false if res?
+        res
+
+    onChange: (e) ->
+      data = synth.copy {}, @state.data
+      data[e.target.name].value = switch e.target.type
+        when 'checkbox' then e.target.checked is true
+        else e.target.value
+      @setState data: data, disabled: false
+
     render: ->
-      params = @props.method.params
+      (form name: @props.name, className: 'form-horizontal', onSubmit: (@onSubmit.bind this), [
+        (div {}, (for own key, x of @state.data
+          (div className: 'form-group', [
+            (label className: 'col-sm-3 control-label', key)
+            (div className: 'col-sm-5', switch x.type
+              when 'enumeration'
+                (select
+                  name: key
+                  className: 'form-control'
+                  value: x.value
+                  onChange: (@onChange.bind this)
+                  (option value: opt, opt) for opt, param of x.enum
+                )
+              when 'boolean'
+                (div className: 'checkbox',
+                  (label {},
+                    (input name: key, type: 'checkbox', defaultChecked: x.value, onChange: (@onChange.bind this) ))
+                 )
+              else
+                (input
+                  name: key
+                  className: 'form-control'
+                  value: x.value
+                  onChange: (@onChange.bind this))
+            )
+            (div className: 'col-sm-4',
+              (div className: 'form-control-static',
+                (em {}, switch x.type
+                  when 'array' then "#{x.type} (#{x.subtype})"
+                  else x.type
+                )
+              ))
+          ]))
+        )
+        (div className: 'form-group',
+          (div className: 'col-sm-offset-3 col-sm-10',
+            (button
+              type: 'submit',
+              className: 'btn btn-default'
+              disabled: @state.disabled
+              @props.submitLabel
+            )
+          )
+        )
+      ])
+      
+  OperationView = Reactor.bind class extends React.Component
+    constructor: ->
+      super
+      @state = output: null, error: null
+      
+    invoke: (data) ->
+      console.info data
+      @props.invoke data
+      .then (res) =>
+        @setState error: null, output: JSON.stringify res.get(), null, 2
+        res
+      .catch (err) =>
+        console.error err
+        @setState error: err, output: null
+
+    componentWillReceiveProps: (nextProps) ->
+      @setState output: null, error: null
+
+    render: ->
+      params = @props.method?.params
       unless params? and params.input?
         return (div className: 'bs-callout bs-callout-warning', [
           (h4 {}, "Interative Operation not available")
           (p {}, "This operation does not have any associated schema information")
         ])
 
-      
-      inSchema = new (@props.method.input)
-      inList = (traverse inSchema.get()).reduce ((a, b) ->
+      schema = new (@props.method.input)
+      data = (traverse schema.get()).reduce ((a, b) ->
         if @isLeaf
           key = [ @key ]
           parent = @parent
@@ -268,72 +393,111 @@
             key.unshift pkey
             parent = parent.parent
           key = key.join '.'
-          a.push name: key, value: b, type: (inSchema.access key)
+          prop = (schema.access key)
+          if prop?.opts?.type
+            type = prop.opts.type
+            a[key] =
+              value: b
+              type: "#{type}"
+            switch "#{type}"
+              when 'enumeration'
+                a[key].enum = (prop.meta 'type').enum
+              when 'array'
+                subtype = prop.opts.subtype ? prop.opts.model
+                if synth.instanceof subtype
+                  subtype = (subtype.get 'name') ? (subtype.get 'synth')
+                a[key].subtype = subtype
         return a
-      ), []
-          
+      ), {}
+
       (div className: 'operation',
         (h3 {}, params.description)
-        (form className: 'form-horizontal', onSubmit: (@invoke.bind this), [
-          (inList.map (x) ->
-            (div className: 'form-group', [
-              (label className: 'col-sm-3 control-label', x.name)
-              (div className: 'col-sm-5', 
-                (input name: "input.#{x.name}", className: 'form-control', defaultValue: x.value)
-              )
-              (div className: 'col-sm-2',
-                (div className: 'form-control-static', x.type.meta 'type')
-              )
-            ])
-          )...
-          (div className: 'form-group',
-            (div className: 'col-sm-offset-3 col-sm-10',
-              (button type: 'submit', className: 'btn btn-default', 'Invoke')
-            )
-          )
-        ])
+        (FormView
+          name: @props.name
+          data: data
+          onSubmit: (@invoke.bind this)
+          submitLabel: 'Invoke')
+        (Alert
+          dismissible: true
+          status: 'danger'
+          title: @state.error.name ? 'Error'
+          message: @state.error.message ? @state.error
+        ) if @state.error?
+        (Callout title: 'Result', [ (Highlight className: 'json scrollable', "#{@state.output}") ]) if @state.output
       )
 
-  InteractiveView = React.createFactory class extends React.Component
-    constructor: ->
+  IntentView = Reactor.bind class extends React.Component
+    constructor: (props) ->
       super
-      @state = operation: null
+      rpcs = (props.module.meta 'rpc') ? {}
+      operations = (Object.keys rpcs)
+      @state = operation: operations[0], key: props.key
+
+    componentWillReceiveProps: (nextProps) ->
+      if @state.key isnt nextProps.key
+        rpcs = (nextProps.module.meta 'rpc') ? {}
+        operations = (Object.keys rpcs)
+        @setState operation: operations[0], key: nextProps.key
       
-    showOperation: (name) -> @setState operation: name
+    showOperation: (name) ->
+      @setState operation: name
 
     render: ->
-      methods = @props.module.methods
-      (div className: 'interactive row', [
+      operations = @props.module.meta 'rpc'
+      (div className: 'intent row', [
         (div className: 'col-sm-3',
           (PanelView
-            panelType: 'primary'
-            heading: 'Interactive Operations'
+            panelType: 'default'
+            heading: 'Intent-based Operations'
             [
-              (ListView value: methods, selected: @state.operation, selectItem: @showOperation.bind this)
+              (ListView value: operations, selected: @state.operation, selectItem: @showOperation.bind this)
             ]
           )
         )
-        if @state.operation of methods
+        if @state.operation of operations
           (div className: 'col-sm-9',
             (OperationView
               name: @state.operation
-              method: methods[@state.operation]
+              method: @props.module.methods[@state.operation]
               invoke: (@props.module.invoke.bind @props.module, @state.operation)
             )
           )
       ])
+
+  StoreView = Reactor.bind class extends React.Component
+    render: ->
+      module = @props.module
+      unless module.properties?
+        return (Callout status: 'warning', title: 'Configuration Store not available', [
+          (p {}, 'This module does not have any configuration tree in the data schema')
+        ])
+        
+      modelSeries = (for name, model of module.meta 'models'
+        continue unless model.get?
+        records = (model.get? 'records') ? []
+        text: name, values: [ Object.keys(records).length ]
+      ).filter (x) -> x?
       
-  MainView = React.createFactory class extends React.Component
+      (div id: 'store-view', className: 'row',
+        (div className: 'col-sm-8',
+          (Highlight className: 'json', JSON.stringify module.get(), null, 2))
+        if modelSeries.length
+          (div className: 'col-sm-4',
+            (BarChart id: 'model-records', height: '300', width: '100%', series: modelSeries, legend: 'false', theme: 'light', title: 'Model Records'))
+      )
+      
+  MainView = Reactor.bind class extends React.Component
     constructor: ->
       super
       @app = @props.app
       @state =
         modules:  Object.keys @app.properties
         selected: 'yangforge'
-        view: 'interactive'
+        view: 'store'
         views:
           source: 'View Source'
-          interactive: 'Live Interaction'
+          intent: 'Intent Interfaces'
+          store: 'Configuration Store'
           
       @app.on 'attach', =>
         @setState modules: Object.keys @app.properties
@@ -357,16 +521,17 @@
           (@state.modules.map (x) =>
             target = @app.access x
             meta = target.parent.constructor.extract()
-            (p id: x, name: meta.name, description: meta.description, "a"))
+            (p id: x, key: x, name: meta.name, description: meta.description, "a"))
         )
         (MenubarView
           active: @state.view
           for name, link of @state.views
-            (a name: name, onClick: (@selectView.bind this, name), link)
+            (a key: name, name: name, onClick: (@selectView.bind this, name), link)
         )
         switch @state.view
           when 'source'      then (SourceView source: source)
-          when 'interactive' then (InteractiveView module: module)
+          when 'intent' then (IntentView key: module.id, module: module)
+          when 'store' then (StoreView key: module.id, module: module)
       ])
 
   React.render (MainView app: Forge), document.getElementById 'main'

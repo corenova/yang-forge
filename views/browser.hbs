@@ -67,59 +67,61 @@
    }
   </style>
   <style>
-   /* Base styles (regardless of theme) */
    .bs-callout {
+     padding: 20px;
      margin: 20px 0;
-     padding: 15px 30px 15px 15px;
-     border-left: 5px solid #eee;
+     border: 1px solid #eee;
+     border-left-width: 5px;
+     border-radius: 3px;
    }
-
    .bs-callout h4 {
      margin-top: 0;
+     margin-bottom: 5px;
    }
-
    .bs-callout p:last-child {
      margin-bottom: 0;
    }
-
-   .bs-callout code,
-   .bs-callout .highlight {
-     background-color: #fff;
+   .bs-callout code {
+     border-radius: 3px;
    }
-
-   /* Themes for different contexts */
+   .bs-callout+.bs-callout {
+     margin-top: -5px;
+   }
+   .bs-callout-default {
+     border-left-color: #777;
+   }
+   .bs-callout-default h4 {
+     color: #777;
+   }
+   .bs-callout-primary {
+     border-left-color: #428bca;
+   }
+   .bs-callout-primary h4 {
+     color: #428bca;
+   }
+   .bs-callout-success {
+     border-left-color: #5cb85c;
+   }
+   .bs-callout-success h4 {
+     color: #5cb85c;
+   }
    .bs-callout-danger {
-     background-color: #fcf2f2;
-     border-color: #dFb5b4;
+     border-left-color: #d9534f;
    }
-
+   .bs-callout-danger h4 {
+     color: #d9534f;
+   }
    .bs-callout-warning {
-     background-color: #fefbed;
-     border-color: #f1e7bc;
+     border-left-color: #f0ad4e;
    }
-
+   .bs-callout-warning h4 {
+     color: #f0ad4e;
+   }
    .bs-callout-info {
-     background-color: #f0f7fd;
-     border-color: #d0e3f0;
+     border-left-color: #5bc0de;
    }
-
-   .bs-callout-danger h4,
-   .bs-callout-danger a.alert-link {
-     color: #B94A48;
-   }
-
-   .bs-callout-warning h4,
-   .bs-callout-warning a.alert-link {
-     color: #C09853;
-   }
-
-   .bs-callout-info h4,
-   .bs-callout-info a.alert-link {
-     color: #3A87AD;
-   }
-
-   .bs-callout a.alert-link {
-     font-weight: bold;
+   .bs-callout-info h4 {
+     color: #5bc0de;
    }
   </style>
   <style>
@@ -129,18 +131,95 @@
    #main a:hover {
 	 cursor: pointer;
    }
+   #main pre {
+	 background: none;
+   }
+   pre code {
+	 font-family: monospace,monospace;
+   }
+   header.navbar {
+	 margin-bottom: 0;
+   }
    #slider .item {
 	 height: 200px;
 	 background-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI4IiBoZWlnaHQ9IjgiPgo8cmVjdCB3aWR0aD0iOCIgaGVpZ2h0PSI4IiBmaWxsPSIjNDAzYzNmIj48L3JlY3Q+CjxwYXRoIGQ9Ik0wIDBMOCA4Wk04IDBMMCA4WiIgc3Ryb2tlLXdpZHRoPSIxIiBzdHJva2U9IiMxZTI5MmQiPjwvcGF0aD4KPC9zdmc+");
    }
+   .operation form {
+	 padding-top: 20px;
+   }
+   .browser-footer {
+	 padding-top: 40px;
+	 padding-bottom: 40px;
+	 margin-top: 100px;
+	 color: #767676;
+	 text-align: center;
+	 border-top: 1px solid #e5e5e5;
+   }
+   .footer-links {
+	 padding-left: 0;
+	 margin-top: 20px;
+   }
+   .footer-links li {
+	 display: inline;
+	 padding: 0 2px;
+   }
   </style>
-  <script src="browser/yangforge.js"></script>
-  <script src="http://fb.me/react-0.13.1.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.6/d3.min.js"></script>
+  <link rel="stylesheet" href="/browser/highlight/tomorrow.css">
+  <script src="/browser/yangforge.js"></script>
 </head>
 <body>
+  <header class="navbar navbar-default navbar-static-top" role="banner">
+	<div class="container">
+	  <div class="navbar-header">
+		<a class="navbar-brand">YangForge</a>
+	  </div>
+	  <nav id="bs-navbar" class="collapse navbar-collapse">
+		<ul class="nav navbar-nav">
+          <li>
+			<a href="getting-started/">Getting started</a>
+          </li>
+          <li>
+			<a href="yang/">YANG</a>
+          </li>
+          <li>
+			<a href="yaml/">YAML</a>
+          </li>
+          <li>
+			<a href="javascript/">JavaScript</a>
+          </li>
+          <li>
+			<a href="customize/">Customize</a>
+          </li>
+		</ul>
+		<ul class="nav navbar-nav navbar-right">
+          <li><a href="http://opnfv.org"">OPNFV</a></li>
+          <li><a href="http://onosproject.org">ONOS</a></li>
+		</ul>
+      </nav>
+	</div>
+  </header>
   {{{body}}}
+  <footer class="browser-footer">
+	<div class="container">
+	  <p>
+		Code licensed under
+		<a rel="license" href="https://github.com/saintkepha/yangforge/blob/master/LICENSE" target="_blank">Apache 2.0</a>,
+		sponsored by 
+		<a rel="company" href="http://www.clearpathnet.com" target="_blank">ClearPath Networks, Inc.</a>
+	  </p>
+	  <ul class="footer-links text-muted">
+		<li>Currently v{{{version}}}</li>
+		<li>·</li>
+		<li><a href="https://github.com/saintkepha/yangforge">GitHub</a></li>
+		<li>·</li>
+		<li><a href="https://github.com/saintkepha/yangforge/issues">Issues</a></li>
+		<li>·</li>
+		<li><a href="https://github.com/saintkepha/yangforge/releases">Releases</a></li>
+	  </ul>
+	</div>
+  </footer>
   <!-- Visualization components -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.6/d3.min.js"></script>
   <script src="//ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.js"></script>
   <script src="//maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js"></script>
 </body>

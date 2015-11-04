@@ -1,7 +1,7 @@
 name: yangforge
 description: YANG driven JS application builder
 author: Peter K. Lee <peter@intercloud.net>
-version: 0.10.5
+version: !coffee "(require './package.json').version"
 license: Apache-2.0
 homepage: http://github.com/saintkepha/yangforge
 repository: git://github.com/saintkepha/yangforge.git
@@ -66,22 +66,23 @@ extension:
 rpc:
   build: !coffee/function |
     (input, output, done) ->
+      app = @parent
       target = (input.get 'arguments')[0]
       options = input.get 'options'
       return done "must specify target input file to build" unless target?
 
-      @parent.import target
-      .then (app) =>
-        result = app.constructor.toSource format: 'yaml'
+      app.import target
+      .then (apps) ->
+        result = apps.constructor.toSource format: 'yaml'
         if options.gzip
-          zlib = @parent.require 'zlib'
+          zlib = app.require 'zlib'
           #result = zlib.deflate result
 
         unless options.output?
           output.set result
           return done()
 
-        fs = @parent.require 'fs'
+        fs = app.require 'fs'
         fs.writeFile options.output, result, 'utf8', (err) ->
           output.set "output saved to '#{options.output}'"
           if err? then done err else done()
@@ -92,48 +93,52 @@ rpc:
 
   info: !coffee/function |
     (input, output, done) ->
+      app = @parent
       target = (input.get 'arguments')[0]
-      target ?= @parent
-      @parent.import target
-      .then (app) ->
-        output.set app.info? (input.get 'options')
+      target ?= app
+      app.import target
+      .then (apps) ->
+        output.set apps.info? (input.get 'options')
         done()
       .catch (err) -> done err
 
   schema: !coffee/function |
     (input, output, done) ->
+      app = @parent
       options = input.get 'options'
       schema = (input.get 'arguments')[0]
       schema = options.eval if options.eval?
       result = switch
-        when options.compile then @parent.compile "!yang #{schema}"
-        when options.preprocess then (@parent.preprocess "!yang #{schema}").schema
-        else @parent.parse "!yang #{schema}"
-      result = (@parent.render result, options)
+        when options.compile then app.compile "!yang #{schema}"
+        when options.preprocess then (app.preprocess "!yang #{schema}").schema
+        else app.parse "!yang #{schema}"
+      result = (app.render result, options)
       unless options.output?
         output.set result
         return done()
 
       output.set "output saved to '#{options.output}'"
-      fs = @parent.require 'fs'
+      fs = app.require 'fs'
       fs.writeFile options.output, result, 'utf8', (err) ->
         if err? then done err else done()
 
   infuse: !coffee/function |
     (input, output, done) ->
-      targets = input.get 'targets'
-      unless targets.length > 0
-        output.set 'message', 'no operation since no target(s) were specified'
+      app = @parent
+      sources = input.get 'sources'
+      sources = sources.concat ((input.get 'targets').map (e) -> e.source)...
+      unless sources.length > 0
+        output.set 'message', 'no operation since no sources(s) were specified'
         return done()
 
-      @parent.import (targets.map (e) -> e.source)
+      app.import sources
       .then (apps) =>
         promises = apps.reduce ((a,b) -> a.concat b.save()...), []
         @invoke promises.map (p) -> (resolve) -> resolve p
-      .then (modules) =>
+      .then (modules) ->
         for model in modules
           console.log "<infuse> absorbing a new model '#{model.name}' into running forge"
-          @parent.attach model.name, model
+          app.attach model.name, model
         modules
       .then (modules) ->
         output.set 'message', 'request processed successfully'
@@ -144,22 +149,24 @@ rpc:
       
   defuse: !coffee/function |
     (input, output, done) ->
+      app = @parent
       for name in input.get 'names'
-        @parent.detach name
+        app.detach name
       output.set 'message', 'OK'
       done()
 
   run: !coffee/function |
     (input, output, done) ->
+      app = @parent
       features = input.get 'options'
       if features.cli is true
-        (@parent.resolve 'feature', 'cli').run this
+        (app.resolve 'feature', 'cli').run this
         return done()
 
       console.log "forgery firing up..."
       for name, arg of features when arg? and arg isnt false
         console.log "#{name} with #{arg}"
-        features[name] = (@parent.resolve 'feature', name)?.run? this, features
+        features[name] = (app.resolve 'feature', name)?.run? this, features
         
       @invoke 'infuse', targets: (input.get 'arguments').map (e) -> source: e
       .then (res) =>

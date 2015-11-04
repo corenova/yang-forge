@@ -593,9 +593,9 @@ extension:
 typedef:
   binary:
     construct: !coffee/function |
-      (params) -> (value) -> 
-        console.assert value instanceof Function,
-          "[#{@type}] not a binary instance"
+      (params, source) -> (value) -> 
+        unless value instanceof Function
+          throw source.error "[#{@opts.type}] not a binary instance"
         value
 
   boolean:
@@ -616,36 +616,40 @@ typedef:
 
   enumeration:
     construct: !coffee/function |
-      (params={}) ->
+      (params={}, source) ->
         unless params.enum instanceof Object
           name = params.enum
           params.enum = {}
           params.enum[name] = value: 0
-        (value) ->
+        f = (value) ->
           if typeof value is 'number'
             for key, val of params.enum when val.value is value or val.value is "#{value}"
               return key
-          console.assert (params.enum.hasOwnProperty value),
-            "[#{@type}] enumeration type violation for #{value} on #{Object.keys params.enum}"
+          unless (params.enum.hasOwnProperty value)
+            throw source.error "[#{@opts.type}] enumeration type violation for '#{value}' on #{Object.keys params.enum}"
           value
+        f.enum = params.enum
+        return f
 
   identityref:
     construct: !coffee/function |
       (params={}, source) ->
-        console.assert typeof params.base is 'string',
-          "identityref must reference 'base' identity"
+        unless typeof params.base is 'string'
+          throw source.error "identityref must reference 'base' identity"
+          
         (value) ->
           match = source.resolve 'identity', value
-          console.assert (match? and params.base is match.base),
-            "[#{@type}] identityref is invalid for #{value}"
+          unless (match? and params.base is match.base)
+            throw source.error "[#{@opts.type}] identityref is invalid for '#{value}'"
           # TODO - need to figure out how to return namespace value...
           value
 
   leafref:
     construct: !coffee/function |
       (params={}, source) ->
-        console.assert typeof params.path is 'string',
-          "leafref must contain 'path' statement"
+        unless typeof params.path is 'string'
+          throw source.error "leafref must contain 'path' statement"
+          
         (value) ->
           self = this
           value: value
@@ -674,7 +678,7 @@ typedef:
 
   number:
     construct: !coffee/function |
-      (params={}) ->
+      (params={}, source) ->
         if params.range?
           ranges = params.range.split '|'
           ranges = ranges.map (e) ->
@@ -686,13 +690,13 @@ typedef:
             (v) -> (not min? or v >= min) and (not max? or v <= max)
         (value) ->
           value = (Number) value
-          console.assert (not ranges? or ranges.some (test) -> test? value),
-            "[#{@type}] range violation for #{value} on #{params.range}"
+          unless (not ranges? or ranges.some (test) -> test? value)
+            throw source.error "[#{@opts.type}] range violation for '#{value}' on #{params.range}"
           value
 
   string:
     construct: !coffee/function |
-      (params={}) ->
+      (params={}, source) ->
         patterns = []
         if params.pattern instanceof Object
           patterns.push (new RegExp regex) for regex of params.pattern
@@ -710,10 +714,10 @@ typedef:
             (v) -> (not min? or v.length >= min) and (not max? or v.length <= max)
         (value) ->
           value = String value
-          console.assert (not ranges? or ranges.some (test) -> test? value),
-            "[#{@type}] length violation for #{value} on #{params.length}"
-          console.assert (not patterns? or patterns.every (regex) -> regex.test value),
-            "[#{@type}] pattern violation for #{value}"
+          unless (not ranges? or ranges.some (test) -> test? value)
+            throw source.error "[#{@opts.type}] length violation for '#{value}' on #{params.length}"
+          unless (not patterns? or patterns.every (regex) -> regex.test value)
+            throw source.error "[#{@opts.type}] pattern violation for '#{value}'"
           value
 
   union:
@@ -728,4 +732,4 @@ typedef:
           for type in types
             try return type value
             catch then continue
-          throw new Error "[#{@type}] unable to find matching type for '#{value}' within: #{types}"
+          throw new Error "[#{@opts.type}] unable to find matching type for '#{value}' within: #{types}"
