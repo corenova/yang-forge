@@ -43,9 +43,8 @@ run: !coffee/function |
     yfx.put "Forge = require('#{pkgdir}');", 'utf8'
     b = browserify yfx, basedir: pkgdir
     b.add source.require.resolve 'coffee-script/lib/coffee-script/browser'
-    b.add (source.require.resolve 'react'), expose: 'react'
-    b.add (source.require.resolve 'zingchart-react'), expose: 'zingchart-react'
-    b.add (source.require.resolve 'react-highlight'), expose: 'react-highlight'
+    for x in [ 'react', 'zingchart-react', 'react-highlight', 'react-textarea-autosize' ]
+      b.add (source.require.resolve x), expose: x 
     b.ignore x for x in [ 'clim', 'prettyjson' ]
     if @config.uglify is true
       b.transform global: true, sourcemap: false, (source.require 'uglifyify')

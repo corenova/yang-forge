@@ -109,6 +109,12 @@ rpc:
       schema = (input.get 'arguments')[0]
       schema = options.eval if options.eval?
       result = switch
+        when options.load
+          source = app.load "!yang #{schema}", async: false
+          for name, model of source.properties
+            console.info "absorbing a new model '#{name}' into running forge"
+            app.attach name, model
+          source.constructor
         when options.compile then app.compile "!yang #{schema}"
         when options.preprocess then (app.preprocess "!yang #{schema}").schema
         else app.parse "!yang #{schema}"

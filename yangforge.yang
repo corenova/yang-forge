@@ -26,16 +26,34 @@ module yangforge {
   }
 
   feature cli {
-    description "When enabled, generates command-line interface for the module";
+    description "When enabled, generates command-line interface";
   }
 
   feature express {
-    description "When enabled, generates HTTP/HTTPS web server instance for the module";
+    description "When enabled, generates HTTP/HTTPS web server instance";
   }
   
   feature restjson {
-    description "When enabled, generates REST/JSON web services interface for the module";
+    description "When enabled, generates REST/JSON web services interface";
     if-feature express;
+  }
+
+  feature browser {
+    description "When enabled, generates web client browser application interface";
+    if-feature express;
+  }
+
+  feature websocket {
+    description "When enabled, generates socket.io websocket interface";
+    if-feature express;
+  }
+
+  typedef textarea {
+    type string {
+      length "1..max";
+    }
+    description
+      "The textarea type represents a string that can be multi-line";
   }
   
   grouping cli-command {
@@ -253,7 +271,7 @@ module yangforge {
 
   rpc schema {
     if-feature cli;
-    description "process a specific YANG schema file";
+    description "process a specific YANG schema file or string";
     input {
       uses cli-command {
         refine arguments {
@@ -272,14 +290,22 @@ module yangforge {
             type boolean;
             units c;
           }
+          leaf load {
+            description "perform load operation on the input";
+            type boolean;
+            units l;
+          }
           leaf eval {
             description "pass a string from the command line as input";
-            type string;
+            type textarea;
             units e;
           }
           leaf format {
             description "specify output format (yaml, json)";
-            type string;
+            type enumeration {
+              enum yaml;
+              enum json;
+            }
             units f;
             default yaml;
           }

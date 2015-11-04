@@ -91,7 +91,8 @@ class Forge extends Compiler
 
       switch opts.format
         when 'json' then JSON.stringify data, null, opts.space
-        when 'yaml' then prettyjson.render data, opts
+        when 'yaml'
+          (prettyjson.render? data, opts) ? (yaml.dump data)
         else data
 
     info: (options={}) ->
@@ -247,7 +248,7 @@ class Forge extends Compiler
     if source.schema?
       source.parent = @source
       source.pkgdir = opts.pkgdir ? @source?.pkgdir
-      source.schema = super source.schema, source if source.schema?
+      source.schema = super source.schema, source
       delete source.parent
     return source
 
@@ -256,11 +257,13 @@ class Forge extends Compiler
     if source?.schema?
       try
         source.parent = @source
-        model = super source.schema, source if source.schema?
+        model = super source.schema, source
         delete source.parent
         for own name of model
           source.main = name
-          break; # should only be ONE here
+          source.name ?= name
+          source.description ?= model[name].get? 'description'
+          break; # TODO: should only be ONE here?
         metadata = synth.extract.apply source, [
           'name', 'version', 'description', 'license', 'schema', 'config', 'dependencies',
           'extension', 'feature', 'keywords', 'rpc', 'typedef', 'complex-type', 'main', 'pkgdir',

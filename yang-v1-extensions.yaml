@@ -457,7 +457,8 @@ extension:
       (arg, params, children) ->
         synth = @require 'data-synth'
         func = @resolve 'rpc', arg, false
-        return unless func instanceof Function
+        func ?= (input, output, done) -> 
+          done "No control logic found for '#{arg}' rpc operation"
         request  = children.input  ? synth.Meta
         response = children.output ? synth.Meta
         method = (data, resolve, reject) ->
@@ -707,10 +708,10 @@ typedef:
           ranges = params.length.split '|'
           ranges = ranges.map (e) ->
             [ min, max ] = e.split '..'
-            if max is 'max'
-              console.warn "max keyword on range not yet supported"
             min = (Number) min
-            max = (Number) max
+            max = switch 
+              when max is 'max' then null
+              else (Number) max
             (v) -> (not min? or v.length >= min) and (not max? or v.length <= max)
         (value) ->
           value = String value

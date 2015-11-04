@@ -8,6 +8,7 @@
   Forge.invoke 'connect', window.location.origin + '/browser'
   .then (io) ->
     console.log 'connected to /browser'
+    # hack for now... should redirect to someplace useful
     console.log = ->
 </script>
 <script type="text/coffeescript">
@@ -26,6 +27,7 @@
   PieChart  = Reactor.bind ZingChart.pie
 
   Highlight = Reactor.bind Forge.require 'react-highlight'
+  Textarea  = Reactor.bind Forge.require 'react-textarea-autosize'
 
   Alert = Reactor.bind class extends React.Component
     @defaultProps =
@@ -151,6 +153,7 @@
       
     render: ->
       leafs = []
+      console.log "rendering ListView: #{@props.selected}"
       nodes = (for own k, v of @props.value
         active = if @props.selected is k then 'list-group-item-info' else ''
         switch
@@ -330,6 +333,8 @@
                   (label {},
                     (input name: key, type: 'checkbox', defaultChecked: x.value, onChange: (@onChange.bind this) ))
                  )
+              when 'textarea'
+                (Textarea name: key, className: 'form-control', value: x.value, onChange: (@onChange.bind this))
               else
                 (input
                   name: key
@@ -367,7 +372,10 @@
       console.info data
       @props.invoke data
       .then (res) =>
-        @setState error: null, output: JSON.stringify res.get(), null, 2
+        output = res.get()
+        if typeof output is 'object'
+          output = JSON.stringify output, null, 2
+        @setState error: null, output: output
         res
       .catch (err) =>
         console.error err
@@ -444,6 +452,11 @@
 
     render: ->
       operations = @props.module.meta 'rpc'
+      unless operations?
+        return (Callout status: 'warning', title: 'Intent Interfaces not available', [
+          (p {}, 'This module does not have any rpc definitions in the data schema')
+        ])
+      console.log "rendering IntentView: #{@state.operation}"
       (div className: 'intent row', [
         (div className: 'col-sm-3',
           (PanelView
@@ -458,7 +471,7 @@
           (div className: 'col-sm-9',
             (OperationView
               name: @state.operation
-              method: @props.module.methods[@state.operation]
+              method: @props.module.methods?[@state.operation]
               invoke: (@props.module.invoke.bind @props.module, @state.operation)
             )
           )
@@ -493,13 +506,14 @@
       @state =
         modules:  Object.keys @app.properties
         selected: 'yangforge'
-        view: 'store'
+        view: 'source'
         views:
           source: 'View Source'
           intent: 'Intent Interfaces'
           store: 'Configuration Store'
           
       @app.on 'attach', =>
+        console.info 'mainview handling attach'
         @setState modules: Object.keys @app.properties
 
     updateSelection: (id) -> @setState selected: id
@@ -529,7 +543,7 @@
             (a key: name, name: name, onClick: (@selectView.bind this, name), link)
         )
         switch @state.view
-          when 'source'      then (SourceView source: source)
+          when 'source' then (SourceView source: source)
           when 'intent' then (IntentView key: module.id, module: module)
           when 'store' then (StoreView key: module.id, module: module)
       ])
