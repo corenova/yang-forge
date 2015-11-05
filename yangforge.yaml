@@ -1,7 +1,7 @@
 name: yangforge
 description: YANG driven JS application builder
 author: Peter K. Lee <peter@intercloud.net>
-version: !coffee "(require './package.json').version"
+version: 0.10.37
 license: Apache-2.0
 homepage: http://github.com/saintkepha/yangforge
 repository: git://github.com/saintkepha/yangforge.git
