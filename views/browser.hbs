@@ -140,9 +140,18 @@
    }
    header.navbar {
 	 margin-bottom: 0;
+	 -moz-box-shadow:    0 7px 5px -5px #aaa;
+     -webkit-box-shadow: 0 7px 5px -5px #aaa;
+     box-shadow:         0 7px 5px -5px #aaa;
    }
+
+   #source-view .views {
+	 margin-bottom: 10px;
+	 margin-right: 0px;
+   }
+
    #slider .item {
-	 height: 200px;
+	 height: 175px;
 	 background-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI4IiBoZWlnaHQ9IjgiPgo8cmVjdCB3aWR0aD0iOCIgaGVpZ2h0PSI4IiBmaWxsPSIjNDAzYzNmIj48L3JlY3Q+CjxwYXRoIGQ9Ik0wIDBMOCA4Wk04IDBMMCA4WiIgc3Ryb2tlLXdpZHRoPSIxIiBzdHJva2U9IiMxZTI5MmQiPjwvcGF0aD4KPC9zdmc+");
    }
    .operation form {
@@ -164,8 +173,14 @@
 	 display: inline;
 	 padding: 0 2px;
    }
+   .tmc {
+	 margin-left: 15%;
+	 margin-right: 15%;
+	 background: none;
+   }
   </style>
   <link rel="stylesheet" href="/browser/highlight/tomorrow.css">
+  <link rel="stylesheet" href="/browser/styles/react-widgets.css">
   <script src="/browser/yangforge.js"></script>
 </head>
 <body>
@@ -220,7 +235,6 @@
 	</div>
   </footer>
   <!-- Visualization components -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.6/d3.min.js"></script>
   <script src="//ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.js"></script>
   <script src="//maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js"></script>
 </body>

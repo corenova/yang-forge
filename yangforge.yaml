@@ -143,13 +143,13 @@ rpc:
         @invoke promises.map (p) -> (resolve) -> resolve p
       .then (modules) ->
         for model in modules
-          console.log "<infuse> absorbing a new model '#{model.name}' into running forge"
+          #console.log "<infuse> absorbing a new model '#{model.name}' into running forge"
           app.attach model.name, model
         modules
       .then (modules) ->
         output.set 'message', 'request processed successfully'
         output.set 'modules', modules.map (x) -> x.name
-        console.log "<infuse> completed"
+        #console.log "<infuse> completed"
         done()
       .catch (err) -> done err
       

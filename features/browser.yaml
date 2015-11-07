@@ -36,6 +36,14 @@ run: !coffee/function |
 
     ).call express()
 
+    reactive = [
+      'moment',
+      'react', 'react-dom'
+      'react-highlight'
+      'react-widgets'
+      'react-textarea-autosize'
+      'zingchart' 
+    ]
     browserify = source.require 'browserify'
     sbuf = source.require 'stream-buffers'
     yfx = new sbuf.ReadableStreamBuffer initialSize: 1024
@@ -43,9 +51,10 @@ run: !coffee/function |
     yfx.put "Forge = require('#{pkgdir}');", 'utf8'
     b = browserify yfx, basedir: pkgdir
     b.add source.require.resolve 'coffee-script/lib/coffee-script/browser'
-    for x in [ 'react', 'zingchart-react', 'react-highlight', 'react-textarea-autosize' ]
-      b.add (source.require.resolve x), expose: x 
-    b.ignore x for x in [ 'clim', 'prettyjson' ]
+    for x in reactive
+      b.add (source.require.resolve x), expose: x
+    b.add (source.require.resolve 'react-widgets/lib/localizers/moment'), expose: 'moment-localizer'
+    b.ignore x for x in [ 'prettyjson' ]
     if @config.uglify is true
       b.transform global: true, sourcemap: false, (source.require 'uglifyify')
 
@@ -62,6 +71,18 @@ run: !coffee/function |
           return next err if err?
           res.type 'text/css'
           res.send data
+      # TODO: this is UGLY...
+      widgets = (source.require 'path').resolve pkgdir, 'node_modules/react-widgets/dist'
+      browser.get '/styles/react-widgets.css', (req, res, next) ->
+        (source.require 'fs').readFile "#{widgets}/css/react-widgets.css", (err, data) ->
+          return next err if err?
+          res.type 'text/css'
+          res.send data
+      browser.get '/fonts/:font', (req, res, next) ->
+        (source.require 'fs').readFile "#{widgets}/fonts/#{req.params.font}", (err, data) ->
+          return next err if err?
+          res.send data
+        
     yfx.destroySoon()
 
     if runtime.express?

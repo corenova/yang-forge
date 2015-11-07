@@ -8,6 +8,12 @@ The compiler only supports bare minium set of YANG statements and
 should be used only to generate a new compiler such as [yangforge](./yangforge.coffee)
 which implements the version 1.0 of the YANG language specifications.
 
+    console = (require 'clim') '[forge]'
+    unless process.stderr?
+      process.stderr = write: -> 
+    unless process.env.yfc_debug?
+      console.log = ->
+        
     synth = require 'data-synth'
 
     class YangCompiler
@@ -143,7 +149,6 @@ found in the parsed output in order to prepare the context for the
         for key, val of schema
           [ prf..., kw ] = key.split ':'
           unless kw of scope
-            console.log scope
             throw @error "invalid '#{kw}' extension found during preprocess operation", schema
 
           if key is 'extension'

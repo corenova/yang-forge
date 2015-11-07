@@ -1,11 +1,7 @@
-# BELOW is a bit HACKISH
-if /bin\/yfc$/.test require?.main?.filename
-  if process.env.yfc_debug?
-    unless console._prefixes?
-      (require 'clim') '[forge]', console, true
-  else
-    console.log = ->
-
+# console = (require 'clim') '[forge]'
+# unless process.env.yfc_debug?
+#   console.log = ->
+    
 { promise, synth, yaml, coffee, path, fs }  = require './bundle'
 { request, url, indent, traverse, tosource } = require './bundle'
 { events } = require './bundle'
@@ -265,9 +261,9 @@ class Forge extends Compiler
           source.description ?= model[name].get? 'description'
           break; # TODO: should only be ONE here?
         metadata = synth.extract.apply source, [
-          'name', 'version', 'description', 'license', 'schema', 'config', 'dependencies',
-          'extension', 'feature', 'keywords', 'rpc', 'typedef', 'complex-type', 'main', 'pkgdir',
-          'module'
+          'name', 'version', 'description', 'license', 'schema', 'dependencies',
+          'extension', 'feature', 'keywords', 'rpc', 'typedef', 'complex-type',
+          'main', 'pkgdir', 'module', 'config'
         ]
         source = ((synth App, opts.hook) metadata).bind model
       finally

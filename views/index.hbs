@@ -1,18 +1,19 @@
 <div class="container">
-  <div class="page-header">
-	<h1>YF Browser <small>real-time data model visualizer</small></h1>
-  </div>
   <div id="main">Loading...</div>
+  <div id="debug"/>
 </div>
 <script type="text/coffeescript">
   Forge.invoke 'connect', window.location.origin + '/browser'
   .then (io) ->
     console.log 'connected to /browser'
-    # hack for now... should redirect to someplace useful
-    console.log = ->
+  
 </script>
 <script type="text/coffeescript">
+  synth    = Forge.require 'data-synth'
+  traverse = Forge.require 'traverse'
+
   React = Forge.require 'react'
+  ReactDOM = Forge.require 'react-dom'
   { nav, section, div, span, p, a, ul, ol, li, dl, dt, dd } = React.DOM
   { form, label, input, textarea, select, option, button } = React.DOM
   { pre, code, img, em, i, b, strong } = React.DOM
@@ -20,14 +21,63 @@
 
   Reactor = (-> (React.createFactory this) arguments... )
 
-  ZingChart = Forge.require 'zingchart-react'
-  LineChart = Reactor.bind ZingChart.line
-  AreaChart = Reactor.bind ZingChart.area
-  BarChart  = Reactor.bind ZingChart.bar
-  PieChart  = Reactor.bind ZingChart.pie
-
   Highlight = Reactor.bind Forge.require 'react-highlight'
   Textarea  = Reactor.bind Forge.require 'react-textarea-autosize'
+
+  Moment = Forge.require 'moment'
+  (Forge.require 'moment-localizer') Moment
+  DateTimePicker = Reactor.bind (Forge.require 'react-widgets').DateTimePicker
+
+  ZingChart = Reactor.bind class extends React.Component
+    constructor: ->
+      super
+      @chart = Forge.require 'zingchart'
+
+    @defaultProps =
+      width:  600
+      height: 400
+      theme: 'light'
+
+    componentDidMount: ->
+      @chart.render
+        id:     @props.id
+        width:  @props.width
+        height: @props.height
+        data:   @props.data
+        theme:  @props.theme ? 'light'
+
+    shouldComponentUpdate: (nextProps, nextState) ->
+      #Lazy object comparison
+      (JSON.stringify nextProps.data) isnt (JSON.stringify @props.data)
+
+    componentWillUpdate : (nextProps) ->
+      @chart.exec @props.id, 'setdata', data: nextProps.data
+
+    render: -> (div id: @props.id)
+
+  TreeMapChart = Reactor.bind class extends React.Component
+    @defaultProps =
+      theme: 'classic'
+
+    componentDidMount: ->
+      # TODO
+      # $("##{@props.id}").on 'node_click', (e) -> console.log "clicked!"; console.log arguments
+      # $("##{@props.id}").on 'click', (e) -> console.log "dom click!"; console.log arguments
+    
+    render: ->
+      options = {}
+      options['max-depth'] = @props.depth if @props.depth?
+      #'alpha-aspect': true
+
+      (ZingChart
+        id:     @props.id
+        height: @props.height
+        width:  @props.width
+        theme:  @props.theme
+        data:
+          type: 'treemap'
+          options: options
+          series: @props.series)
 
   Alert = Reactor.bind class extends React.Component
     @defaultProps =
@@ -49,9 +99,36 @@
       status: 'default'
     render: ->
       { title, status } = @props
+      items = @props.children
+      items = [ items ] unless Array.isArray items
       (div className: "bs-callout bs-callout-#{status}",
         (h4 {}, title) if title?
-        @props.children...)
+        items...)
+
+  ButtonGroup = Reactor.bind class extends React.Component
+    @defaultProps =
+      size: ''
+      align: ''
+
+    componentDidMount: ->
+      # TODO
+      #$("#{@props.id} input").on 'change', (e) -> console.log "TOGGLE"; console.log arguments
+      
+    render: ->
+      size = if @props.size then "btn-group-#{@props.size}" else ''
+      buttons = @props.children
+      buttons = [ buttons ] unless Array.isArray buttons
+      (div
+        id: @props.id
+        role: 'group'
+        className: "btn-group #{size} #{@props.align}"
+        'data-toggle': 'buttons'
+        buttons.map (x) ->
+          x.on? 'click', (e) ->
+            console.log 'clicked button!'
+            console.log e
+          x
+      )
 
   TreeLeaf = Reactor.bind class extends React.Component
     constructor: ->
@@ -158,10 +235,14 @@
         active = if @props.selected is k then 'list-group-item-info' else ''
         switch
           when v instanceof Object
-            (a className: "list-group-item #{active}", onClick: (@selectItem.bind this, k), [
-              (span className: 'badge', (Object.keys v).length) if @props.showBadge
-              k
-            ])
+            (a
+              href: "##{k}"
+              className: "list-group-item #{active}"
+              onClick: (@selectItem.bind this, k), [
+                (span className: 'badge', (Object.keys v).length) if @props.showBadge
+                k
+              ]
+            )
           else
             leafs.push v
             undefined
@@ -182,11 +263,10 @@
   SliderView = Reactor.bind class extends React.Component
     constructor: ->
       super
-      @state =
-        selected: @props.selected
-        interval: @props.interval
+      @state = selected: @props.selected
 
     @defaultProps =
+      interval: 0
       selectItem: (idx) -> console.warn 'ignoring update to callee: %s', idx
 
     componentDidMount: ->
@@ -205,7 +285,7 @@
       (div
         id: 'slider'
         className: 'carousel slide'
-        'data-interval': @state.interval
+        'data-interval': @props.interval
         'data-ride': 'carousel'
         [
           (ol className: 'carousel-indicators',
@@ -218,64 +298,59 @@
             href: '#slider'
             role: 'button'
             'data-slide': 'prev'
-            (span className: 'glyphicon glyphicon-chevron-left', 'aria-hidden': true)
-          )
+            (span className: 'glyphicon glyphicon-chevron-left', 'aria-hidden': true))
           (a
             className: 'right carousel-control'
             href: '#slider'
             role: 'button'
             'data-slide': 'next'
-            (span className: 'glyphicon glyphicon-chevron-right', 'aria-hidden': true)
-          )
+            (span className: 'glyphicon glyphicon-chevron-right', 'aria-hidden': true))
         ]
       )
       
-  SourceView = Reactor.bind class extends React.Component
-    constructor: (props) ->
-      super
-      @state =
-        selected: props.selected
-        
-    @defaultProps =
-      selected: 'schema'
-
-    updateSelection: (idx) -> @setState selected: idx
-
-    render: ->
-      selected = @state.selected
-      unless @props.source[selected]?
-        selected = 'schema'
-      data = @props.source[selected]
-      console.log "rendering SourceView: #{selected}"
-      (div className: 'source', [
-        div className: 'row', [
-          (div className: 'col-sm-3',
-            (ListView
-              value: @props.source
-              selected: selected
-              showBadge: true
-              selectItem: @updateSelection.bind this)
-          )
-          (div className: 'col-sm-9', [
-            (TreeView value: data, auto: true)
-          ])
-        ]
-      ])
-      
   MenubarView = Reactor.bind class extends React.Component
     render: ->
+      items = @props.children
       (nav className: 'navbar navbar-default',
         (div className: 'container',
           (ul className: 'nav navbar-nav',
-            @props.children.map (x) =>
+            items.map (x) =>
               active = if @props.active is x.props.name then 'active' else ''
               (li className: active, x)
           )
         )
       )
 
-  synth    = Forge.require 'data-synth'
-  traverse = Forge.require 'traverse'
+  # TODO
+  TabView = Reactor.bind class extends React.Component
+    render: ->
+      (div id: @props.id, [
+        (ul role: 'tablist', className: 'nav nav-tabs', [
+          (li role: 'presentation', className: 'active',
+            (a
+              href: '#op-output'
+              role: 'tab'
+              'aria-controls': 'op-output'
+              'data-toggle': 'tab', 'Response'))
+          (li role: 'presentation',
+            (a
+              href: '#op-input'
+              role: 'tab'
+              'aria-controls': 'op-input'
+              'data-toggle': 'tab', 'Request'))
+        ])
+        (div className: 'tab-content', [
+          (div
+            id: 'op-output'
+            role: 'tabpanel', className: 'tab-pane active',
+            (Highlight className: 'json', "{ 'hi': 'there' }"))
+          (div
+            id: 'op-input'
+            role: 'tabpanel', className: 'tab-pane',
+            (Highlight className: 'json', "[]"))
+        ])
+      ])
+
   FormView = Reactor.bind class extends React.Component
     constructor: (props) ->
       super
@@ -299,6 +374,8 @@
         value = switch obj.type
           when 'array'
             if Array.isArray value then value else [ value ]
+          when 'yang:date-and-time'
+            value?.toJSON?()
           else value
         synth.copy data, synth.objectify key, value
       @setState disabled: true
@@ -307,10 +384,11 @@
         @setState disabled: false if res?
         res
 
-    onChange: (e) ->
+    onChange: (name, e) ->
       data = synth.copy {}, @state.data
-      data[e.target.name].value = switch e.target.type
-        when 'checkbox' then e.target.checked is true
+      data[name].value = switch
+        when not e.target? then e
+        when e.target.type is 'checkbox' then e.target.checked is true
         else e.target.value
       @setState data: data, disabled: false
 
@@ -319,28 +397,34 @@
         (div {}, (for own key, x of @state.data
           (div className: 'form-group', [
             (label className: 'col-sm-3 control-label', key)
+            # TODO: make this more dynamic rendering based on 'typedef'
             (div className: 'col-sm-5', switch x.type
               when 'enumeration'
                 (select
-                  name: key
                   className: 'form-control'
                   value: x.value
-                  onChange: (@onChange.bind this)
+                  onChange: (@onChange.bind this, key)
                   (option value: opt, opt) for opt, param of x.enum
                 )
               when 'boolean'
                 (div className: 'checkbox',
                   (label {},
-                    (input name: key, type: 'checkbox', defaultChecked: x.value, onChange: (@onChange.bind this) ))
+                    (input type: 'checkbox', defaultChecked: x.value, onChange: (@onChange.bind this, key) ))
                  )
               when 'textarea'
-                (Textarea name: key, className: 'form-control', value: x.value, onChange: (@onChange.bind this))
+                (Textarea className: 'form-control', value: x.value, onChange: (@onChange.bind this, key))
+              when 'yang:date-and-time'
+                (DateTimePicker
+                  defaultValue: x.value
+                  onChange: (@onChange.bind this, key)
+                  min: new Date()
+                  step: 30)
               else
                 (input
-                  name: key
                   className: 'form-control'
                   value: x.value
-                  onChange: (@onChange.bind this))
+                  readOnly: (x.config is false)
+                  onChange: (@onChange.bind this, key))
             )
             (div className: 'col-sm-4',
               (div className: 'form-control-static',
@@ -366,23 +450,26 @@
   OperationView = Reactor.bind class extends React.Component
     constructor: ->
       super
-      @state = output: null, error: null
+      @state = error: null, result: null
       
     invoke: (data) ->
-      console.info data
       @props.invoke data
       .then (res) =>
         output = res.get()
         if typeof output is 'object'
           output = JSON.stringify output, null, 2
-        @setState error: null, output: output
+        @setState
+          error: null
+          result:
+            input:  JSON.stringify data, null, 2
+            output: output
         res
       .catch (err) =>
         console.error err
-        @setState error: err, output: null
+        @setState error: err, result: null
 
     componentWillReceiveProps: (nextProps) ->
-      @setState output: null, error: null
+      @setState error: null, result: null
 
     render: ->
       params = @props.method?.params
@@ -407,6 +494,7 @@
             a[key] =
               value: b
               type: "#{type}"
+              config: prop.opts.config
             switch "#{type}"
               when 'enumeration'
                 a[key].enum = (prop.meta 'type').enum
@@ -431,7 +519,34 @@
           title: @state.error.name ? 'Error'
           message: @state.error.message ? @state.error
         ) if @state.error?
-        (Callout title: 'Result', [ (Highlight className: 'json scrollable', "#{@state.output}") ]) if @state.output
+        (Callout title: '',
+          (div {}, [
+            (ul role: 'tablist', className: 'nav nav-tabs', [
+              (li role: 'presentation', className: 'active',
+                (a
+                  href: '#op-response'
+                  role: 'tab'
+                  'aria-controls': 'op-response'
+                  'data-toggle': 'tab', 'Response'))
+              (li role: 'presentation',
+                (a
+                  href: '#op-request'
+                  role: 'tab'
+                  'aria-controls': 'op-request'
+                  'data-toggle': 'tab', 'Request'))
+            ])
+            (div className: 'tab-content', [
+              (div
+                id: 'op-response'
+                role: 'tabpanel', className: 'tab-pane active',
+                (Highlight className: 'json', "#{@state.result.output}"))
+              (div
+                id: 'op-request'
+                role: 'tabpanel', className: 'tab-pane',
+                (Highlight className: 'json', "#{@state.result.input}"))
+            ])
+          ])
+        ) if @state.result
       )
 
   IntentView = Reactor.bind class extends React.Component
@@ -459,13 +574,7 @@
       console.log "rendering IntentView: #{@state.operation}"
       (div className: 'intent row', [
         (div className: 'col-sm-3',
-          (PanelView
-            panelType: 'default'
-            heading: 'Intent-based Operations'
-            [
-              (ListView value: operations, selected: @state.operation, selectItem: @showOperation.bind this)
-            ]
-          )
+          (ListView value: operations, selected: @state.operation, selectItem: @showOperation.bind this)
         )
         if @state.operation of operations
           (div className: 'col-sm-9',
@@ -484,20 +593,154 @@
         return (Callout status: 'warning', title: 'Configuration Store not available', [
           (p {}, 'This module does not have any configuration tree in the data schema')
         ])
-        
-      modelSeries = (for name, model of module.meta 'models'
+
+      models = for own name, model of module.meta 'models'
         continue unless model.get?
-        records = (model.get? 'records') ? []
-        text: name, values: [ Object.keys(records).length ]
-      ).filter (x) -> x?
-      
+        records = (model.get? 'records') ? {}
+        key: name, values: [ Object.keys(records).length ]
+      models = models.filter (x) -> x?
+      data =
+        type: 'bar'
+        title:
+          text: 'Model Records'
+          'font-color': '#777'
+          'text-align': 'center'
+        'scale-y':
+          'minor-ticks': 1
+        legend:
+          layout: 'float'
+          align: 'center'
+          'vertical-align': 'bottom'
+        series: models.map (x) -> text: x.key, values: x.values
+
+      # hack for promise
+      if (module.meta 'name') is 'opnfv-promise'
+        capacity = module.get 'promise.capacity'
+        labels = null
+        series = for own name, elements of capacity when name isnt 'total'
+          labels ?= Object.keys elements
+          text: name, values: (traverse elements).reduce ((a, b) ->
+            return a unless @isLeaf
+            total = capacity.total[@key]
+            a.push b * 100 / total
+            return a
+          ), []
+        cdata =
+          type: 'bar'
+          'fill-angle': 45
+          'stacked': true
+          'stack-type': '100%'
+          title:
+            text: 'Current Capacity Utilization'
+            'font-color': '#777'
+            'text-align': 'center'
+          legend:
+            layout: 'float'
+            align: 'right'
+            'vertical-align': 'top'
+            'alpha': 0.25
+            shadow: 0
+            'border-width': 0
+          plotarea: margin: '75px'
+          plot:
+            alpha: 0.8
+            animation:
+              delay: 0
+              effect: 3
+              speed: '500'
+              method: '0'
+              sequence: '1'
+          'scale-x':
+            values: labels
+            'items-overlap': true
+            item:
+              'font-angle': -48
+              'offset-x': '5px'
+          'scale-y':
+            label: text: 'Resource Utilization'
+          series: series
+          
       (div id: 'store-view', className: 'row',
+        if cdata?
+          (div className: 'col-sm-12',
+            (ZingChart id: 'promise-utilization', height: '500', width: '100%', data: cdata))
         (div className: 'col-sm-8',
           (Highlight className: 'json', JSON.stringify module.get(), null, 2))
-        if modelSeries.length
+        if data.series.length
           (div className: 'col-sm-4',
-            (BarChart id: 'model-records', height: '300', width: '100%', series: modelSeries, legend: 'false', theme: 'light', title: 'Model Records'))
+            (ZingChart id: 'model-records', height: '500', width: '100%', data: data))
       )
+      
+  SourceView = Reactor.bind class extends React.Component
+    constructor: (props) ->
+      super
+      @state =
+        selected: props.selected
+        view: 'treemap'
+        
+    @defaultProps =
+      selected: 'schema'
+
+    updateSelection: (idx)   -> @setState selected: idx
+    changeDisplay: (view) -> @setState view: view
+
+    render: ->
+      selected = @state.selected
+      unless @props.source[selected]?
+        selected = 'schema'
+      data = @props.source[selected]
+      dataMap = (traverse data).map (x) ->
+        if @isLeaf
+          return (@update text: @key, value: "#{x}".length, true) 
+        if @level > 5
+          @update text: @key, value: Object.keys(x).length, true
+        @after (y) ->
+          children = switch
+            when typeof y is 'object' then (v for own k, v of y)
+            else [ y ]
+          @update text: @key, children: children, true
+          
+      console.log "rendering SourceView: #{selected}"
+      (div id: 'source-view', [
+        div className: 'row', [
+          (div className: 'col-sm-3',
+            (ListView
+              value: @props.source
+              selected: selected
+              showBadge: true
+              selectItem: @updateSelection.bind this)
+          )
+          (div className: 'col-sm-9', [
+            (div className: 'views row',
+              (ButtonGroup
+                id: "view-buttons"
+                align: 'pull-right', size: 'sm'
+                onSelect: (@changeDisplay.bind this), [
+                  (label
+                    className: 'btn btn-default active'
+                    onClick: (@changeDisplay.bind this, 'treemap')
+                    [
+                      (input type: 'radio', name: 'view', defaultChecked: true)
+                      'TreeMap'
+                    ])
+                  (label
+                    className: 'btn btn-default'
+                    onClick: (@changeDisplay.bind this, 'treelist')
+                    [
+                      (input type: 'radio', name: 'view')
+                      'TreeList'
+                    ])
+                ])
+              )
+            if @state.view is 'treemap'
+              (TreeMapChart
+                id: "sv-treemap", height: 600, width: '100%'
+                series: dataMap.children)
+            else
+              (TreeView value: data, auto: true)
+          ])
+        ]
+      ])
       
   MainView = Reactor.bind class extends React.Component
     constructor: ->
@@ -513,7 +756,6 @@
           store: 'Configuration Store'
           
       @app.on 'attach', =>
-        console.info 'mainview handling attach'
         @setState modules: Object.keys @app.properties
 
     updateSelection: (id) -> @setState selected: id
@@ -535,19 +777,17 @@
           (@state.modules.map (x) =>
             target = @app.access x
             meta = target.parent.constructor.extract()
-            (p id: x, key: x, name: meta.name, description: meta.description, "a"))
-        )
+            (div id: x, key: x, name: meta.name, description: meta.description)))
         (MenubarView
           active: @state.view
           for name, link of @state.views
-            (a key: name, name: name, onClick: (@selectView.bind this, name), link)
-        )
+            (a href: '#', key: name, name: name, onClick: (@selectView.bind this, name), link))
         switch @state.view
           when 'source' then (SourceView source: source)
           when 'intent' then (IntentView key: module.id, module: module)
           when 'store' then (StoreView key: module.id, module: module)
       ])
 
-  React.render (MainView app: Forge), document.getElementById 'main'
+  ReactDOM.render (MainView app: Forge), document.getElementById 'main'
       
 </script>
