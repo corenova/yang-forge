@@ -14,7 +14,7 @@ It also utilizes YAML with custom tags to construct a portable module
 with embedded code.
 
 It is written primarily using [CoffeeScript](http://coffeescript.org)
-and runs on [Node.js](http://nodejs.org) and the web browser.
+and runs on [Node.js](http://nodejs.org) and the **web browser** (yes, it's isomorphic).
 
 >
 Be sure to try out the new [browser](features/browser.yaml) feature interface which generates **client-side web application** for real-time visualization and interactions.
