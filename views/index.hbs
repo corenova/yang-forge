@@ -422,7 +422,12 @@
                   min: new Date()
                   step: 30)
               else
+                type = switch
+                  when /password/.test x.type then 'password'
+                  when /[u]*int[0-9]+/.test x.type then 'number'
+                  else 'text'
                 (input
+                  type: type
                   className: 'form-control'
                   value: x.value
                   readOnly: (x.config is false)
