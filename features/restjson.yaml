@@ -218,7 +218,7 @@ run: !coffee/function |
       # default 'catch-all' error handler
       @use (err, req, res, next) ->
         console.error err
-        res.status(500).send error: switch
+        res.status(err.status ? 500).send error: switch
           when err instanceof Error then err.toString()
           else JSON.stringify err
 

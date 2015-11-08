@@ -28,6 +28,8 @@
   (Forge.require 'moment-localizer') Moment
   DateTimePicker = Reactor.bind (Forge.require 'react-widgets').DateTimePicker
 
+  Request = Forge.require 'superagent'
+
   ZingChart = Reactor.bind class extends React.Component
     constructor: ->
       super
@@ -455,7 +457,7 @@
     invoke: (data) ->
       @props.invoke data
       .then (res) =>
-        output = res.get()
+        output = res.get?() ? res
         if typeof output is 'object'
           output = JSON.stringify output, null, 2
         @setState
@@ -554,7 +556,7 @@
       super
       rpcs = (props.module.meta 'rpc') ? {}
       operations = (Object.keys rpcs)
-      @state = operation: operations[0], key: props.key
+      @state = operation: operations[0], key: props.key, interface: null
 
     componentWillReceiveProps: (nextProps) ->
       if @state.key isnt nextProps.key
@@ -565,6 +567,22 @@
     showOperation: (name) ->
       @setState operation: name
 
+    changeInterface: (iface) -> @setState interface: iface
+
+    handleIntent: (module, intent, data) ->
+      method = switch @state.interface
+        when 'restjson'
+          (data, resolve, reject) ->
+            Request
+              .post "/restjson/#{module.name}/#{intent}"
+              .send data
+              .set 'Accept', 'application/json'
+              .end (err, res) ->
+                if err? or !res.ok then return reject err
+                resolve res.body
+        else intent
+      module.invoke method, data
+      
     render: ->
       operations = @props.module.meta 'rpc'
       unless operations?
@@ -577,13 +595,33 @@
           (ListView value: operations, selected: @state.operation, selectItem: @showOperation.bind this)
         )
         if @state.operation of operations
-          (div className: 'col-sm-9',
+          (div className: 'col-sm-9', [
+            (div className: 'view-options row',
+              (ButtonGroup
+                align: 'pull-right', size: 'sm'
+                [
+                  (label
+                    className: 'btn btn-default active'
+                    onClick: (@changeInterface.bind this)
+                    [
+                      (input type: 'radio', name: 'interface', defaultChecked: true)
+                      'browser'
+                    ])
+                  (label
+                    className: 'btn btn-default'
+                    onClick: (@changeInterface.bind this, 'restjson')
+                    [
+                      (input type: 'radio', name: 'interface')
+                      'restjson'
+                    ])
+                ])
+              )
             (OperationView
               name: @state.operation
               method: @props.module.methods?[@state.operation]
-              invoke: (@props.module.invoke.bind @props.module, @state.operation)
+              invoke: (@handleIntent.bind this, @props.module, @state.operation)
             )
-          )
+          ])
       ])
 
   StoreView = Reactor.bind class extends React.Component
@@ -711,7 +749,7 @@
               selectItem: @updateSelection.bind this)
           )
           (div className: 'col-sm-9', [
-            (div className: 'views row',
+            (div className: 'view-options row',
               (ButtonGroup
                 id: "view-buttons"
                 align: 'pull-right', size: 'sm'

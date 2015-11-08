@@ -339,7 +339,6 @@ class Forge extends Compiler
         request
         .get source
         .end (err, res) =>
-          console.info res
           if err? or !res.ok then reject err
           else resolve @load "#{tag} |\n#{indent res.text, ' ', 2}"
 
