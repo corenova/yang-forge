@@ -16,6 +16,11 @@ with embedded code.
 It is written primarily using [CoffeeScript](http://coffeescript.org)
 and runs on [Node.js](http://nodejs.org) and the web browser.
 
+>
+Be sure to try out the new [browser](features/browser.yaml) feature interface which generates **client-side web application** for real-time visualization and interactions.
+After `yfc run` fire up your browser and go to `http://localhost:5000/browser`.
+> 
+
 This software is **sponsored** by
 [ClearPath Networks](http://www.clearpathnet.com) on behalf of the
 [OPNFV](http://opnfv.org) (Open Platform for Network Functions
