@@ -39,7 +39,7 @@ run: !coffee/function |
         args = rpc.input['leaf-list'].arguments
         if args?.config is true
           argstring = args.units ? args.type
-          argstring += '...' unless args['max-elements'] is '1'
+          argstring += '...' unless args['max-elements'] is 1
           command +=
             if args.mandatory then " <#{argstring}>"
             else " [#{argstring}]"
