@@ -64,13 +64,13 @@ You must have `node >= 0.10.28` as a minimum requirement to run
 
   Commands:
 
-    build [options] [file]      package the application for deployment (planned)
+    build [options] [file]      package the application for deployment
     config                      manage yangforge service configuration (planned)
     deploy                      deploy application into yangforge endpoint (planned)
     info [options] [name]       shows info about a specific module
     publish [options]           publish package to upstream registry (planned)
     run [options] [modules...]  runs one or more modules and/or schemas
-    schema [options] [file]     process a specific YANG schema file
+    schema [options] [file]     process a specific YANG schema file or string
     sign                        sign package to ensure authenticity (planned)
 
   YANG driven JS application builder
