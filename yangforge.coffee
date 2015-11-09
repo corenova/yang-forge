@@ -7,7 +7,7 @@ unless process.env.yfc_debug?
 { promise, synth, yaml, coffee, path, fs }  = require './bundle'
 { request, url, indent, traverse, tosource } = require './bundle'
 { events } = require './bundle'
-      
+
 prettyjson = require 'prettyjson'
 Compiler   = require './yang-compiler'
 
