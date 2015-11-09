@@ -45,7 +45,7 @@
     "coffee-script": ">=1.7",
     "colors": "^1.1.2",
     "commander": "^2.8.1",
-    "data-synth": "^0.7.12",
+    "data-synth": "^0.7.13",
     "errorhandler": "^1.4.1",
     "express": "^4.13.1",
     "express-handlebars": "^2.0.1",

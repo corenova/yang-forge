@@ -1,6 +1,8 @@
-# console = (require 'clim') '[forge]'
-# unless process.env.yfc_debug?
-#   console.log = ->
+console = (require 'clim') '[forge]'
+unless process.stderr?
+  process.stderr = write: -> 
+unless process.env.yfc_debug?
+  console.log = ->
     
 { promise, synth, yaml, coffee, path, fs }  = require './bundle'
 { request, url, indent, traverse, tosource } = require './bundle'

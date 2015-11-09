@@ -78,10 +78,10 @@ run: !coffee/function |
               when 'boolean' then (option.default is 'true')
               else option.default
             if defaultValue? and !!defaultValue
-              console.log "setting option #{key} with default: #{defaultValue}"
+              console.debug? "setting option #{key} with default: #{defaultValue}"
               cmd.option optstring, optdesc, defaultValue
             else
-              console.log "setting option #{key}: #{optdesc}"
+              console.debug? "setting option #{key}: #{optdesc}"
               cmd.option optstring, optdesc
 
       do (cmd, action, status) ->
@@ -97,7 +97,7 @@ run: !coffee/function |
             [ args..., opts ] = arguments
             model.invoke action, arguments: ([].concat args...), options: opts
               .then (res) ->
-                console.log "action '#{action}' completed"
+                console.debug? "action '#{action}' completed"
                 console.info res.get()
               .catch (err) ->
                 console.error err if err?.context
