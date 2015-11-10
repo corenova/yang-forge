@@ -16,18 +16,18 @@
 
 name: browser
 description: web client interface for interacting with YF instance
-config: 
+config:
   uglify: false
 
 run: !coffee/function |
-  (model, runtime) -> 
-    source = model.parent
-    pkgdir = source.meta 'pkgdir'
+  (model, runtime) ->
+    app = model.parent
+    pkgdir = app.meta 'pkgdir'
 
-    express = source.require 'express'
-    exphbs  = source.require 'express-handlebars'
+    express = app.require 'express'
+    exphbs  = app.require 'express-handlebars'
     browser = (->
-      @engine 'hbs', exphbs 
+      @engine 'hbs', exphbs
         defaultLayout: 'main'
         extname: 'hbs'
         layoutsDir: "#{pkgdir}/views"
@@ -42,47 +42,47 @@ run: !coffee/function |
       'react-highlight'
       'react-widgets'
       'react-textarea-autosize'
-      'zingchart' 
+      'zingchart'
     ]
-    browserify = source.require 'browserify'
-    sbuf = source.require 'stream-buffers'
+    browserify = app.require 'browserify'
+    sbuf = app.require 'stream-buffers'
     yfx = new sbuf.ReadableStreamBuffer initialSize: 1024
-    yfx.put "source = atob('#{source.constructor.toSource format: 'yaml', encoding: 'base64'}');", 'utf8'
+    yfx.put "source = atob('#{app.constructor.toSource format: 'yaml', encoding: 'base64'}');", 'utf8'
     yfx.put "Forge = require('#{pkgdir}');", 'utf8'
     b = browserify yfx, basedir: pkgdir
-    b.add source.require.resolve 'coffee-script/lib/coffee-script/browser'
+    b.add app.require.resolve 'coffee-script/lib/coffee-script/browser'
     for x in reactive
-      b.add (source.require.resolve x), expose: x
-    b.add (source.require.resolve 'react-widgets/lib/localizers/moment'), expose: 'moment-localizer'
+      b.add (app.require.resolve x), expose: x
+    b.add (app.require.resolve 'react-widgets/lib/localizers/moment'), expose: 'moment-localizer'
     b.ignore x for x in [ 'prettyjson' ]
     if @config.uglify is true
-      b.transform global: true, sourcemap: false, (source.require 'uglifyify')
+      b.transform global: true, sourcemap: false, (app.require 'uglifyify')
 
     console.info "browser: yangforge browserification started (will take a few seconds)".grey
     b.bundle (err, js) ->
       console.info "browser: yangforge browserification complete".grey
-      browser.get '/', (req, res) -> res.render 'index', layout: 'browser', version: source.meta 'version'
+      browser.get '/', (req, res) -> res.render 'index', layout: 'browser', version: app.meta 'version'
       browser.get '/yangforge.js', (req, res) ->
         res.type 'application/javascript'
         res.send js
-      highlight = (source.require 'path').resolve pkgdir, 'node_modules/highlight.js/styles'
+      highlight = (app.require 'path').resolve pkgdir, 'node_modules/highlight.js/styles'
       browser.get '/highlight/:style.css', (req, res, next) ->
-        (source.require 'fs').readFile "#{highlight}/#{req.params.style}.css", (err, data) ->
+        (app.require 'fs').readFile "#{highlight}/#{req.params.style}.css", (err, data) ->
           return next err if err?
           res.type 'text/css'
           res.send data
       # TODO: this is UGLY...
-      widgets = (source.require 'path').resolve pkgdir, 'node_modules/react-widgets/dist'
+      widgets = (app.require 'path').resolve pkgdir, 'node_modules/react-widgets/dist'
       browser.get '/styles/react-widgets.css', (req, res, next) ->
-        (source.require 'fs').readFile "#{widgets}/css/react-widgets.css", (err, data) ->
+        (app.require 'fs').readFile "#{widgets}/css/react-widgets.css", (err, data) ->
           return next err if err?
           res.type 'text/css'
           res.send data
       browser.get '/fonts/:font', (req, res, next) ->
-        (source.require 'fs').readFile "#{widgets}/fonts/#{req.params.font}", (err, data) ->
+        (app.require 'fs').readFile "#{widgets}/fonts/#{req.params.font}", (err, data) ->
           return next err if err?
           res.send data
-        
+
     yfx.destroySoon()
 
     if runtime.express?
@@ -101,11 +101,11 @@ run: !coffee/function |
             rooms
             .map (room) ->
               # ok this is kinda long and ugly... haha
-              (source.access room)?.parent.constructor.toSource? format: 'yaml'
+              (app.access room)?.parent.constructor.toSource? format: 'yaml'
             .filter (x) -> x?
             .map (x) -> source: x
           )
-          socket.emit 'enter', keys
+          socket.emit 'infuse', keys
 
         socket.on 'join', (rooms) ->
           console.log '[socket:%s] Joining %s', socket.id, rooms
@@ -119,12 +119,12 @@ run: !coffee/function |
             socket.leave room for room in rooms
           else
             socket.leave rooms
+        socket.emit 'rooms', Object.keys(app.properties)
 
-        console.log Object.keys(source.properties)
-        socket.emit 'rooms', Object.keys(source.properties)
-        
-      # watch source and send events
-      # source.on 'change', (room, type, message) ->
-      #   io.to(room).emit type, message
-      
+      # watch app and send events
+      app.on 'attach', (name, room) ->
+        source = room?.parent?.constructor.toSource? format: 'yaml'
+        socket.emit 'infuse', source: source if source?
+        #io.to(room).emit type, message
+
     return browser

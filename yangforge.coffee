@@ -1,13 +1,13 @@
 console = (require 'clim') '[forge]'
 unless process.stderr?
-  process.stderr = write: -> 
+  process.stderr = write: ->
 unless process.env.yfc_debug?
   console.log = ->
-    
+
 { promise, synth, yaml, coffee, path, fs }  = require './bundle'
 { request, url, indent, traverse, tosource } = require './bundle'
 { events } = require './bundle'
-      
+
 prettyjson = require 'prettyjson'
 Compiler   = require './yang-compiler'
 
@@ -37,7 +37,7 @@ class Forge extends Compiler
                 y.overrides ?= {}
                 y.overrides["#{k}.#{a}"] = b
             @update y.overrides, true
-          
+
       source = switch opts.format
         when 'yaml' then yaml.dump source
         when 'json'
@@ -58,8 +58,8 @@ class Forge extends Compiler
         # this runs on the client-side
         socket = (require 'socket.io-client') namespace
         socket.on 'connect', =>
-          modules = Object.keys(@properties)
           console.log '[socket:%s] connected', socket.id
+          modules = Object.keys(@properties)
           socket.once 'rooms', (rooms) ->
             rooms = rooms.filter (x) -> typeof x is 'string'
             console.log 'got rooms: %s', rooms
@@ -71,13 +71,13 @@ class Forge extends Compiler
               # 2. request access for new rooms
               socket.emit 'knock', newRooms
           resolve socket
-        socket.on 'enter', (keys) =>
+        socket.on 'infuse', (keys) =>
           forge = @access 'yangforge'
           # infuse the modules using keys
           forge?.invoke 'infuse', targets: keys
           .then (res) -> socket.emit 'join', res.get 'modules'
           .catch (err) -> console.error err
-            
+
       super
 
     attach: (key, val) ->
@@ -97,7 +97,7 @@ class Forge extends Compiler
       summarize = (what) ->
         (synth.objectify k, (v?.description ? null) for k, v of what)
         .reduce ((a,b) -> synth.copy a, b), {}
-      
+
       info = @constructor.extract 'name', 'description', 'license', 'keywords'
       for name, schema of @constructor.get 'schema.module'
         info.schema = do (schema, options) ->
@@ -145,7 +145,7 @@ class Forge extends Compiler
 
   # NOT the most efficient way to do it...
   genSchema: (options={}) ->
-    
+
     fetch = (input, opts) ->
       try
         try
@@ -156,7 +156,7 @@ class Forge extends Compiler
           pkgdir = path.dirname (path.resolve input)
       catch then data = input
       return [ data, pkgdir ]
-    
+
     yaml.Schema.create [
       new yaml.Type '!coffee',
         kind: 'scalar'
@@ -185,7 +185,7 @@ class Forge extends Compiler
           @parse data, format: 'yaml', pkgdir: pkgdir
       new yaml.Type '!yang',
         kind: 'scalar'
-        resolve:   (data) -> typeof data is 'string' 
+        resolve:   (data) -> typeof data is 'string'
         construct: (data) =>
           console.log "processing !yang using: #{data}"
           [ data, pkgdir ] = fetch data, options
@@ -218,7 +218,7 @@ class Forge extends Compiler
 
   parse: (source, opts={}) ->
     return source unless typeof source is 'string'
-    
+
     input = source
     source = switch opts.format
       when 'yang' then super source
@@ -236,7 +236,7 @@ class Forge extends Compiler
   preprocess: (source, opts={}) ->
     source = @parse source, opts if typeof source is 'string'
     return source unless source instanceof Object
-    
+
     # determine whether source is YAML or YANG output... a bit hackish
     # but YANG parse output always has ONE primary root element
     # need a better way to know the actual VALUE of the source
@@ -294,10 +294,10 @@ class Forge extends Compiler
 
     return resolve source if source instanceof App
     return reject 'must pass in string(s) for import' unless typeof source is 'string'
-    
+
     opts.async = true
     return resolve @load source if /\n|\r/.test source
-    
+
     url = url.parse source
     source = switch url.protocol
       when 'forge:'
