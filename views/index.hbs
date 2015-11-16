@@ -34,6 +34,7 @@
     constructor: ->
       super
       @chart = Forge.require 'zingchart'
+      @chart.MODULESDIR = "/browser/zingchart/modules/"
 
     @defaultProps =
       width:  600

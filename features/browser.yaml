@@ -83,6 +83,12 @@ run: !coffee/function |
           return next err if err?
           res.send data
 
+      zingchart = (app.require 'path').resolve pkgdir, 'node_modules/zingchart/client/modules'
+      browser.get '/zingchart/modules/:script', (req, res, next) ->
+        (app.require 'fs').readFile "#{zingchart}/#{req.params.script}", (err, data) ->
+          return next err if err?
+          res.send data
+
     yfx.destroySoon()
 
     if runtime.express?
