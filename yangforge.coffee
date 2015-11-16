@@ -71,10 +71,10 @@ class Forge extends Compiler
               # 2. request access for new rooms
               socket.emit 'knock', newRooms
           resolve socket
-        socket.on 'infuse', (keys) =>
+        socket.on 'infuse', (data) =>
           forge = @access 'yangforge'
           # infuse the modules using keys
-          forge?.invoke 'infuse', targets: keys
+          forge?.invoke 'infuse', data
           .then (res) -> socket.emit 'join', res.get 'modules'
           .catch (err) -> console.error err
 

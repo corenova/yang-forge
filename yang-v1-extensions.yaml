@@ -1,6 +1,6 @@
 # YANG Version 1.0 Extensions
 #
-# This submodule implements the [RFC 6020](http://www.rfc-editor.org/rfc/rfc6020.txt) 
+# This submodule implements the [RFC 6020](http://www.rfc-editor.org/rfc/rfc6020.txt)
 # compliant language extensions.  It is used by `yangforge` to produce a new compiler
 # that can then be used to compile any other v1 compatible YANG schema
 # definitions into JS code.
@@ -21,7 +21,7 @@ keywords:
   - yang
   - rfc6020
 
-# 
+#
 extension:
   augment: !yang/extension
     anyxml:      0..n
@@ -105,7 +105,7 @@ extension:
     uses: 0..n
     when: 0..1
     construct: !coffee/function |
-      (arg, params, children) -> 
+      (arg, params, children) ->
         synth = @require 'data-synth'
         (synth.Object params).bind children
 
@@ -187,7 +187,7 @@ extension:
 
   if-feature: !yang/extension
     preprocess: !coffee/function |
-      (arg, params, ctx) -> 
+      (arg, params, ctx) ->
         unless (@resolve 'feature', arg)?
           ctx.status = 'unavailable'
 
@@ -243,7 +243,7 @@ extension:
     typedef: 0..n
     uses: 0..n
     construct: !coffee/function |
-      (arg, params, children) -> 
+      (arg, params, children) ->
         synth = @require 'data-synth'
         (synth.Object params).bind children
 
@@ -284,7 +284,7 @@ extension:
 
   list: !yang/extension
     anyxml: 0..n
-    choice: 0..n 
+    choice: 0..n
     config: 0..1
     container: 0..n
     description: 0..1
@@ -305,7 +305,7 @@ extension:
     uses: 0..n
     when: 0..1
     construct: !coffee/function |
-      (arg, params, children) -> 
+      (arg, params, children) ->
         synth = @require 'data-synth'
         item = (synth.Object null).bind children
         (synth.List params).set type: item
@@ -358,7 +358,7 @@ extension:
           synth.copy match, changes
         delete @source[params.prefix]
     construct: !coffee/function |
-      (arg, params, children) -> 
+      (arg, params, children) ->
         synth = @require 'data-synth'
         modules = {}
         for k, v of params.import
@@ -414,7 +414,7 @@ extension:
 
   pattern: !yang/extension
     construct: !coffee/function |
-      (arg, params, children, ctx) -> 
+      (arg, params, children, ctx) ->
         ctx.patterns ?= []
         ctx.patterns.push new RegExp arg
 
@@ -457,7 +457,7 @@ extension:
       (arg, params, children) ->
         synth = @require 'data-synth'
         func = @resolve 'rpc', arg, false
-        func ?= (input, output, done) -> 
+        func ?= (input, output, done) ->
           done "No control logic found for '#{arg}' rpc operation"
         request  = children.input  ? synth.Meta
         response = children.output ? synth.Meta
@@ -473,7 +473,7 @@ extension:
         method.input  = request
         method.output = response
         return method
-        
+
   submodule: !yang/extension
     argument: name
     anyxml: 0..n
@@ -594,7 +594,7 @@ extension:
 typedef:
   binary:
     construct: !coffee/function |
-      (params, source) -> (value) -> 
+      (params, source) -> (value) ->
         unless value instanceof Function
           throw source.error "[#{@opts.type}] not a binary instance"
         value
@@ -637,7 +637,7 @@ typedef:
       (params={}, source) ->
         unless typeof params.base is 'string'
           throw source.error "identityref must reference 'base' identity"
-          
+
         (value) ->
           match = source.resolve 'identity', value
           unless (match? and params.base is match.base)
@@ -650,7 +650,7 @@ typedef:
       (params={}, source) ->
         unless typeof params.path is 'string'
           throw source.error "leafref must contain 'path' statement"
-          
+
         (value) ->
           self = this
           value: value
@@ -709,7 +709,7 @@ typedef:
           ranges = ranges.map (e) ->
             [ min, max ] = e.split '..'
             min = (Number) min
-            max = switch 
+            max = switch
               when max is 'max' then null
               else (Number) max
             (v) -> (not min? or v.length >= min) and (not max? or v.length <= max)

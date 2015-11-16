@@ -105,7 +105,7 @@ run: !coffee/function |
             .filter (x) -> x?
             .map (x) -> source: x
           )
-          socket.emit 'infuse', keys
+          socket.emit 'infuse', targets: keys
 
         socket.on 'join', (rooms) ->
           console.log '[socket:%s] Joining %s', socket.id, rooms
@@ -124,7 +124,8 @@ run: !coffee/function |
       # watch app and send events
       app.on 'attach', (name, room) ->
         source = room?.parent?.constructor.toSource? format: 'yaml'
-        socket.emit 'infuse', source: source if source?
+        console.log "attached #{name}"
+        io.emit 'infuse', sources: source if source?
         #io.to(room).emit type, message
 
     return browser
