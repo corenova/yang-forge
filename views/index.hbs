@@ -3,7 +3,7 @@
   <div id="debug"/>
 </div>
 <script type="text/coffeescript">
-  Forge.invoke 'connect', window.location.origin + '/browser'
+  Forge.connect window.location.origin + '/browser'
   .then (io) ->
     console.log 'connected to /browser'
 

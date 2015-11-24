@@ -301,10 +301,12 @@ module yangforge {
             units e;
           }
           leaf format {
-            description "specify output format (yaml, json)";
+            description "specify output format";
             type enumeration {
               enum yaml;
               enum json;
+              enum tree;
+              enum xml;
             }
             units f;
             default yaml;

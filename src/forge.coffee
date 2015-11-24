@@ -4,15 +4,15 @@ unless process.stderr?
 unless process.env.yfc_debug?
   console.log = ->
 
-{ promise, synth, yaml, coffee, path, fs }  = require './bundle'
-{ request, url, indent, traverse, tosource } = require './bundle'
-{ events } = require './bundle'
+{
+  promise, synth, yaml, coffee, path, fs, events
+  request, url, indent, traverse, tosource, treeify, js2xml
+} = require './components'
 
 prettyjson = require 'prettyjson'
-Compiler   = require './yang-compiler'
 
-class Forge extends Compiler
-  require: (require './bundle').require
+class Forge extends (require './compiler')
+  require: (require './components').require
 
   class App extends synth.Object
     @set synth: 'source'
@@ -46,17 +46,20 @@ class Forge extends Compiler
             if x instanceof Function
               @update synth.objectify '!js/function', tosource x
           JSON.stringify source, null, opts.space
+        when 'tree' then treeify.asTree source, true
         else
           source
       switch opts.encoding
         when 'base64' then (new Buffer source).toString 'base64'
         else source
 
-    require: (require './bundle').require
-    constructor: ->
-      @attach 'connect', (namespace, resolve, reject) ->
-        # this runs on the client-side
-        socket = (require 'socket.io-client') namespace
+    require: (require './components').require
+
+    attach: (key, val) -> super; @emit 'attach', arguments...
+
+    connect: (to, opts) ->
+      @invoke (resolve, reject) ->
+        socket = (require 'socket.io-client') to
         socket.on 'connect', =>
           console.log '[socket:%s] connected', socket.id
           modules = Object.keys(@properties)
@@ -78,12 +81,6 @@ class Forge extends Compiler
           .then (res) -> socket.emit 'join', res.get 'modules'
           .catch (err) -> console.error err
 
-      super
-
-    attach: (key, val) ->
-      super
-      @emit 'attach', arguments...
-
     render: (data=this, opts={}) ->
       return data.toSource opts if App.instanceof data
 
@@ -91,6 +88,8 @@ class Forge extends Compiler
         when 'json' then JSON.stringify data, null, opts.space
         when 'yaml'
           (prettyjson.render? data, opts) ? (yaml.dump data)
+        when 'tree' then treeify.asTree data, true
+        when 'xml' then js2xml 'schema', data, prettyPrinting: indentString: '  '
         else data
 
     info: (options={}) ->
@@ -138,7 +137,7 @@ class Forge extends Compiler
     return super unless source?
     return @load source,
       async: false
-      pkgdir: __dirname
+      pkgdir: path.resolve __dirname, '..'
       hook: ->
         @mixin Forge
         @include source: @extract()

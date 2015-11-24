@@ -113,11 +113,10 @@ ensures syntax correctness and building the JS object tree structure.
           .reduce ((a, b) -> synth.copy a, b, true), {}
         params = null unless Object.keys(params).length > 0
 
-        unless params?
-          synth.objectify "#{normalize input}", input.arg
-        else
-          input.arg = input.arg.replace /[.]/g, '_'
-          synth.objectify "#{normalize input}.#{input.arg}", params
+        synth.objectify "#{normalize input}", switch
+          when not params? then input.arg
+          when not !!input.arg then params
+          else "#{input.arg}": params
 
 The `preprocess` function is the intermediary method of the compiler
 which prepares a parsed output to be ready for the `compile`

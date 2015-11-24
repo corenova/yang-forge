@@ -15,4 +15,6 @@ module.exports =
   traverse: require 'traverse'
   tosource: require 'tosource'
   events:   require 'events'
+  treeify:  require 'treeify'
+  js2xml:   require 'js2xmlparser'
   require:  require

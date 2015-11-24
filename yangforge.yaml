@@ -32,11 +32,11 @@ schema: !yang yangforge.yang
 config: !json yangforge.json
 
 dependencies:
-  yang-v1-extensions: !yaml yang-v1-extensions.yaml
-  complex-types:      !yaml complex-types.yaml
-  ietf-yang-types:    !yang ietf-yang-types.yang
-  ietf-inet-types:    !yang ietf-inet-types.yang
-  iana-crypt-hash:    !yang iana-crypt-hash.yang
+  yang-v1-extensions: !yaml core/yang-v1-extensions.yaml
+  complex-types:      !yaml core/complex-types.yaml
+  ietf-yang-types:    !yang core/ietf-yang-types.yang
+  ietf-inet-types:    !yang core/ietf-inet-types.yang
+  iana-crypt-hash:    !yang core/iana-crypt-hash.yang
 
 feature:
   browser:   !yaml features/browser.yaml

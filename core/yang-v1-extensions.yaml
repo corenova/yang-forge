@@ -462,7 +462,7 @@ extension:
         request  = children.input  ? synth.Meta
         response = children.output ? synth.Meta
         method = (data, resolve, reject) ->
-          console.info "executing rpc #{arg}..."
+          console.debug? "executing rpc #{arg}..."
           try
             input = new request data, this
             output = new response null, this

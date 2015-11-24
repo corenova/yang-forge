@@ -1,5 +1,5 @@
 {
-  "version": "0.10.42",
+  "version": "0.11.0",
   "name": "yangforge",
   "description": "YANG driven JS application builder",
   "keywords": [
@@ -34,7 +34,7 @@
   "bugs": {
     "url": "https://github.com/saintkepha/yangforge/issues"
   },
-  "main": "yangforge.js",
+  "main": "./lib/forge.js",
   "bin": {
     "yfc": "bin/yfc"
   },
@@ -52,6 +52,7 @@
     "highlight.js": "^8.9.1",
     "indent-string": "^2.1.0",
     "js-yaml": "^3.4.2",
+    "js2xmlparser": "^1.0.0",
     "moment": "^2.10.6",
     "needle": "^0.10.0",
     "passport": "^0.2.2",
@@ -68,6 +69,7 @@
     "superagent": "^1.4.0",
     "tosource": "^1.0.0",
     "traverse": "^0.6.6",
+    "treeify": "^1.0.1",
     "uglifyify": "^3.0.1",
     "yang-parser": "^0.1.0",
     "zingchart": "^2.2.0"
@@ -87,7 +89,7 @@
     "node": ">=0.10.28"
   },
   "scripts": {
-    "prepublish": "coffee -c *coffee",
+    "prepublish": "coffee -o lib -c src/*coffee",
     "start": "bin/yfc run"
   }
 }
