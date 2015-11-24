@@ -7,6 +7,11 @@ schema-driven application lifecycle management.
 modeling language as defined in IETF drafts and standards
 ([RFC 6020](http://tools.ietf.org/html/rfc6020)).
 
+  [![NPM Version][npm-image]][npm-url]
+  [![NPM Downloads][downloads-image]][downloads-url]
+  
+  [![NPM][history-image]][history-url]
+
 Basically, the framework enables YANG schema language to *become* a
 **programming** language.
 
@@ -28,9 +33,6 @@ Virtualization) community. For a reference implementation created entirely utili
 
 Please note that this project is under **active development**. Be sure
 to check back often as new updates are being pushed regularly.
-
-  [![NPM Version][npm-image]][npm-url]
-  [![NPM Downloads][downloads-image]][downloads-url]
 
 ## Welcome to 0.10.x
 
@@ -292,3 +294,5 @@ with documentation all-in-one.
 [npm-url]: https://npmjs.org/package/yangforge
 [downloads-image]: https://img.shields.io/npm/dm/yangforge.svg
 [downloads-url]: https://npmjs.org/package/yangforge
+[history-image]: https://nodei.co/npm-dl/yangforge.png?height=3
+[history-url]: https://nodei.co/npm/yangforge
