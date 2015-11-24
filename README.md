@@ -121,10 +121,10 @@ and they will be retrieved/resolved automatically.
 
 name | description | reference
 --- | --- | ---
-[complex-types](complex-types.yang) | extensions to model complex types and typed instance identifiers | RFC-6095
-[iana-crypt-hash](iana-crypt-hash.yang) | typedef for storing passwords using a hash function | RFC-7317
-[ietf-inet-types](ietf-inet-types.yang) | collection of generally useful types for Internet addresses | RFC-6991
-[ietf-yang-types](ietf-yang-types.yang) | collection of generally useful derived data types | RFC-6991
+[complex-types](core/complex-types.yang) | extensions to model complex types and typed instance identifiers | RFC-6095
+[iana-crypt-hash](core/iana-crypt-hash.yang) | typedef for storing passwords using a hash function | RFC-7317
+[ietf-inet-types](core/ietf-inet-types.yang) | collection of generally useful types for Internet addresses | RFC-6991
+[ietf-yang-types](core/ietf-yang-types.yang) | collection of generally useful derived data types | RFC-6991
 
 Additional YANG modules will be bundled into the `yangforge` package
 over time. Since `yangforge` facilitate *forging* of new YANG modules
@@ -170,15 +170,15 @@ forge.import 'my-cool-schema.yang'
   alternative `resolver` functions to change the behavior of produced
   output
 
-[YangForge](yangforge.coffee) itself is also a YANG schema
+[YangForge](src/forge.coffee) itself is also a YANG schema
 ([yangforge.yang](./yangforge.yang)) **compiled** module. It is
-compiled by the [yang-compiler](yang-compiler.litcoffee) and
+compiled by the [yang-compiler](src/compiler.litcoffee) and
 natively includes
-[yang-v1-extensions](yang-v1-extensions.yaml) submodule for
+[yang-v1-extensions](core/yang-v1-extensions.yaml) submodule for
 supporting the YANG version 1.0
 ([RFC 6020](http://tools.ietf.org/html/rfc6020)) specifications.
 Please reference the
-[yang-v1-extensions documentation](yang-v1-extensions.md) for
+[yang-v1-extensions documentation](core/yang-v1-extensions.md) for
 up-to-date info on YANG 1.0 language coverage status. It serves as a
 good reference for writing new compilers, custom extensions, custom
 typedefs, among other things.
@@ -244,7 +244,7 @@ console.log forge.preprocess yaml
 ```
 
 Forging a new module/application for build/publish using YAML
-(see also [complex-types](complex-types.yaml)):
+(see also [complex-types](core/complex-types.yaml)):
 ```coffeescript
 name: some-new-application
 schema: !yang some-new-application.yang
@@ -277,8 +277,8 @@ object as well as the instantiated class.
 The source code is documented in Markdown format. It's code combined
 with documentation all-in-one.
 
-* [YangForge](yangforge.coffee)
-  * [Compiler](yang-compiler.litcoffee)
+* [YangForge](src/forge.coffee)
+  * [Compiler](src/compiler.litcoffee)
   * [Features](features)
   * [Module](yangforge.yaml)
   * [Schema](yangforge.yang)
