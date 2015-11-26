@@ -1,20 +1,22 @@
 console = (require 'clim') '[forge]'
 unless process.stderr?
   process.stderr = write: ->
-unless process.env.yfc_debug?
+if process.env.yfc_debug?
+  console.debug = console.log
+else
   console.log = ->
-
+  
 {
   promise, synth, yaml, coffee, path, fs, events
   request, url, indent, traverse, tosource, treeify, js2xml
 } = require './components'
 
-prettyjson = require 'prettyjson'
+coffee.register?()
 
 class Forge extends (require './compiler')
-  require: (require './components').require
+  require: require
 
-  class App extends synth.Object
+  class Forgery extends synth.Object
     @set synth: 'source'
     @mixin events.EventEmitter
 
@@ -39,7 +41,7 @@ class Forge extends (require './compiler')
             @update y.overrides, true
 
       source = switch opts.format
-        when 'yaml' then yaml.dump source
+        when 'yaml' then yaml.dump source, lineWidth: -1
         when 'json'
           opts.space ?= 2
           source = (traverse source).map (x) ->
@@ -53,7 +55,7 @@ class Forge extends (require './compiler')
         when 'base64' then (new Buffer source).toString 'base64'
         else source
 
-    require: (require './components').require
+    require: require
 
     attach: (key, val) -> super; @emit 'attach', arguments...
 
@@ -82,12 +84,12 @@ class Forge extends (require './compiler')
           .catch (err) -> console.error err
 
     render: (data=this, opts={}) ->
-      return data.toSource opts if App.instanceof data
+      return data.toSource opts if Forgery.instanceof data
 
       switch opts.format
         when 'json' then JSON.stringify data, null, opts.space
         when 'yaml'
-          (prettyjson.render? data, opts) ? (yaml.dump data)
+          ((require 'prettyjson').render? data, opts) ? (yaml.dump data, lineWidth: -1)
         when 'tree' then treeify.asTree data, true
         when 'xml' then js2xml 'schema', data, prettyPrinting: indentString: '  '
         else data
@@ -121,6 +123,10 @@ class Forge extends (require './compiler')
       delete @feature[name]
 
     run: (features...) ->
+      if 'cli' in features
+        (@resolve 'feature', 'cli').run this
+        return
+      
       options = features
         .map (e) ->
           unless typeof e is 'object'
@@ -128,16 +134,22 @@ class Forge extends (require './compiler')
           else e
         .reduce ((a, b) -> synth.copy a, b, true), {}
 
-      (@access @meta 'main').invoke 'run', options: options
+      (@access 'yangforge').invoke 'run', options: options
       .catch (e) -> console.error e
 
-    toString: -> "App:#{@meta 'name'}"
+    toString: -> "Forgery:#{@meta 'name'}"
 
+  #
+  # self-forge using package.json and package.yaml
+  #
   constructor: (source) ->
     return super unless source?
+    if source instanceof (require 'module')
+      pkgdir = path.resolve __dirname, '..'
+      source = @parse '!json package.json', pkgdir: pkgdir
+      source = synth.copy source, @parse '!yaml package.yaml', pkgdir: pkgdir
     return @load source,
       async: false
-      pkgdir: path.resolve __dirname, '..'
       hook: ->
         @mixin Forge
         @include source: @extract()
@@ -157,6 +169,12 @@ class Forge extends (require './compiler')
       return [ data, pkgdir ]
 
     yaml.Schema.create [
+      new yaml.Type '!require',
+        kind: 'scalar'
+        resolve:   (data) -> typeof data is 'string'
+        construct: (data) ->
+          console.log "processing !require using: #{data}"
+          require (path.resolve options.pkgdir, data)
       new yaml.Type '!coffee',
         kind: 'scalar'
         resolve:   (data) -> typeof data is 'string'
@@ -202,17 +220,6 @@ class Forge extends (require './compiler')
           [ data, pkgdir ] = fetch data, options
           options.pkgdir ?= pkgdir if pkgdir?
           @parse data, format: 'yaml', pkgdir: pkgdir
-      # deprecated
-      new yaml.Type '!yang/schema',
-        kind: 'scalar'
-        resolve:   (data={}) ->
-          console.warn "DEPRECATION: !yang/schema custom-tag is now just !yang"
-          false
-      new yaml.Type '!yaml/schema',
-        kind: 'scalar'
-        resolve:   (data={}) ->
-          console.warn "DEPRECATION: !yaml/schema custom-tag is now just !yaml"
-          false
     ]
 
   parse: (source, opts={}) ->
@@ -257,16 +264,15 @@ class Forge extends (require './compiler')
         model = super source.schema, source
         delete source.parent
         for own name of model
-          source.main = name
           source.name ?= name
           source.description ?= model[name].get? 'description'
           break; # TODO: should only be ONE here?
         metadata = synth.extract.apply source, [
           'name', 'version', 'description', 'license', 'schema', 'dependencies',
           'extension', 'feature', 'keywords', 'rpc', 'typedef', 'complex-type',
-          'main', 'pkgdir', 'module', 'config'
+          'pkgdir', 'module', 'config'
         ]
-        source = ((synth App, opts.hook) metadata).bind model
+        source = ((synth Forgery, opts.hook) metadata).bind model
       finally
         delete source.parent
     return source
@@ -291,7 +297,7 @@ class Forge extends (require './compiler')
     return promise.all (@import x, opts for x in source) if source instanceof Array
     return @invoke arguments.callee, source, opts unless resolve? and reject?
 
-    return resolve source if source instanceof App
+    return resolve source if source instanceof Forgery
     return reject 'must pass in string(s) for import' unless typeof source is 'string'
 
     opts.async = true
@@ -299,12 +305,12 @@ class Forge extends (require './compiler')
 
     url = url.parse source
     source = switch url.protocol
-      when 'forge:'
+      when 'yf:','forge:'
         forgery = opts.forgery ? (@get 'yangforge.runtime.forgery') ? (@meta 'forgery')
         "#{forgery}/registry/modules/#{url.hostname}"
       when 'http:','https:'
         source
-      when 'github:'
+      when 'gh:','github:'
         "https://raw.githubusercontent.com/#{url.hostname}#{url.pathname}"
       else
         url.protocol = 'file:'
@@ -319,7 +325,7 @@ class Forge extends (require './compiler')
       when 'file:'
         try resolve @load "#{tag} #{source}"
         catch err then reject err
-      when 'forge:'
+      when 'yf:','forge:'
         # we initiate a TWO stage sequence, get metadata and then get binary
         request
         .head source
@@ -364,8 +370,4 @@ class Forge extends (require './compiler')
     return switch format
       when 'json' then JSON.stringify obj
 
-#
-# self-forge using the yangforge.yaml schema
-#
-
-module.exports = new Forge (window?.source ? '!yaml yangforge.yaml')
+module.exports = new Forge (window?.source ? module)

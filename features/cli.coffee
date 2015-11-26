@@ -1,28 +1,34 @@
 # Command-line interface feature module
 #
 # This feature add-on module enables dynamic command-line interface
-# generation based on available runtime `app` instances.
+# generation based on available runtime `app` instance.
 #
 # It utilizes the [commander](http://github.com/tj/commander.js) utility
 # to dynamically construct the command line processing engine and
 # invokes upon generation to process the passed in command line
 # arguments.
 
-name: cli
-description: Command Line Interface
-run: !coffee/function |
-  (model) ->
-    source = model.parent
-    program = source.require 'commander'
-    colors  = source.require 'colors'
+module.exports = 
+  run: (app) ->
+    program = require 'commander'
+    colors  = require 'colors'
 
     # 1. Setup some default execution context
-    version = (source.meta 'version')
+    version = (app.meta 'version')
     program
       .version version
-      .description (source.meta 'description')
+      .description (app.meta 'description')
+      .option '-I, --include [module]', 'pre-load the specified module(s) into runtime', ((x,y) -> y.concat x), []
       .option '--no-color', 'disable color output'
 
+    # 2. extract -I include options
+    program.parseOptions program.normalize process.argv.slice 2
+    path = require 'path'
+    for addon in program.include
+      try
+        pkgdir = path.dirname require.resolve "@yf/#{addon}/package.json"
+      catch
+        
     # for action, rpc of model.methods
     #   continue unless (model.meta "rpc.#{action}.if-feature") is 'cli'
     #   meta = model.meta "rpc.#{action}"
@@ -30,6 +36,7 @@ run: !coffee/function |
     #   status = meta.status
     #   command = "#{action}"
 
+    model = app.access 'yangforge'
     for action, rpc of (model.meta 'rpc')
       continue unless rpc['if-feature'] is 'cli'
 
@@ -108,4 +115,6 @@ run: !coffee/function |
             cmd.help()
 
     program.parse process.argv
+    #program.help() unless program.args.length
+      
     return program

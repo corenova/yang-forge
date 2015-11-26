@@ -9,20 +9,18 @@
 # to dynamically instanticate the web server and makes itself available
 # for higher-order features to utilize it for associating additional routing endpoints.
 
-name: express
-description: Fast, unopionated, minimalist web framework (HTTP/HTTPS)
-config:
-  port: 5000
-
-run: !coffee/function |
-  (model, runtime) ->
+module.exports = 
+  description: 'Fast, unopionated, minimalist web framework (HTTP/HTTPS)'
+  config:
+    port: 5000
+  run: (model, runtime) ->
     source = model.parent
     if runtime.express instanceof Function
       console.info "express: re-using passed-in instance".grey
       return runtime.express
 
-    express = source.require 'express'
-    errorhandler = source.require 'errorhandler'
+    express = require 'express'
+    errorhandler = require 'errorhandler'
     port = runtime.express ? @config.port
     app = (->
       env = process.env.NODE_ENV ? 'development'

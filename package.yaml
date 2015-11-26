@@ -1,29 +1,3 @@
-name: yangforge
-description: YANG driven JS application builder
-author: Peter K. Lee <peter@intercloud.net>
-version: 0.10.43
-license: Apache-2.0
-homepage: http://github.com/saintkepha/yangforge
-repository: git://github.com/saintkepha/yangforge.git
-registry: https://yangforge.intercloud.net
-keywords:
-  - build
-  - config
-  - datastore
-  - datamodel
-  - forge
-  - model
-  - yang
-  - opnfv
-  - parse
-  - restjson
-  - restconf
-  - rpc
-  - translate
-  - yang-json
-  - yang-yaml
-  - yfc
-
 # schema - describes the data model of the application
 schema: !yang yangforge.yang
 
@@ -39,11 +13,9 @@ dependencies:
   iana-crypt-hash:    !yang core/iana-crypt-hash.yang
 
 feature:
-  browser:   !yaml features/browser.yaml
-  cli:       !yaml features/cli.yaml
-  express:   !yaml features/express.yaml
-  restjson:  !yaml features/restjson.yaml
-  websocket: !yaml features/websocket.yaml
+  cli:      !require features/cli
+  express:  !require features/express
+  restjson: !require features/restjson
 
 extension:
   module: !yang/extension
@@ -69,11 +41,20 @@ rpc:
       app = @parent
       target = (input.get 'arguments')[0]
       options = input.get 'options'
+
+      browserify = require 'browserify'
+
+      # unless target? or target is directory
+      # 1. retrieve package.json
+      # 2. retrieve package.yaml
+      # 3. res = browserify package
+      # 4. treat target as !yfx res
+
       return done "must specify target input file to build" unless target?
 
       app.import target
-      .then (apps) ->
-        result = apps.constructor.toSource format: 'yaml'
+      .then (res) ->
+        result = res.constructor.toSource format: 'yaml'
         if options.gzip
           zlib = app.require 'zlib'
           #result = zlib.deflate result
@@ -97,8 +78,8 @@ rpc:
       target = (input.get 'arguments')[0]
       target ?= app
       app.import target
-      .then (apps) ->
-        output.set apps.info? (input.get 'options')
+      .then (res) ->
+        output.set res.info? (input.get 'options')
         done()
       .catch (err) -> done err
 
@@ -138,8 +119,8 @@ rpc:
         return done()
 
       app.import sources
-      .then (apps) =>
-        promises = apps.reduce ((a,b) -> a.concat b.save()...), []
+      .then (res) =>
+        promises = res.reduce ((a,b) -> a.concat b.save()...), []
         @invoke promises.map (p) -> (resolve) -> resolve p
       .then (modules) ->
         for model in modules
@@ -165,10 +146,6 @@ rpc:
     (input, output, done) ->
       app = @parent
       features = input.get 'options'
-      if features.cli is true
-        (app.resolve 'feature', 'cli').run this
-        return done()
-
       console.log "forgery firing up..."
       for name, arg of features when arg? and arg isnt false
         console.debug? "#{name} with #{arg}"

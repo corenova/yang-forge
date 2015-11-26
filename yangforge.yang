@@ -38,16 +38,6 @@ module yangforge {
     if-feature express;
   }
 
-  feature browser {
-    description "When enabled, generates web client browser application interface";
-    if-feature express;
-  }
-
-  feature websocket {
-    description "When enabled, generates socket.io websocket interface";
-    if-feature express;
-  }
-
   typedef textarea {
     type string {
       length "1..max";
@@ -55,7 +45,7 @@ module yangforge {
     description
       "The textarea type represents a string that can be multi-line";
   }
-  
+
   grouping cli-command {
     description
       "The cli-command schema provides general schema format for defining CLI interface RPC input format";
@@ -237,10 +227,6 @@ module yangforge {
           units "modules";
         }
         augment options {
-          leaf cli {
-            description "enables commmand-line-interface";
-            type boolean;
-          }
           leaf express {
             description "enables express web server on a specified port";
             type union {
@@ -251,16 +237,6 @@ module yangforge {
           }
           leaf restjson {
             description "enables REST/JSON interface";
-            type boolean;
-            default true;
-          }
-          leaf websocket {
-            description "enables socket.io interface";
-            type boolean;
-            default true;
-          }
-          leaf browser {
-            description "enables web client interface";
             type boolean;
             default true;
           }

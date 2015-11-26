@@ -17,4 +17,3 @@ module.exports =
   events:   require 'events'
   treeify:  require 'treeify'
   js2xml:   require 'js2xmlparser'
-  require:  require

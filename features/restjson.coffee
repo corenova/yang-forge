@@ -8,14 +8,13 @@
 # method facilities according to the available runtime `module`
 # instances.
 
-name: restjson
-description: REST/JSON web services interface generator
+module.exports = 
+  description: 'REST/JSON web services interface generator'
 
-# Routers 
-# when called with an instance context will attach various handlers
-routers:
-  loop: !coffee/function |
-    (target) ->
+  # Routers 
+  # when called with an instance context will attach various handlers
+  routers:
+    loop: (target) ->
       @all '*', (req, res, next) ->
         req.target ?= target
         next()
@@ -30,8 +29,7 @@ routers:
 
       return this
 
-  source: !coffee/function |
-    (target) ->
+    source: (target) ->
       @route '/'
       .all (req, res, next) ->
         req.target ?= target
@@ -56,8 +54,7 @@ routers:
 
       return this
 
-  store: !coffee/function |
-    (target) ->
+    store: (target) ->
       @route '/'
       .all (req, res, next) ->
         req.target ?= target
@@ -71,8 +68,7 @@ routers:
 
       return this
 
-  model: !coffee/function |
-    (target) ->
+    model: (target) ->
       @route '/'
       .all (req, res, next) ->
         req.target ?= target
@@ -118,8 +114,7 @@ routers:
           .catch (err) -> next err
       return this
 
-  object: !coffee/function |
-    (target) ->
+    object: (target) ->
       @route '/'
       .all (req, res, next) ->
         req.target ?= target
@@ -141,8 +136,7 @@ routers:
       # Add any special logic for handling 'container' here
       return this
 
-  list: !coffee/function |
-    (target) ->
+    list: (target) ->
       @route '/'
       .all (req, res, next) ->
         req.target ?= target
@@ -180,11 +174,10 @@ routers:
 
       return this
 
-run: !coffee/function |
-  (model, runtime) ->
+  run: (model, runtime) ->
     console.log "generating REST/JSON interface..."
     source  = model.parent
-    express = source.require 'express'
+    express = require 'express'
 
     loopRouter   = @routers.loop.call   express.Router(), source
     sourceRouter = @routers.source.call express.Router(), source
@@ -197,8 +190,8 @@ run: !coffee/function |
     # Nested Loopback to itself if additional target in the URL
     loopRouter.use '/:target', loopRouter
 
-    bp = source.require 'body-parser'
-    passport = source.require 'passport'
+    bp = require 'body-parser'
+    passport = require 'passport'
     restjson = (->
       @use bp.urlencoded(extended:true), bp.json(strict:true), passport.initialize()
 
