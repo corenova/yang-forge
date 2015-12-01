@@ -1,5 +1,7 @@
 # yfc -- YangForge Controller
 
+[![Join the chat at https://gitter.im/saintkepha/yangforge](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/saintkepha/yangforge?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+
 `yfc` is the command shell for the YangForge framework, providing
 schema-driven application lifecycle management.
 
