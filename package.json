@@ -65,7 +65,6 @@
     "colors",
     "commander",
     "indent-string",
-    "js-yaml",
     "prettyjson",
     "promise",
     "yang-parser"
