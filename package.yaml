@@ -46,6 +46,7 @@ rpc:
 
       # unless target? or target is directory
       # 1. retrieve package.json
+      # 1a. if has 'dependencies' then need to issue 'npm install' do it via API?
       # 2. retrieve package.yaml
       # 3. res = browserify package
       # 4. treat target as !yfx res
