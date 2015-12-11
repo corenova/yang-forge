@@ -8,7 +8,7 @@
 # invokes upon generation to process the passed in command line
 # arguments.
 
-module.exports = 
+module.exports =
   run: (app) ->
     program = require 'commander'
     colors  = require 'colors'
@@ -23,16 +23,16 @@ module.exports =
 
     # 2. extract -I include options
     program.parseOptions program.normalize process.argv.slice 2
-    path = require 'path'
-    for addon in program.include
-      try
-        pkgdir = path.dirname require.resolve "@yf/#{addon}/package.json"
-      catch
-        
+    for preload in program.include
+      source = app.load "!yaml #{preload}", async: false
+      for name, model of source.properties
+        console.info "absorbing a new model '#{name}' into running forge"
+        app.attach name, model
+
     # for action, rpc of model.methods
     #   continue unless (model.meta "rpc.#{action}.if-feature") is 'cli'
     #   meta = model.meta "rpc.#{action}"
-      
+
     #   status = meta.status
     #   command = "#{action}"
 
@@ -115,6 +115,4 @@ module.exports =
             cmd.help()
 
     program.parse process.argv
-    #program.help() unless program.args.length
-      
     return program
