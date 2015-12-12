@@ -1,27 +1,18 @@
 # socket.io (websockets) feature interface module
 #
 
-name: websocket
-description: socket.io interface
-config:
-  port: 8080
+module.exports = 
+  config:
+    port: 8080
 
-# TODO...
-# dependencies:
-#   server:   !require 'socket.io'
-#   client:   !require 'socket.io-client'
-#   wildcard: !require 'socketio-wildcard'
-
-# run is called ONCE during start...
-run: !coffee/function |
-  (model, runtime) ->
+  run: (model, runtime) ->
     app = model.parent
     server = runtime.express?.server ? @config.port
     console.info "websocket: binding forgery to /socket.io".grey
-    io = (app.require 'socket.io') server
+    io = (require 'socket.io') server
     io.on 'connection', (socket) ->
       room = socket.join 'yangforge'
-      
+
     # watch app and send events
     app.on 'attach', (name, module) ->
       console.debug? "attached #{name}"
@@ -29,5 +20,4 @@ run: !coffee/function |
       io.to('yangforge').emit 'infuse', sources: source if source?
     return io
 
-send: !coffee/function |
-  (to, data, resolve, reject) ->
+  send: (to, data, resolve, reject) ->

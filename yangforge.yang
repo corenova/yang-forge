@@ -38,6 +38,11 @@ module yangforge {
     if-feature express;
   }
 
+  feature websocket {
+    description "When enabled, generates socket.io websocket interface";
+    if-feature express;
+  }
+
   typedef textarea {
     type string {
       length "1..max";
@@ -103,66 +108,9 @@ module yangforge {
   }
   
   // RPC definitions for CLI
-  
-  rpc build {
-    if-feature cli;
-    description "package the application for deployment/publishing";
-    input {
-      uses cli-command {
-        refine arguments {
-          config true;
-          units "file";
-          max-elements 1;
-        }
-        augment options {
-          leaf output {
-            description "set the output filename for generated build";
-            type string;
-            units o;
-          }
-          leaf gzip {
-            description "gzip compress the build output";
-            type boolean;
-            units z;
-          }
-        }
-      }
-    }
-  }
 
-  rpc config {
-    if-feature cli;
-    description "manage yangforge service configuration";
-    input {
-      uses cli-command {
-        // choice argument {
-        //   case set {
-        //     container argument {
-        //       leaf key { type string; mandatory true; }
-        //       leaf value { type string; mandatory true; }
-        //     }
-        //   }
-        //   case get {
-        //     leaf argument { type string; mandatory true; units key; }
-        //   }
-        //   case delete {
-        //     leaf argument { type string; mandatory true; units key; }
-        //   }
-        //   case list {
-        //     leaf argument { type empty; }
-        //   }
-        // }
-      }
-    }
-    status planned;
-  }
-  
-  rpc deploy {
-    if-feature cli;
-    description "deploy application into yangforge endpoint";
-    status planned;
-  }
-  
+  // Common Utilities
+
   rpc info {
     if-feature cli;
     description "shows info about a specific module";
@@ -193,52 +141,6 @@ module yangforge {
             description "increase verbosity";
             type empty;
             units v;
-          }
-        }
-      }
-    }
-  }
-
-  rpc publish {
-    if-feature cli;
-    description "publish package to upstream registry";
-    input {
-      uses cli-command {
-        augment options {
-          leaf registry {
-            description "The base URL of the package registry";
-            type string;
-            units r;
-            default "http://yangforge.intercloud.net";
-          }
-        }
-      }
-    }
-    status planned;
-  }
-  
-  rpc run {
-    if-feature cli;
-    description "runs one or more modules and/or schemas";
-    input {
-      uses cli-command {
-        refine arguments {
-          config true;
-          units "modules";
-        }
-        augment options {
-          leaf express {
-            description "enables express web server on a specified port";
-            type union {
-              type uint16;
-              type binary;
-            }
-            default 5000;
-          }
-          leaf restjson {
-            description "enables REST/JSON interface";
-            type boolean;
-            default true;
           }
         }
       }
@@ -302,7 +204,151 @@ module yangforge {
       }
     }
   }
+
+  rpc translate {
+    if-feature cli;
+    description "translates input configuration data according to available YANG schema(s)";
+    input {
+      uses cli-command {
+        refine arguments {
+          config true;
+          units "file";
+          max-elements 1;
+        }
+        augment options {
+          leaf format {
+            description "specify output format";
+            type enumeration {
+              enum yaml;
+              enum json;
+              enum tree;
+              enum xml;
+            }
+            units f;
+            default yaml;
+          }
+          leaf output {
+            description "set the output filename";
+            type string;
+            units o;
+          }
+        }
+      }
+    }
+  }
+
+  // Lifecycle Utilities
   
+  rpc build {
+    if-feature cli;
+    description "package the application for deployment/publishing";
+    input {
+      uses cli-command {
+        refine arguments {
+          config true;
+          units "file";
+          max-elements 1;
+        }
+        augment options {
+          leaf output {
+            description "set the output filename for generated build";
+            type string;
+            units o;
+          }
+          leaf gzip {
+            description "gzip compress the build output";
+            type boolean;
+            units z;
+          }
+        }
+      }
+    }
+  }
+
+  rpc config {
+    if-feature cli;
+    description "manage yangforge service configuration";
+    input {
+      uses cli-command {
+        // choice argument {
+        //   case set {
+        //     container argument {
+        //       leaf key { type string; mandatory true; }
+        //       leaf value { type string; mandatory true; }
+        //     }
+        //   }
+        //   case get {
+        //     leaf argument { type string; mandatory true; units key; }
+        //   }
+        //   case delete {
+        //     leaf argument { type string; mandatory true; units key; }
+        //   }
+        //   case list {
+        //     leaf argument { type empty; }
+        //   }
+        // }
+      }
+    }
+    status planned;
+  }
+  
+  rpc deploy {
+    if-feature cli;
+    description "deploy application into yangforge endpoint";
+    status planned;
+  }
+  
+  rpc publish {
+    if-feature cli;
+    description "publish package to upstream registry";
+    input {
+      uses cli-command {
+        augment options {
+          leaf registry {
+            description "The base URL of the package registry";
+            type string;
+            units r;
+            default "http://yangforge.intercloud.net";
+          }
+        }
+      }
+    }
+    status planned;
+  }
+  
+  rpc run {
+    if-feature cli;
+    description "runs one or more modules and/or schemas";
+    input {
+      uses cli-command {
+        refine arguments {
+          config true;
+          units "modules";
+        }
+        augment options {
+          leaf express {
+            description "enables express web server on a specified port";
+            type union {
+              type uint16;
+              type binary;
+            }
+            default 5000;
+          }
+          leaf restjson {
+            description "enables REST/JSON interface";
+            type boolean;
+            default true;
+          }
+          leaf websocket {
+              description "enables socket.io interface";
+              type boolean;
+              default true;
+          }
+        }
+      }
+    }
+  }
+
   rpc sign {
     if-feature cli;
     description "sign package to ensure authenticity";
