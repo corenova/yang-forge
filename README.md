@@ -23,11 +23,6 @@ with embedded code.
 It is written primarily using [CoffeeScript](http://coffeescript.org)
 and runs on [Node.js](http://nodejs.org) and the **web browser** (yes, it's isomorphic).
 
->
-Be sure to try out the new [browser](features/browser.yaml) feature interface which generates **client-side web application** for real-time visualization and interactions.
-After `yfc run` fire up your browser and go to `http://localhost:5000/browser`.
-> 
-
 This software is **sponsored** by
 [ClearPath Networks](http://www.clearpathnet.com) on behalf of the
 [OPNFV](http://opnfv.org) (Open Platform for Network Functions
@@ -35,23 +30,6 @@ Virtualization) community. For a reference implementation created entirely utili
 
 Please note that this project is under **active development**. Be sure
 to check back often as new updates are being pushed regularly.
-
-## Welcome to 0.10.x
-
-`YangForge` has undergone extensive restructuring with the
-introduction of **YAML** as the primary application packaging
-construct. This means that *aside* from the `YangForge` package itself
-having NPM dependency, other generated modules no longer require NPM
-for `build/publish` activities. The results are rather dramatic, as
-the entire source tree has been collapsed (one flat directory) since
-there is no longer any need to maintain separate directories to
-individually package specific YANG module with code logic.
-
-Furthermore, interfaces for programmatic usage of the `YangForge`
-module as a library has been greatly enhanced, including asynchronous
-`import` capability, which can now also load YAML/YANG/JSON files from
-remote web sources. Please refer to below updated documentation for
-more details.
 
 ## Installation
 ```bash
@@ -93,7 +71,7 @@ sub-statement definitions for a reference regarding different types of
 command-line arguments, descriptions, and options processing syntax.
 The corresponding **actions** for each of the `rpc` extensions are
 implemented inside the `YangForge` YAML module
-[yangforge.yaml](yangforge.yaml).
+[package.yaml](package.yaml).
 
 For comprehensive **usage documentation** around various CLI commands,
 please refer to the [YangForge Examples README](examples#readme).
@@ -138,11 +116,10 @@ this time.
 
 name | description | dependency
 --- | --- | ---
-[cli](features/cli.yaml) | generates command-line interface | none
-[express](features/express.yaml) | generates HTTP/HTTPS web server instance | none
-[restjson](features/restjson.yaml) | generates REST/JSON web services interface | express
-[browser](features/browser.yaml) | generates web client application interface | express
-[websocket](features/websocket.yaml) | generates socket.io interface | express
+[cli](features/cli.coffee) | generates command-line interface | none
+[express](features/express.coffee) | generates HTTP/HTTPS web server instance | none
+[restjson](features/restjson.coffee) | generates REST/JSON web services interface | express
+[websocket](features/websocket.coffee) | generates socket.io interface | express
 
 You can click on the *name* entry above for reference documentation on
 each feature module.
@@ -282,7 +259,7 @@ with documentation all-in-one.
 * [YangForge](src/forge.coffee)
   * [Compiler](src/compiler.litcoffee)
   * [Features](features)
-  * [Module](yangforge.yaml)
+  * [Module](package.yaml)
   * [Schema](yangforge.yang)
 * External Dependencies
   * [data-synth library](http://github.com/saintkepha/data-synth)
