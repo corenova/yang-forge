@@ -1,5 +1,5 @@
 {
-  "version": "0.11.0",
+  "version": "0.11.1",
   "name": "yangforge",
   "description": "YANG driven JS application builder",
   "keywords": [
@@ -40,7 +40,6 @@
   },
   "dependencies": {
     "body-parser": "^1.13.2",
-    "browserify": "^11.2.0",
     "clim": "^1.1.1",
     "coffee-script": ">=1.7",
     "colors": "^1.1.2",
@@ -61,6 +60,9 @@
     "traverse": "^0.6.6",
     "treeify": "^1.0.1",
     "yang-parser": "^0.1.0"
+  },
+  "devDependencies": {
+    "browserify": "^11.2.0"
   },
   "bundleDependencies": [
     "clim",

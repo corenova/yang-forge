@@ -1,5 +1,5 @@
-module yang-transformation {
-  prefix yt;
+module transform-composition {
+  prefix tc;
   
   organization
     "ClearPath Networks NFV R&D Group";
@@ -12,7 +12,7 @@ module yang-transformation {
 
   description
     "This module provides YANG language extensions for transforming data
-     models and chaining transformations.";
+     models and chaining transformations for achieving function composition";
 
   extension transformation {
     argument name;
@@ -30,8 +30,26 @@ module yang-transformation {
     argument transformation-name;
     description "An instance of transformation that will be invoked with a given transform-input";
   }
+  extension compose {
+    argument transform-rule;
+  }
+  
   extension matrix {
     argument name;
     description "An instance of real-time state machine containing set of transforms";
   }
+
+  tc:transform foo {
+    description "accepts input schema of a and returns output schema of c";
+    tc:compose "a -> b -> c";
+  }
+
+  tc:transform bar {
+    tc:compose "foo ->" {
+      // some schema
+    }
+  }
+
+  tc:compose "a + b -> c + d";
+  
 }
