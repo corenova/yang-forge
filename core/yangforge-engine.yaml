@@ -1,0 +1,17 @@
+extension:
+  module: !yang/extension
+    argument: name
+    include: 0..n
+    prefix: 0..1
+
+  prefix: !yang/extension
+    argument: value
+
+  include: !yang/extension
+    argument: module
+    preprocess: !coffee/function |
+      (arg, params, ctx) ->
+        m = @preprocess (@resolve 'models', arg)
+        @define 'extension', k, v for k, v of m.extension
+        @define 'typedef', k, v for k, v of m.typedef
+        ctx[k] = v for k, v of m.schema

@@ -1,2 +1,7 @@
 #!/usr/bin/env node
-require('..').run('cli')
+
+try {
+	require('..').run('cli');
+} catch (e) {
+	console.error("forgot to run 'bootstrap.sh' in repo?");
+}

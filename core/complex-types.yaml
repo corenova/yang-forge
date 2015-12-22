@@ -1,4 +1,4 @@
-# YANG comlex-types module
+# YANG comlex-types extension definitions
 #
 # The YANG complex-types module provides additional Yang language
 # extensions according to [RFC
@@ -7,13 +7,6 @@
 # essentially allows a given YANG data schema module to describe more
 # than one data models and to build relationships between the data
 # models.
-
-name: complex-types
-description: YANG language extensions (RFV-6095)
-author: Peter K. Lee <peter@intercloud.net>
-license: Apache-2.0
-
-schema: !yang complex-types.yang
 
 extension:
   complex-type: !yang/extension

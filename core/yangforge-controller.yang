@@ -1,5 +1,5 @@
-module yangforge {
-  prefix yf;
+module yangforge-controller {
+  prefix yfc;
 
   include yang-v1-extensions;
   import ietf-yang-types { prefix yang; }

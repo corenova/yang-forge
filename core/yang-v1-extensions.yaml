@@ -1,4 +1,4 @@
-# YANG Version 1.0 Extensions
+# YANG Version 1.0 Extension Definitions
 #
 # This submodule implements the [RFC 6020](http://www.rfc-editor.org/rfc/rfc6020.txt)
 # compliant language extensions.  It is used by `yangforge` to produce a new compiler
@@ -13,13 +13,6 @@
 # long as the context for the callback function to handle the
 # extension is well understood.  For more details, please refer to
 # documentation found inside the main `yangforge` project.
-
-name: yang-v1-extensions
-license: MIT
-schema: !yang yang-v1-extensions.yang
-keywords:
-  - yang
-  - rfc6020
 
 #
 extension:
@@ -230,7 +223,14 @@ extension:
         @compile (@source[params.prefix]), @source
 
   include: !yang/extension
+    argument: module
     revision-date: 0..1
+    preprocess: !coffee/function |
+      (arg, params, ctx) ->
+        m = @preprocess (@resolve 'models', arg)
+        @define 'extension', k, v for k, v of m.extension
+        @define 'typedef', k, v for k, v of m.typedef
+        ctx[k] = v for k, v of m.schema
 
   input: !yang/extension
     anyxml: 0..n
@@ -323,6 +323,7 @@ extension:
       (arg, params, ctx) -> ctx['min-elements'] = (Number) arg
 
   module: !yang/extension
+    argument: name
     anyxml: 0..n
     augment: 0..n
     choice: 0..n
@@ -419,6 +420,7 @@ extension:
         ctx.patterns.push new RegExp arg
 
   prefix: !yang/extension
+    argument: value
     preprocess: !coffee/function |
       (arg, params, ctx) -> @source[arg] = @source
 
