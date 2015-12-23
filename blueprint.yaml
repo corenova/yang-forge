@@ -1,7 +1,6 @@
 name: yangforge-controller
 description: YANG driven JS runtime MVC framework
-version: 0.11.2
-author: Peter Lee <peter@intercloud.net>
+maintainer: Peter Lee <peter@intercloud.net>
 license: Apache-2.0
 
 # definitions are used during preprocess/compile operations by this blueprint

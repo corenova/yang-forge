@@ -14,9 +14,8 @@ else
 coffee.register?()
 
 class Forge extends (require './compiler')
-  require: require
 
-  class Forgery extends synth.Object
+  class Runtime extends synth.Object
     @set synth: 'source'
     @mixin events.EventEmitter
 
@@ -55,36 +54,10 @@ class Forge extends (require './compiler')
         when 'base64' then (new Buffer source).toString 'base64'
         else source
 
-    require: require
-
     attach: (key, val) -> super; @emit 'attach', arguments...
 
-    connect: (to, opts) ->
-      @invoke (resolve, reject) ->
-        socket = (require 'socket.io-client') to
-        socket.on 'connect', =>
-          console.log '[socket:%s] connected', socket.id
-          modules = Object.keys(@properties)
-          socket.once 'rooms', (rooms) ->
-            rooms = rooms.filter (x) -> typeof x is 'string'
-            console.log 'got rooms: %s', rooms
-            # 1. join known rooms
-            socket.emit 'join', rooms.filter (room) -> room in modules
-
-            newRooms = rooms.filter (room) -> room not in modules
-            if newRooms.length > 0
-              # 2. request access for new rooms
-              socket.emit 'knock', newRooms
-          resolve socket
-        socket.on 'infuse', (data) =>
-          forge = @access 'yangforge'
-          # infuse the modules using keys
-          forge?.invoke 'infuse', data
-          .then (res) -> socket.emit 'join', res.get 'modules'
-          .catch (err) -> console.error err
-
     render: (data=this, opts={}) ->
-      return data.toSource opts if Forgery.instanceof data
+      return data.toSource opts if Runtime.instanceof data
 
       switch opts.format
         when 'json' then JSON.stringify data, null, opts.space
@@ -137,17 +110,16 @@ class Forge extends (require './compiler')
       (@access 'yangforge').invoke 'run', options: options
       .catch (e) -> console.error e
 
-    toString: -> "Forgery:#{@meta 'name'}"
+    toString: -> "Runtime:#{@meta 'name'}"
 
   #
-  # self-forge using package.json and package.yaml
+  # self-forge using package.json and blueprint.yaml
   #
   constructor: (source) ->
     return super unless source?
     if source instanceof (require 'module')
       pkgdir = path.resolve __dirname, '..'
-      source = @parse '!json package.json', pkgdir: pkgdir
-      source = synth.copy source, @parse '!yaml package.yaml', pkgdir: pkgdir
+      source = @parse '!forge blueprint.yaml', pkgdir: pkgdir
     return @load source,
       async: false
       hook: ->
@@ -169,6 +141,21 @@ class Forge extends (require './compiler')
       return [ data, pkgdir ]
 
     yaml.Schema.create [
+      new yaml.Type '!forge',
+        kind: 'scalar'
+        resolve:   (data) -> typeof data is 'string'
+        construct: (data) ->
+          console.log "processing !forge using: #{data}"
+          [ data, pkgdir ] = fetch data, options
+          options.pkgdir ?= pkgdir if pkgdir?
+          bp = @parse data, format: 'yaml', pkgdir: pkgdir
+          bp.definitions = bp.definitions?.map? (data) =>
+            [ data, pkgdir ] = fetch data, options
+            @parse data, format: 'yaml', pkgdir: pkgdir
+          bp.models = bp.models?.map? (data) =>
+            [ data, pkgdir ] = fetch data, options
+            @parse data, format: 'yang', pkgdir: pkgdir
+          return bp
       new yaml.Type '!require',
         kind: 'scalar'
         resolve:   (data) -> typeof data is 'string'
@@ -235,8 +222,8 @@ class Forge extends (require './compiler')
       throw @error "unable to parse requested source data: #{input}"
 
     # XXX - below doesn't belong here...
-    if source.dependencies?
-      source.require = (arg) -> @dependencies[arg]
+    # if source.dependencies?
+    #   source.require = (arg) -> @dependencies[arg]
     return source
 
   preprocess: (source, opts={}) ->
@@ -272,7 +259,7 @@ class Forge extends (require './compiler')
           'extension', 'feature', 'keywords', 'rpc', 'typedef', 'complex-type',
           'pkgdir', 'module', 'config'
         ]
-        source = ((synth Forgery, opts.hook) metadata).bind model
+        source = ((synth Runtime, opts.hook) metadata).bind model
       finally
         delete source.parent
     return source
@@ -297,7 +284,7 @@ class Forge extends (require './compiler')
     return promise.all (@import x, opts for x in source) if source instanceof Array
     return @invoke arguments.callee, source, opts unless resolve? and reject?
 
-    return resolve source if source instanceof Forgery
+    return resolve source if source instanceof Runtime
     return reject 'must pass in string(s) for import' unless typeof source is 'string'
 
     opts.async = true
