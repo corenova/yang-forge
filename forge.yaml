@@ -1,14 +1,12 @@
 name: yangforge
 description: YANG driven JS runtime controller
 maintainer: Peter Lee <peter@intercloud.net>
-license: Apache-2.0
-repository: saintkepha/yangforge
 
 compilers:
-  yang: ./lib/compiler
+  yang: yang-js
   coffee: coffee-script/register
 
-targets:
+components:
   yangv1:
     - schema/yang-v1-extensions.yang
     - binding/yang-v1-extensions.yaml

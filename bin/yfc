@@ -1,3 +1,6 @@
 #!/usr/bin/env node
 
-require('..').build('../forge.yaml').run('cli');
+require('..')
+  .load('../forge.yaml')
+  .build('main')
+  .run('cli');

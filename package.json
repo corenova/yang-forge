@@ -4,6 +4,7 @@
   "description": "forge YANG modules to compose apps",
   "keywords": [
     "yang",
+	"yang-js",
     "yaml",
     "json",
     "restjson",
@@ -49,14 +50,13 @@
     "tosource": "^1.0.0",
     "traverse": "^0.6.6",
     "treeify": "^1.0.1",
-    "yang-parser": "^0.1.0"
+	"yang-js": "^0.12.0"
   },
   "bundleDependencies": [
     "clim",
     "indent-string",
     "prettyjson",
-    "promise",
-    "yang-parser"
+    "promise"
   ],
   "optionalDependencies": {
     "body-parser": "^1.13.2",
