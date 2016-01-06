@@ -1,9 +1,8 @@
-module yangforge-controller {
+module yangforge {
   prefix yfc;
 
-  include yang-v1-extensions;
   import ietf-yang-types { prefix yang; }
-  import ietf-yang-library { prefix yanglib; }
+  //import ietf-yang-library { prefix yanglib; }
 
   organization
     "ClearPath Networks NFV R&D Group";

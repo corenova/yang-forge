@@ -1,6 +1,4 @@
 module.exports =
-  @model: 'yangforge-engine'
-  
   info: (input, output, done) ->
     app = @parent
     target = (input.get 'arguments')[0]
