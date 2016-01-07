@@ -1,75 +1,3 @@
-# forge - load and build components
-
-yang    = require 'yang-js'
-promise = require 'promise'
-synth   = require 'data-synth'
-url     = require 'url'
-yaml    = require 'js-yaml'
-path    = require 'path'
-
-FORGERY_SCHEMA = yaml.Schema.create [
-
-]
-
-# protected singleton class instance
-class Forge extends yang.Module
-  @schema """
-    leaf name { type string; }
-    leaf description { type string; }
-    leaf maintainer { type string; }
-  """
-
-  fetch: (source, opts={}, resolve, reject) ->
-    return @invoke arguments.callee, source, opts unless resolve?
-
-    # check if source is raw YAML text (kinda simple...)
-    return resolve source if /\n|\r/.test source
-
-    url = url.parse source
-    source = switch url.protocol
-      when 'http:','https:'
-        source
-      when 'gh:','github:'
-        "https://raw.githubusercontent.com/#{url.hostname}#{url.pathname}"
-      else
-        url.protocol = 'file:'
-        url.pathname
-
-  # performs load of one or more target forgery and returns new instance(s) of Forge
-  load: (forgery, opts={}, resolve, reject) ->
-    if opts.async is true
-      return promise.all (@load x, opts for x in forgery) if forgery instanceof Array
-      return @invoke arguments.callee, forgery, opts unless resolve?
-    else
-      resolve = (x) -> x
-      reject = -> throw new Error arguments...
-
-    return reject 'must set async: true if loading multiple forgeries' if forgery instanceof Array
-
-    if opts.forked is false
-      opts.forked = true
-      return @fork arguments.callee, arguments...
-
-    # here we have a new instance of Forge as 'this'
-    @fetch source
-    .then (data) ->
-
-    plan = yaml.load forgery, schema: FORGERY_SCHEMA
-    @set forgery
-    resolve this
-
-  build: (components...) ->
-
-
-module.exports = new Forge
-
-
-
-
-
-
-
-
 console = (require 'clim') '[forge]'
 unless process.stderr?
   process.stderr = write: ->
@@ -77,7 +5,7 @@ if process.env.yfc_debug?
   console.debug = console.log
 else
   console.log = ->
-
+  
 {
   promise, synth, yaml, coffee, path, fs, events
   request, url, indent, traverse, tosource, treeify, js2xml
@@ -171,7 +99,7 @@ class Forge extends (require './compiler')
       if 'cli' in features
         (@resolve 'feature', 'cli').run this
         return
-
+      
       options = features
         .map (e) ->
           unless typeof e is 'object'
