@@ -4,7 +4,7 @@
   "description": "forge YANG modules to compose apps",
   "keywords": [
     "yang",
-	"yang-js",
+    "yang-js",
     "yaml",
     "json",
     "restjson",
@@ -20,12 +20,12 @@
     "datamodel",
     "forge",
     "model",
-	"controller",
-	"view",
-	"mvc",
+    "controller",
+    "view",
+    "mvc",
     "opnfv",
     "rpc",
-	"rfc6020",
+    "rfc6020",
     "yfc"
   ],
   "preferGlobal": true,
@@ -50,7 +50,7 @@
     "tosource": "^1.0.0",
     "traverse": "^0.6.6",
     "treeify": "^1.0.1",
-	"yang-js": "^0.12.0"
+    "yang-js": "^0.12.2"
   },
   "bundleDependencies": [
     "clim",

@@ -2,22 +2,18 @@
 
 yang    = require 'yang-js'
 promise = require 'promise'
-synth   = require 'data-synth'
 url     = require 'url'
-yaml    = require 'js-yaml'
 path    = require 'path'
 
-FORGERY_SCHEMA = yaml.Schema.create [
-
-]
-
-# protected singleton class instance
-class Forge extends yang.Module
-  @schema """
-    leaf name { type string; }
-    leaf description { type string; }
-    leaf maintainer { type string; }
-  """
+class Forge extends yang.Compiler
+  
+  constructor: (@parent) ->
+    super
+    unless @parent?
+      console.info "initializing YANG Forge Specification and Schema"
+      spec   = fs.readFileSync (path.resolve __dirname, '../yang-forge.yaml'), 'utf-8'
+      schema = fs.readFileSync (path.resolve __dirname, '../yang-forge.yang'), 'utf-8'
+       return @load (yang.loadSpec spec), schema
 
   fetch: (source, opts={}, resolve, reject) ->
     return @invoke arguments.callee, source, opts unless resolve?

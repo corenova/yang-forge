@@ -1,31 +1,25 @@
 name: yangforge
 description: YANG driven JS runtime controller
-maintainer: Peter Lee <peter@intercloud.net>
+maintainer: Peter Lee <peter@corenova.com>
 
 compilers:
   yang: yang-js
   coffee: coffee-script/register
 
 components:
-  yangv1:
-    - schema/yang-v1-extensions.yang
-    - binding/yang-v1-extensions.yaml
-
   common:
-    - yangv1
+    - spec/complex-types.yaml
     - schema/complex-types.yang
     - schema/ietf-yang-types.yang
     - schema/ietf-inet-types.yang
     - schema/iana-crypt-hash.yang
-    - binding/complex-types.yaml
     # future...
     #- schema/ietf-yang-library.yang
 
   main:
-    - yangv1
+    - spec/yangforge.yaml
     - schema/ietf-yang-types.yang
     - schema/yangforge.yang
-    - binding/yangforge.yaml
     - feature/cli
     - feature/express
     - feature/restjson
