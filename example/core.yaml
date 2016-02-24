@@ -1,0 +1,17 @@
+name: example
+summary: Collection of example schemas and cores
+license: MIT
+keywords:
+  - yangforge
+  - ping
+  - example
+
+links:
+  - !magnet yangforge:latest/common
+
+provides:
+  - jukebox.yang
+  - union.yang
+
+contains:
+  - !core ./ping.yaml

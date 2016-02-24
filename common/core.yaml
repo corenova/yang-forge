@@ -1,0 +1,18 @@
+name: common
+author: Peter Lee <peter@corenova.com>
+keywords:
+  - complex-types
+  - ietf-yang-types
+  - ietf-inet-types
+  - iana-crypt-hash
+
+defines: # one or more compiler specifications
+  - complex-types.yaml
+
+provides: # one or more data models
+  - complex-types.yang
+  - ietf-yang-types.yang
+  - ietf-inet-types.yang
+  - iana-crypt-hash.yang
+  # future...
+  #- ietf-yang-library.yang
