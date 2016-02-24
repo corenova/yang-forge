@@ -6,7 +6,7 @@ url     = require 'url'
 path    = require 'path'
 
 class Forge extends yang.Compiler
-  
+
   constructor: (@parent) ->
     super
     unless @parent?
@@ -32,7 +32,7 @@ class Forge extends yang.Compiler
         url.pathname
 
   # performs load of one or more target forgery and returns new instance(s) of Forge
-  load: (forgery, opts={}, resolve, reject) ->
+  load: (forgefile, opts={}, resolve, reject) ->
     if opts.async is true
       return promise.all (@load x, opts for x in forgery) if forgery instanceof Array
       return @invoke arguments.callee, forgery, opts unless resolve?

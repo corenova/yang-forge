@@ -1,27 +1,29 @@
 name: yangforge
-description: YANG driven JS runtime controller
-maintainer: Peter Lee <peter@corenova.com>
+summary: YANG driven JS runtime controller
+author: Peter Lee <peter@corenova.com>
+license: Apache-2.0
+keywords:
+  - build
+  - parse
+  - compile
+  - translate
+  - publish
+  - yang
 
-compilers:
-  yang: yang-js
-  coffee: coffee-script/register
+contains: # one or more bundled assets (incuding subcores)
+  - !npm ./package.json
+  - !core ./common
+  - !core ./example
 
-components:
-  common:
-    - spec/complex-types.yaml
-    - schema/complex-types.yang
-    - schema/ietf-yang-types.yang
-    - schema/ietf-inet-types.yang
-    - schema/iana-crypt-hash.yang
-    # future...
-    #- schema/ietf-yang-library.yang
+provides: # one or more data models
+  - yangforge.yang
 
-  main:
-    - spec/yangforge.yaml
-    - schema/ietf-yang-types.yang
-    - schema/yangforge.yang
-    - feature/cli
-    - feature/express
-    - feature/restjson
-    - feature/websocket
-
+transforms: # one or more transform functions
+  - !xform /yangforge/info:   !require ./lib/yangforge/rpc-info
+  - !xform /yangforge/schema: !require ./lib/yangforge/rpc-schema
+  
+# features:
+#   - feature/cli
+#   - feature/express
+#   - feature/restjson
+#   - feature/websocket
