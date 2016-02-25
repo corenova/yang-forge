@@ -1,11 +1,44 @@
 # forge - load and build components
 
 yang    = require 'yang-js'
+yaml    = require 'js-yaml'
 promise = require 'promise'
 url     = require 'url'
 path    = require 'path'
 
+CORE_YAML_SCHEMA = require './core-schema'
+
 class Forge extends yang.Compiler
+
+  class Core extends Forge.Module
+    @mixin Forge
+    @schema """
+      leaf name { type string; }
+      leaf summary { type string; }
+      leaf author { type string; }
+      leaf license { type string; }
+      leaf-list keywords { type string; }
+
+      list contains { }
+    """
+  
+  # accepts: variable arguments of CORE definition string(s)
+  #
+  # returns: Promise for one or more generated Core(s)
+  load: (core, rest...) ->
+    return promise.all (@load x for x in arguments) if arguments.length > 1
+    return new promise (resolve, reject) =>
+      core = (yaml.load core, schema: CORE_YAML_SCHEMA) if typeof core is 'string'
+      #resolve (new Core core, this)
+      
+      @load core.contains...
+      .then (res) => (new Core core, this).attach res
+      .then (res) => res.link core.links...
+      .then (res) =>
+        @use core.defines...
+        super core.provides...
+      .then (res) => resolve res
+      .catch -> reject arguments...
 
   fetch: (source, opts={}, resolve, reject) ->
     return @invoke arguments.callee, source, opts unless resolve?
@@ -22,37 +55,6 @@ class Forge extends yang.Compiler
       else
         url.protocol = 'file:'
         url.pathname
-
-  # accepts: variable arguments of CORE definition string(s)
-  #
-  # returns: a new Forge instance with updated @map of available cores to build
-  load: ->
-
-
-  load: (forgefile, opts={}, resolve, reject) ->
-    if opts.async is true
-      return promise.all (@load x, opts for x in forgery) if forgery instanceof Array
-      return @invoke arguments.callee, forgery, opts unless resolve?
-    else
-      resolve = (x) -> x
-      reject = -> throw new Error arguments...
-
-    return reject 'must set async: true if loading multiple forgeries' if forgery instanceof Array
-
-    if opts.forked is false
-      opts.forked = true
-      return @fork arguments.callee, arguments...
-
-    # here we have a new instance of Forge as 'this'
-    @fetch source
-    .then (data) ->
-
-    plan = yaml.load forgery, schema: FORGERY_SCHEMA
-    @set forgery
-    resolve this
-
-  build: (components...) ->
-
 
 #
 # declare exports

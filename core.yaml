@@ -20,7 +20,7 @@ contains: # one or more bundled assets (incuding subcores and features)
   - !feature websocket: !require ./lib/feature-websocket
 
 provides: # one or more data models
-  - yangforge.yang
+  - !yang yangforge.yang
 
 transforms: # one or more transform functions
   - !xform /yangforge/build:     !require ./lib/yangforge/rpc-build
