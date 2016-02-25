@@ -8,17 +8,17 @@
 # method facilities according to the available runtime `module`
 # instances.
 
-module.exports = 
+module.exports =
   description: 'REST/JSON web services interface generator'
 
   run: (model, runtime) ->
     console.log "generating REST/JSON interface..."
-    
+
     express = require 'express'
     bp = require 'body-parser'
     passport = require 'passport'
-    yrouter = (require './yang-router') model.parent
-    
+    yrouter = (require './feature-restjson-router') model.parent
+
     restjson = (->
       @use bp.urlencoded(extended:true), bp.json(strict:true), passport.initialize()
 

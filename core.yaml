@@ -1,5 +1,5 @@
-name: yangforge
-summary: YANG driven JS runtime controller
+name: forge
+summary: Provides application composition and publication facilities
 author: Peter Lee <peter@corenova.com>
 license: Apache-2.0
 keywords:
@@ -10,20 +10,23 @@ keywords:
   - publish
   - yang
 
-contains: # one or more bundled assets (incuding subcores)
+contains: # one or more bundled assets (incuding subcores and features)
   - !npm ./package.json
   - !core ./common
   - !core ./example
+  - !feature cli:       !require ./lib/feature-cli
+  - !feature express:   !require ./lib/feature-express
+  - !feature restjson:  !require ./lib/feature-restjson
+  - !feature websocket: !require ./lib/feature-websocket
 
 provides: # one or more data models
   - yangforge.yang
 
 transforms: # one or more transform functions
-  - !xform /yangforge/info:   !require ./lib/yangforge/rpc-info
-  - !xform /yangforge/schema: !require ./lib/yangforge/rpc-schema
-  
-# features:
-#   - feature/cli
-#   - feature/express
-#   - feature/restjson
-#   - feature/websocket
+  - !xform /yangforge/build:     !require ./lib/yangforge/rpc-build
+  - !xform /yangforge/run:       !require ./lib/yangforge/rpc-run
+  - !xform /yangforge/infuse:    !require ./lib/yangforge/rpc-infuse
+  - !xform /yangforge/defuse:    !require ./lib/yangforge/rpc-defuse
+  - !xform /yangforge/info:      !require ./lib/yangforge/rpc-info
+  - !xform /yangforge/schema:    !require ./lib/yangforge/rpc-schema
+  - !xform /yangforge/translate: !require ./lib/yangforge/rpc-translate

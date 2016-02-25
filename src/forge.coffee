@@ -7,14 +7,6 @@ path    = require 'path'
 
 class Forge extends yang.Compiler
 
-  constructor: (@parent) ->
-    super
-    unless @parent?
-      console.info "initializing YANG Forge Specification and Schema"
-      spec   = fs.readFileSync (path.resolve __dirname, '../yang-forge.yaml'), 'utf-8'
-      schema = fs.readFileSync (path.resolve __dirname, '../yang-forge.yang'), 'utf-8'
-       return @load (yang.loadSpec spec), schema
-
   fetch: (source, opts={}, resolve, reject) ->
     return @invoke arguments.callee, source, opts unless resolve?
 
@@ -31,7 +23,12 @@ class Forge extends yang.Compiler
         url.protocol = 'file:'
         url.pathname
 
-  # performs load of one or more target forgery and returns new instance(s) of Forge
+  # accepts: variable arguments of CORE definition string(s)
+  #
+  # returns: a new Forge instance with updated @map of available cores to build
+  load: ->
+
+
   load: (forgefile, opts={}, resolve, reject) ->
     if opts.async is true
       return promise.all (@load x, opts for x in forgery) if forgery instanceof Array
@@ -57,14 +54,29 @@ class Forge extends yang.Compiler
   build: (components...) ->
 
 
-module.exports = new Forge
+#
+# declare exports
+#
+exports = module.exports = new Forge
+exports.Forge = Forge # for class-def reuse
 
 
-
-
-
-
-
+components =
+  promise:  require 'promise'
+  synth:    require 'data-synth'
+  yaml:     require 'js-yaml'
+  coffee:   require 'coffee-script'
+  path:     require 'path'
+  sys:      require 'child_process'
+  fs:       require 'fs'
+  url:      require 'url'
+  request:  require 'superagent'
+  indent:   require 'indent-string'
+  traverse: require 'traverse'
+  tosource: require 'tosource'
+  events:   require 'events'
+  treeify:  require 'treeify'
+  js2xml:   require 'js2xmlparser'
 
 console = (require 'clim') '[forge]'
 unless process.stderr?
