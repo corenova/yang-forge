@@ -9,6 +9,7 @@
 # arguments.
 
 module.exports =
+  name: 'cli'
   run: (app) ->
     program = require 'commander'
     colors  = require 'colors'

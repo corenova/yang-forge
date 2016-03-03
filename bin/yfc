@@ -1,6 +1,10 @@
 #!/usr/bin/env node
 
+var url  = require('url');
+var core = __dirname + '../core.yaml';
+
 require('..')
-  .load('../core.yaml')
-  .build('forge')
-  .run('cli');
+  .load(url.parse("file:#{core}"))
+  .then( function (forge) {
+    forge.build('forge').run('cli');
+  });

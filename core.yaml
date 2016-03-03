@@ -10,17 +10,17 @@ keywords:
   - publish
   - yang
 
-contains: # one or more bundled assets (incuding subcores and features)
-  - !npm ./package.json
+contains: # one or more bundled cores
+  - !npm  ./package.json
   - !core ./common
   - !core ./example
-  - !feature cli:       !require ./lib/feature-cli
-  - !feature express:   !require ./lib/feature-express
-  - !feature restjson:  !require ./lib/feature-restjson
-  - !feature websocket: !require ./lib/feature-websocket
 
-provides: # one or more data models
-  - !yang yangforge.yang
+provides: # one or more specs, schemas, and features
+  - !schema ./yangforge.yang
+  - !feature ./lib/yangforge/feature-cli
+  - !feature ./lib/yangforge/feature-express
+  - !feature ./lib/yangforge/feature-restjson
+  - !feature ./lib/yangforge/feature-websocket
 
 transforms: # one or more transform functions
   - !xform /yangforge/build:     !require ./lib/yangforge/rpc-build
