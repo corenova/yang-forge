@@ -7,7 +7,7 @@ keywords:
   - example
 
 links:
-  - !magnet yangforge:latest/common
+  - !magnet forge:latest/common
 
 provides:
   - jukebox.yang

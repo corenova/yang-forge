@@ -78,7 +78,7 @@
     "node": ">=0.10.28"
   },
   "scripts": {
-    "prepublish": "bin/yfc build -o dist/bundle.yfx forge.yaml",
+    "prepublish": "coffee -o lib -c src",
     "start": "bin/yfc run"
   }
 }

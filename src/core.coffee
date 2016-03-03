@@ -20,7 +20,6 @@ exports.load = (input) ->
 
 
 components =
-  coffee:   require 'coffee-script'
   sys:      require 'child_process'
   indent:   require 'indent-string'
   traverse: require 'traverse'
@@ -36,8 +35,6 @@ if process.env.yfc_debug?
   console.debug = console.log
 else
   console.log = ->
-
-coffee.register?()
 
 class Forge extends (require './compiler')
 

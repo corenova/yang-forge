@@ -19,7 +19,7 @@ class Composer extends Compiler
       when input instanceof url.Url then (@fetch input).then (res) => resolve @compose res, input
       else resolve @compose input
 
-  compose: (input, opts) -> throw @error "must be overriden by implementing class"
+  compose: (input, origin) -> throw @error "must be overriden by implementing class"
 
   # helper routine for fetching remote assets
   fetch: (source) -> new promise (resolve, reject) =>
@@ -36,34 +36,66 @@ class Composer extends Compiler
       else
         reject "unrecognized protocol '#{source.protocol}' for retrieving #{url.pathname}"
 
+class Provider extends Composer
+  load: -> super.then (res) =>
+    res = [ res ] unless res instanceof Array
+    @use (@compile x) for x in res
+    return this
+
+  compose: (x) -> @parse x if typeof x is 'string'
+
 class Forge extends Composer
 
+  class Container extends Forge
+    # enable inspecting inside defined core(s) during lookup
+    resolve: ->
+      match = super
+      unless match?
+        for name, core of (super 'core') when core?.compiler?
+          match = core.compiler.resolve? arguments...
+          break if match?
+      return match
+
+    # special npm:? link processing
+    fetch: (link) ->
+      data = switch link.pathname
+        when /^\./ then (super "file:#{link.pathname}")
+        
+      return switch link.protocol
+        when 'npm:' then data.then (res) -> JSON.parse res
+        else data
+  
   # TODO: special magnet:? link processing
-  class Linker extends Forge
+  class Linker extends Container
     fetch: (link) -> super
 
   # accepts: variable arguments of Core definition schema(s)
   # returns: Promise for a new Forge with one or more generated Core(s)
   load: -> super.then (res) =>
     res = [ res ] unless res instanceof Array
-    @define core.get('name'), core for core in res when core?.get?
+    @define 'core', core.get('name'), core for core in res when core?.get?
     return this
 
   compose: (input, origin) ->
     input = Core.load input
-    (new Forge this).load input.contains...
+    (new Container this).load input.contains...
     .then (res) -> (new Linker res).load input.links...
-    .then (res) -> (new Compiler res).load input.provides...
+    .then (res) -> (new Provider res).load input.provides...
     .then (res) ->
       class extends Core
+        @compiler = res
         @merge input
-        @set origin: origin, maker: res
+        @set origin: origin
         @bind res.map
 
-  build: (cname, config) ->
+  create: (cname, opts={}) ->
+    opts.transform ?= true
     try
       console.log "[build:#{cname}] creating a new #{cname} core instance"
-      return new (@resolve cname) config
+      core = @resolve 'core', cname
+      # if opts.transform
+      #   for xform in (core.get 'transforms') ? []
+      return new core opts.config
     catch e
       console.error e
       return new Core config

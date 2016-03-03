@@ -5,6 +5,6 @@ var core = __dirname + '../core.yaml';
 
 require('..')
   .load(url.parse("file:#{core}"))
-  .then( function (forge) {
-    forge.build('forge').run('cli');
+  .then( function (res) {
+    res.create('forge').run('cli');
   });
