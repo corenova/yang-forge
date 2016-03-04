@@ -5,6 +5,12 @@ yaml   = require 'js-yaml'
 events = require 'events'
 
 class Core extends yang.Module
+  @set synth: 'core'
+  @mixin events.EventEmitter
+
+  attach: -> super; @emit 'attach', arguments...
+
+  toString: -> "Core:#{@meta 'name'}"
 
 
 exports = module.exports = Core
@@ -28,13 +34,13 @@ components =
   treeify:  require 'treeify'
   js2xml:   require 'js2xmlparser'
 
-console = (require 'clim') '[forge]'
-unless process.stderr?
-  process.stderr = write: ->
-if process.env.yfc_debug?
-  console.debug = console.log
-else
-  console.log = ->
+# console = (require 'clim') '[forge]'
+# unless process.stderr?
+#   process.stderr = write: ->
+# if process.env.yfc_debug?
+#   console.debug = console.log
+# else
+#   console.log = ->
 
 class Forge extends (require './compiler')
 

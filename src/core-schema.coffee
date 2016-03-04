@@ -4,7 +4,7 @@ coffee = require 'coffee-script'
 
 module.exports = yaml.Schema.create [
 
-  # contains types (async)
+  # contains types (local/remote fetch)
   new yaml.Type '!npm',
     kind: 'scalar'
     resolve:   (data) -> typeof data is 'string'
@@ -14,15 +14,15 @@ module.exports = yaml.Schema.create [
     resolve:   (data) -> typeof data is 'string'
     construct: (data) -> url.parse "core:#{data}"
 
-  # provides types (sync)
+  # provides types (local files only)
   new yaml.Type '!spec',
     kind: 'scalar'
     resolve:   (data) -> typeof data is 'string'
-    construct: (data) -> url.parse "spec:#{data}"
+    construct: (data) -> url.parse "file:#{data}"
   new yaml.Type '!schema',
     kind: 'scalar'
     resolve:   (data) -> typeof data is 'string'
-    construct: (data) -> url.parse "schema:#{data}"
+    construct: (data) -> url.parse "file:#{data}"
   new yaml.Type '!feature',
     kind: 'scalar'
     resolve:   (data) -> typeof data is 'string'
@@ -43,5 +43,5 @@ module.exports = yaml.Schema.create [
     construct: (data) -> coffee.eval? data
     predicate: (obj) -> obj instanceof Function
     represent: (obj) -> obj.toString()
-    
+
 ]

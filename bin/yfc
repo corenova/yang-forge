@@ -1,10 +1,11 @@
 #!/usr/bin/env node
 
 var url  = require('url');
-var core = __dirname + '../core.yaml';
 
 require('..')
-  .load(url.parse("file:#{core}"))
+  .use({ origin: __dirname })
+  .load(url.parse('file:../core.yaml'))
   .then( function (res) {
-    res.create('forge').run('cli');
+    forge = res.create('forge');
+	forge.run('cli');
   });

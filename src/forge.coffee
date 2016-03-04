@@ -16,59 +16,40 @@ class Composer extends Compiler
   load: (input, rest...) ->
     return promise.all (@load x for x in arguments) if arguments.length > 1
     return new promise (resolve, reject) => switch
-      when input instanceof url.Url then (@fetch input).then (res) => resolve @compose res, input
+      when input instanceof url.Url
+        input = @normalize input
+        (@fetch input).then (res) => resolve @compose res, input
       else resolve @compose input
 
   compose: (input, origin) -> throw @error "must be overriden by implementing class"
 
+  # handles relative link paths if 'origin' is defined
+  normalize: (link) ->
+    origin = @resolve 'origin'
+    origin = url.parse origin if typeof origin is 'string'
+    return link unless origin instanceof url.Url
+
+    origin.protocol ?= 'file:'
+    if /^\./.test link.pathname
+      link.pathname = path.normalize (path.dirname(origin.pathname) + link.pathname)
+    return link
+
   # helper routine for fetching remote assets
-  fetch: (source) -> new promise (resolve, reject) =>
-    return reject "attempting to fetch invalid Url" unless source instanceof url.Url
-    switch source.protocol
+  fetch: (link) -> new promise (resolve, reject) =>
+    return reject "attempting to fetch invalid link" unless link instanceof url.Url
+    switch link.protocol
       when 'http:','https:'
-        request.get(source).end (err, res) ->
+        request.get(link).end (err, res) ->
           if err? or !res.ok then reject err
           else resolve res.text
       when 'file:'
-        fs.readFile (path.resolve source.pathname), 'utf-8', (err, data) ->
+        fs.readFile (path.resolve link.pathname), 'utf-8', (err, data) ->
           if err? then reject err
           else resolve data
       else
-        reject "unrecognized protocol '#{source.protocol}' for retrieving #{url.pathname}"
+        reject "unrecognized protocol '#{link.protocol}' for retrieving #{url.format link}"
 
-class Provider extends Composer
-  load: -> super.then (res) =>
-    res = [ res ] unless res instanceof Array
-    @use (@compile x) for x in res
-    return this
-
-  compose: (x) -> @parse x if typeof x is 'string'
-
-class Forge extends Composer
-
-  class Container extends Forge
-    # enable inspecting inside defined core(s) during lookup
-    resolve: ->
-      match = super
-      unless match?
-        for name, core of (super 'core') when core?.compiler?
-          match = core.compiler.resolve? arguments...
-          break if match?
-      return match
-
-    # special npm:? link processing
-    fetch: (link) ->
-      data = switch link.pathname
-        when /^\./ then (super "file:#{link.pathname}")
-        
-      return switch link.protocol
-        when 'npm:' then data.then (res) -> JSON.parse res
-        else data
-  
-  # TODO: special magnet:? link processing
-  class Linker extends Container
-    fetch: (link) -> super
-
+class Maker extends Composer
   # accepts: variable arguments of Core definition schema(s)
   # returns: Promise for a new Forge with one or more generated Core(s)
   load: -> super.then (res) =>
@@ -78,7 +59,9 @@ class Forge extends Composer
 
   compose: (input, origin) ->
     input = Core.load input
-    (new Container this).load input.contains...
+    (new Container this)
+    .use origin: origin
+    .load input.contains...
     .then (res) -> (new Linker res).load input.links...
     .then (res) -> (new Provider res).load input.provides...
     .then (res) ->
@@ -88,10 +71,50 @@ class Forge extends Composer
         @set origin: origin
         @bind res.map
 
+class Container extends Maker
+  # enable inspecting inside defined core(s) during lookup
+  resolve: ->
+    match = super
+    unless match?
+      for name, core of (super 'core') when core?.compiler?
+        match = core.compiler.resolve? arguments...
+        break if match?
+    return match
+
+  # special npm:? link processing
+  fetch: (link) -> switch link.protocol
+    when 'npm:'
+      if /^[\.\/]/.test link.pathname
+        unless /package.json$/.test link.pathname
+          link.pathname += '/package.json'
+        (super url.parse "file:#{link.pathname}")
+        .then (res) -> JSON.parse res
+    when 'core:'
+      if /^[\.\/]/.test link.pathname
+        (super url.parse "file:#{link.pathname}")
+    else
+      super
+
+class Linker extends Container
+  # TODO: special magnet:? link processing
+  fetch: (link) -> super
+
+class Provider extends Composer
+  load: -> super.then (res) =>
+    res = [ res ] unless res instanceof Array
+    @use (@compile x) for x in res
+    return this
+
+  compose: (x) ->
+    if typeof x is 'string' then @parse x
+    else x
+
+class Forge extends Maker
+
   create: (cname, opts={}) ->
     opts.transform ?= true
     try
-      console.log "[build:#{cname}] creating a new #{cname} core instance"
+      console.log "[create:#{cname}] creating a new #{cname} core instance"
       core = @resolve 'core', cname
       # if opts.transform
       #   for xform in (core.get 'transforms') ? []
