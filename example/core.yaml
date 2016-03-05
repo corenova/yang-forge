@@ -6,12 +6,13 @@ keywords:
   - ping
   - example
 
-links:
-  - !magnet forge:latest/common
-
-provides:
-  - jukebox.yang
-  - union.yang
-
 contains:
   - !core ./ping.yaml
+
+# links:
+#   - !magnet forge:latest/common
+
+provides:
+  - !schema ./jukebox.yang
+  - !schema ./union.yang
+

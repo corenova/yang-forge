@@ -1,64 +1,28 @@
 # forge - load and build components
 
-promise = require 'promise'
-url     = require 'url'
-path    = require 'path'
-fs      = require 'fs'
-request = require 'superagent'
-
-Compiler = require './compiler'
+Composer = require './composer'
 Core     = require './core'
-
-# Composer - promise wrapper around compiler to enable asynchronous compilations
-class Composer extends Compiler
-  # accepts: variable arguments of target input(s)
-  # returns: Promise for one or more generated output(s)
-  load: (input, rest...) ->
-    return promise.all (@load x for x in arguments) if arguments.length > 1
-    return new promise (resolve, reject) => switch
-      when input instanceof url.Url
-        input = @normalize input
-        (@fetch input).then (res) => resolve @compose res, input
-      else resolve @compose input
-
-  compose: (input, origin) -> throw @error "must be overriden by implementing class"
-
-  # handles relative link paths if 'origin' is defined
-  normalize: (link) ->
-    origin = @resolve 'origin'
-    origin = url.parse origin if typeof origin is 'string'
-    return link unless origin instanceof url.Url
-
-    origin.protocol ?= 'file:'
-    if /^\./.test link.pathname
-      link.pathname = path.normalize (path.dirname(origin.pathname) + link.pathname)
-    return link
-
-  # helper routine for fetching remote assets
-  fetch: (link) -> new promise (resolve, reject) =>
-    return reject "attempting to fetch invalid link" unless link instanceof url.Url
-    switch link.protocol
-      when 'http:','https:'
-        request.get(link).end (err, res) ->
-          if err? or !res.ok then reject err
-          else resolve res.text
-      when 'file:'
-        fs.readFile (path.resolve link.pathname), 'utf-8', (err, data) ->
-          if err? then reject err
-          else resolve data
-      else
-        reject "unrecognized protocol '#{link.protocol}' for retrieving #{url.format link}"
+url      = require 'url'
 
 class Maker extends Composer
   # accepts: variable arguments of Core definition schema(s)
   # returns: Promise for a new Forge with one or more generated Core(s)
-  load: -> super.then (res) =>
-    res = [ res ] unless res instanceof Array
-    @define 'core', core.get('name'), core for core in res when core?.get?
-    return this
+  load: ->
+    super
+    .then (res) =>
+      res = [].concat res...
+      for core in res when core?.get?
+        console.log "[Maker:load] define a new core '#{core.get 'name'}'"
+        @define 'core', core.get('name'), core
+      return this
 
   compose: (input, origin) ->
+    console.log "[Maker:compose] entered with:"
+    console.log input
     input = Core.load input
+    return @load input if input instanceof url.Url
+
+    console.log "[Maker:compose] #{input.name}"
     (new Container this)
     .use origin: origin
     .load input.contains...
@@ -66,18 +30,20 @@ class Maker extends Composer
     .then (res) -> (new Provider res).load input.provides...
     .then (res) ->
       class extends Core
-        @compiler = res
+        @provider = res
         @merge input
         @set origin: origin
         @bind res.map
+    .catch (err) => console.error err; throw @error err
 
 class Container extends Maker
   # enable inspecting inside defined core(s) during lookup
   resolve: ->
     match = super
+    return match unless @parent?
     unless match?
-      for name, core of (super 'core') when core?.compiler?
-        match = core.compiler.resolve? arguments...
+      for name, core of (super 'core') when core?.provider?
+        match = core.provider.resolve? arguments...
         break if match?
     return match
 
@@ -92,6 +58,10 @@ class Container extends Maker
     when 'core:'
       if /^[\.\/]/.test link.pathname
         (super url.parse "file:#{link.pathname}")
+        .catch ->
+          (super url.parse "file:#{link.pathname}/core.yaml")
+    when 'feature:'
+      (super url.parse "require:#{link.pathname}")
     else
       super
 
@@ -101,7 +71,8 @@ class Linker extends Container
 
 class Provider extends Composer
   load: -> super.then (res) =>
-    res = [ res ] unless res instanceof Array
+    res = [].concat res...
+    console.log res
     @use (@compile x) for x in res
     return this
 
@@ -109,7 +80,7 @@ class Provider extends Composer
     if typeof x is 'string' then @parse x
     else x
 
-class Forge extends Maker
+class Forge extends Container
 
   create: (cname, opts={}) ->
     opts.transform ?= true

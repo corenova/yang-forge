@@ -7,10 +7,10 @@ keywords:
   - iana-crypt-hash
 
 provides: # one or more data models
-  - !spec   complex-types.yaml
-  - !schema complex-types.yang
-  - !schema ietf-yang-types.yang
-  - !schema ietf-inet-types.yang
-  - !schema iana-crypt-hash.yang
+  - !spec   ./complex-types.yaml
+  - !schema ./complex-types.yang
+  - !schema ./ietf-yang-types.yang
+  - !schema ./ietf-inet-types.yang
+  - !schema ./iana-crypt-hash.yang
   # future...
   #- ietf-yang-library.yang
