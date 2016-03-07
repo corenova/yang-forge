@@ -1,5 +1,7 @@
 # forge - load and build components
 
+console.debug ?= console.log if process.env.yang_debug?
+
 Composer = require './composer'
 Core     = require './core'
 url      = require 'url'
@@ -10,19 +12,21 @@ class Maker extends Composer
   load: ->
     super
     .then (res) =>
-      res = [].concat res...
+      res = ([].concat res).filter (e) -> e? and !!e
       for core in res when core?.get?
-        console.log "[Maker:load] define a new core '#{core.get 'name'}'"
+        console.debug? "[Maker:load] define a new core '#{core.get 'name'}'"
         @define 'core', core.get('name'), core
       return this
 
   compose: (input, origin) ->
-    console.log "[Maker:compose] entered with:"
-    console.log input
+    console.debug? "[Maker:compose] entered with:"
+    console.debug? input
     input = Core.load input
     return @load input if input instanceof url.Url
 
-    console.log "[Maker:compose] #{input.name}"
+    throw @error "cannot compose a new core without name", input unless input.name?
+
+    console.debug? "[Maker:compose] #{input.name}"
     (new Container this)
     .use origin: origin
     .load input.contains...
@@ -38,12 +42,12 @@ class Maker extends Composer
 
 class Container extends Maker
   # enable inspecting inside defined core(s) during lookup
-  resolve: ->
+  resolve: (type, key, opts={}) ->
     match = super
     return match unless @parent?
     unless match?
       for name, core of (super 'core') when core?.provider?
-        match = core.provider.resolve? arguments...
+        match = core.provider.resolve? type, key, recurse: false
         break if match?
     return match
 
@@ -71,8 +75,7 @@ class Linker extends Container
 
 class Provider extends Composer
   load: -> super.then (res) =>
-    res = [].concat res...
-    console.log res
+    res = ([].concat res).filter (e) -> e? and !!e
     @use (@compile x) for x in res
     return this
 
@@ -85,7 +88,7 @@ class Forge extends Container
   create: (cname, opts={}) ->
     opts.transform ?= true
     try
-      console.log "[create:#{cname}] creating a new #{cname} core instance"
+      console.debug? "[create:#{cname}] creating a new #{cname} core instance"
       core = @resolve 'core', cname
       # if opts.transform
       #   for xform in (core.get 'transforms') ? []

@@ -9,7 +9,8 @@
 # to dynamically instanticate the web server and makes itself available
 # for higher-order features to utilize it for associating additional routing endpoints.
 
-module.exports = 
+module.exports =
+  name: 'express'
   description: 'Fast, unopionated, minimalist web framework (HTTP/HTTPS)'
   config:
     port: 5000

@@ -1,5 +1,7 @@
 # Composer - promise wrapper around compiler to enable asynchronous compilations
 
+console.debug ?= console.log if process.env.yang_debug?
+
 promise = require 'promise'
 url     = require 'url'
 path    = require 'path'
@@ -10,7 +12,7 @@ class Composer extends (require 'yang-js').Compiler
   # accepts: variable arguments of target input(s)
   # returns: Promise for one or more generated output(s)
   load: (input, rest...) ->
-    return promise.all (@load x for x in arguments) if arguments.length > 1
+    return promise.all (Composer::load.call this, x for x in arguments) if arguments.length > 1
     return new promise (resolve, reject) => switch
       when not input? then resolve null
       when input instanceof url.Url
@@ -24,7 +26,7 @@ class Composer extends (require 'yang-js').Compiler
 
   # handles relative link paths if 'origin' is defined
   normalize: (link) ->
-    console.log "[Composer:normalize] #{url.format link}"
+    console.debug? "[Composer:normalize] #{url.format link}"
     origin = @resolve 'origin'
     origin = url.parse origin if typeof origin is 'string'
     return link unless origin instanceof url.Url
@@ -44,7 +46,7 @@ class Composer extends (require 'yang-js').Compiler
 
   # helper routine for fetching remote assets
   fetch: (link) -> new promise (resolve, reject) =>
-    console.log "[Composer:fetch] #{url.format link}"
+    console.debug? "[Composer:fetch] #{url.format link}"
     return reject "attempting to fetch invalid link" unless link instanceof url.Url
     switch link.protocol
       when 'http:','https:'

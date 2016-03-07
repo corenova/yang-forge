@@ -1,7 +1,8 @@
 # socket.io (websockets) feature interface module
 #
 
-module.exports = 
+module.exports =
+  name: 'websocket'
   # should 'bind' to a runtime before use
   connect: (to, opts) ->
     @invoke (resolve, reject) ->

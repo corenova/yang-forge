@@ -9,6 +9,7 @@
 # instances.
 
 module.exports =
+  name: 'restjson'
   description: 'REST/JSON web services interface generator'
 
   run: (model, runtime) ->
