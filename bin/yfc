@@ -1,9 +1,8 @@
 #!/usr/bin/env node
 
 require('..')
-  .use({ origin: __dirname })
+  .define('origin', __dirname)
   .load('!core ../core.yaml')
   .then( function (res) {
-    forge = res.create('forge');
-	forge.run('cli');
+    res.enable('cli').run();
   });

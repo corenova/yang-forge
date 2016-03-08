@@ -10,22 +10,22 @@
 
 module.exports =
   name: 'cli'
-  run: (app) ->
+  run: (core) ->
     program = require 'commander'
     colors  = require 'colors'
 
     # 1. Setup some default execution context
-    version = (app.meta 'version')
+    version = (core.meta 'version')
     program
       .version version
-      .description (app.meta 'description')
+      .description (core.meta 'description')
       .option '-I, --include [module]', 'pre-load the specified module(s) into runtime', ((x,y) -> y.concat x), []
       .option '--no-color', 'disable color output'
 
     # 2. extract -I include options
     program.parseOptions program.normalize process.argv.slice 2
     for preload in program.include
-      source = app.load "!yaml #{preload}", async: false
+      source = core.load "!yaml #{preload}", async: false
       for name, model of source.properties
         console.info "absorbing a new model '#{name}' into running forge"
         app.attach name, model
