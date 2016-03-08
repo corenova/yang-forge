@@ -2,28 +2,16 @@ yaml   = require 'js-yaml'
 url    = require 'url'
 coffee = require 'coffee-script'
 
-module.exports = yaml.Schema.create [
+keywords = [
+  'npm', 'core', 'feature', 'machine', 'magnet'
+]
 
-  # contains and links
-  new yaml.Type '!npm',
-    kind: 'scalar'
-    resolve:   (data) -> typeof data is 'string'
-    construct: (data) -> url.parse "npm:?#{data}"
+extensions = keywords.map (x) -> new yaml.Type "!#{x}",
+  kind: 'scalar'
+  resolve:   (data) -> typeof data is 'string'
+  construct: (data) -> url.parse "#{x}:?#{data}"
 
-  new yaml.Type '!core',
-    kind: 'scalar'
-    resolve:   (data) -> typeof data is 'string'
-    construct: (data) -> url.parse "core:?#{data}"
-
-  new yaml.Type '!feature',
-    kind: 'scalar'
-    resolve:   (data) -> typeof data is 'string'
-    construct: (data) -> url.parse "feature:?#{data}"
-
-  new yaml.Type '!magnet',
-    kind: 'scalar'
-    resolve:   (data) -> typeof data is 'string'
-    construct: (data) -> url.parse "magnet:?#{data}"
+module.exports = yaml.Schema.create extensions.concat [
 
   # provides types (local files only)
   new yaml.Type '!spec',
@@ -53,5 +41,5 @@ module.exports = yaml.Schema.create [
     construct: (data) -> coffee.eval? data
     predicate: (obj) -> obj instanceof Function
     represent: (obj) -> obj.toString()
-
+    
 ]

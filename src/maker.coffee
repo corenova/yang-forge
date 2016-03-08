@@ -73,7 +73,14 @@ class Container extends Maker
 
 class Linker extends Container
   # TODO: special magnet:? link processing
-  fetch: (link) -> super
+  fetch: (link) ->  switch link.protocol
+    when 'machine:'
+      (super url.parse "https://#{link.host}:37713")
+      .catch ->
+        name: 'interlink.io'
+        description: 'placeholder'
+    else
+      super
 
 class Provider extends Composer
   load: -> super.then (res) =>

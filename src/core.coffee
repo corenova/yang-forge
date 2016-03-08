@@ -85,61 +85,10 @@ class Core extends yang.Module
 
     return @render info, options
 
-  enable: (name, options) ->
-    @feature[name] ?= (@meta "feature.#{name}")?.construct? options
-
-  disable: (name) ->
-    @feature[name]?.destroy?()
-    delete @feature[name]
-
-  run: (features...) ->
-    if 'cli' in features
-      (@resolve 'feature', 'cli').run this
-      return
-
-    options = features
-      .map (e) ->
-        unless typeof e is 'object'
-          synth.objectify e, on
-        else e
-      .reduce ((a, b) -> synth.copy a, b, true), {}
-
-    (@access 'yangforge').invoke 'run', options: options
-    .catch (e) -> console.error e
-
 exports = module.exports = Core
-exports.Schema = require './core-schema'
+exports.Schema = require './schema'
 exports.load = (input, opts={}) ->
   opts.schema ?= @Schema
   if typeof input is 'string' then yaml.load input, opts
   else input
 
-# console = (require 'clim') '[forge]'
-# unless process.stderr?
-#   process.stderr = write: ->
-# if process.env.yfc_debug?
-#   console.debug = console.log
-# else
-#   console.log = ->
-
-
-  # TBD
-  # export: (input=this) ->
-  #   console.assert input instanceof Object, "invalid input to export module"
-  #   console.assert typeof input.name is 'string' and !!input.name,
-  #     "need to pass in 'name' of the module to export"
-  #   format = input.format ? 'json'
-  #   m = switch
-  #     when (synth.instanceof input) then input
-  #     else @resolve 'module', input.name
-  #   console.assert (synth.instanceof m),
-  #     "unable to retrieve requested module #{input.name} for export"
-
-  #   obj = m.extract 'name', 'schema', 'map', 'extensions', 'importers', 'exporters', 'procedures'
-  #   for key in [ 'extensions', 'importers', 'procedures' ]
-  #     obj[key]?.toJSON = ->
-  #       @[k] = tosource v for k, v of this when k isnt 'toJSON' and v instanceof Function
-  #       this
-
-  #   return switch format
-  #     when 'json' then JSON.stringify obj

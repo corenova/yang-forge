@@ -19,6 +19,9 @@ contains: # one or more bundled cores
   - !feature ./lib/yangforge/feature-restjson
   - !feature ./lib/yangforge/feature-websocket
 
+links: # one or more remote machines
+  - !machine interlink.io
+
 provides: # one or more specs and schemas
   - !schema ./yangforge.yang
 
