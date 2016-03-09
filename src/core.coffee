@@ -1,10 +1,12 @@
 # core - the embodiment of the soul of the application
+console.debug ?= console.log if process.env.yang_debug?
 
 yang     = require 'yang-js'
 yaml     = require 'js-yaml'
 events   = require 'events'
 traverse = require 'traverse'
 tosource = require 'tosource'
+assert   = require 'assert'
 # sys =      require 'child_process'
 # treeify =  require 'treeify'
 # js2xml =   require 'js2xmlparser'
@@ -12,6 +14,17 @@ tosource = require 'tosource'
 class Core extends yang.Module
   @set synth: 'core'
   @mixin events.EventEmitter
+
+  enable: (feature, data, args...) ->
+    Feature = (@meta 'provider').resolve 'feature', feature
+    assert Feature instanceof Function,
+      "cannot enable incompatible feature"
+
+    @once 'start', (engine) =>
+      console.debug? "[Core:enable] starting with '#{feature}'"
+      (new Feature data, this).invoke 'main', args...
+      .then (res) -> console.log res
+      .catch (err) -> console.error err
 
   @toSource: (opts={}) ->
     source = @extract()
@@ -86,9 +99,7 @@ class Core extends yang.Module
     return @render info, options
 
 exports = module.exports = Core
-exports.Schema = require './schema'
 exports.load = (input, opts={}) ->
-  opts.schema ?= @Schema
+  opts.schema ?= require './schema'
   if typeof input is 'string' then yaml.load input, opts
   else input
-

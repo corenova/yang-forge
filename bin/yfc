@@ -3,6 +3,9 @@
 require('..')
   .define('origin', __dirname)
   .load('!core ../core.yaml')
-  .then( function (res) {
-    res.enable('cli').run();
-  });
+  .then( function (engine) {
+    var core = engine.create('forge');
+	core.enable('cli', null, core.access('yangforge'), process.argv);
+	engine.run(core);
+  })
+  .catch( function (err) { console.error(err); } );

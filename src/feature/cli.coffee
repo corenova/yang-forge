@@ -10,25 +10,24 @@
 
 module.exports =
   name: 'cli'
-  run: (core) ->
+  main: (model, argv) ->
     program = require 'commander'
     colors  = require 'colors'
 
     # 1. Setup some default execution context
-    version = (core.meta 'version')
     program
-      .version version
-      .description (core.meta 'description')
-      .option '-I, --include [module]', 'pre-load the specified module(s) into runtime', ((x,y) -> y.concat x), []
+      .version (model.parent.get 'version')
+      .description (model.parent.get 'description')
+      #.option '-I, --include [module]', 'pre-load the specified module(s) into runtime', ((x,y) -> y.concat x), []
       .option '--no-color', 'disable color output'
 
     # 2. extract -I include options
-    program.parseOptions program.normalize process.argv.slice 2
-    for preload in program.include
-      source = core.load "!yaml #{preload}", async: false
-      for name, model of source.properties
-        console.info "absorbing a new model '#{name}' into running forge"
-        app.attach name, model
+    # program.parseOptions program.normalize process.argv.slice 2
+    # for preload in program.include
+    #   source = core.load "!yaml #{preload}", async: false
+    #   for name, model of source.properties
+    #     console.info "absorbing a new model '#{name}' into running forge"
+    #     app.attach name, model
 
     # for action, rpc of model.methods
     #   continue unless (model.meta "rpc.#{action}.if-feature") is 'cli'
@@ -37,7 +36,6 @@ module.exports =
     #   status = meta.status
     #   command = "#{action}"
 
-    model = app.access 'yangforge'
     for action, rpc of (model.meta 'rpc')
       continue unless rpc['if-feature'] is 'cli'
 
@@ -115,5 +113,5 @@ module.exports =
             console.error "#{e}".red
             cmd.help()
 
-    program.parse process.argv
+    program.parse argv
     return program

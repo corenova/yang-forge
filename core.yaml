@@ -1,5 +1,6 @@
 name: forge
-summary: Provides application composition and publication facilities
+version: 0.12.0
+description: Provides application composition and publication facilities
 author: Peter Lee <peter@corenova.com>
 license: Apache-2.0
 keywords:
@@ -14,29 +15,14 @@ contains: # one or more bundled cores
   - !npm  ./package.json
   - !core ./common
   #- !core ./example
-  - !feature ./lib/yangforge/feature-cli
-  - !feature ./lib/yangforge/feature-express
-  - !feature ./lib/yangforge/feature-restjson
-  - !feature ./lib/yangforge/feature-websocket
+  - !feature ./lib/feature/cli
+  - !feature ./lib/feature/express
+  - !feature ./lib/feature/restjson
+  - !feature ./lib/feature/websocket
 
 links: # one or more remote machines
   - !machine interlink.io
 
 provides: # one or more specs and schemas
+  - !spec   ./yangforge.yaml
   - !schema ./yangforge.yang
-
-transforms: # one or more transform functions
-  - !xform 
-    /yangforge.build:     ./lib/yangforge/rpc-build
-  - !xform 
-    /yangforge.run:       ./lib/yangforge/rpc-run
-  - !xform 
-    /yangforge.infuse:    ./lib/yangforge/rpc-infuse
-  - !xform 
-    /yangforge.defuse:    ./lib/yangforge/rpc-defuse
-  - !xform 
-    /yangforge.info:      ./lib/yangforge/rpc-info
-  - !xform 
-    /yangforge.schema:    ./lib/yangforge/rpc-schema
-  - !xform 
-    /yangforge.translate: ./lib/yangforge/rpc-translate

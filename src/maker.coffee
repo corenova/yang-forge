@@ -13,20 +13,26 @@ class Maker extends Composer
     super
     .then (res) =>
       res = ([].concat res).filter (e) -> e? and !!e
-      for core in res when core?.get?
-        console.debug? "[Maker:load] define a new core '#{core.get 'name'}'"
-        @define 'core', core.get('name'), core
+      for core in res when core.constructor is Core.constructor
+        { name, origin } = core.extract 'name', 'origin'
+        type = origin.protocol.replace ':',''
+        type ?= 'core'
+        console.debug? "[Maker:load] define a new '#{type}:#{name}'"
+        @define type, name, core
       return this
 
+  # Maker can also compose instances of existing Core(s)
   compose: (input, origin) ->
     console.debug? "[Maker:compose] entered with:"
     console.debug? input
     input = Core.load input
-    return @load input if input instanceof url.Url
-
+    switch
+      when input instanceof url.Url then return @load input
+      when input instanceof Core then return input.constructor
+      when input.constructor is Core.constructor then return input
     throw @error "cannot compose a new core without name", input unless input.name?
 
-    console.debug? "[Maker:compose] #{input.name}"
+    console.debug? "[Maker:compose] #{input.name} from #{url.format origin}"
     (new Container this)
     .use origin: origin
     .load input.contains...
@@ -34,11 +40,19 @@ class Maker extends Composer
     .then (res) -> (new Provider res).load input.provides...
     .then (res) ->
       class extends Core
-        @provider = res
-        @merge input
-        @set origin: origin
+        @set name: input.name, origin: origin, provider: res
+        @bind input
         @bind res.map
     .catch (err) => console.error err; throw @error err
+
+  create: (cname, data) ->
+    try
+      console.debug? "[Maker:create] a new '#{cname}' core instance"
+      core = @resolve 'core', cname
+      return new core data, this
+    catch e
+      console.error e
+      return new Core config
 
 class Container extends Maker
   # enable inspecting inside defined core(s) during lookup
@@ -48,8 +62,9 @@ class Container extends Maker
     unless match?
       opts.warn = false
       opts.recurse = false
-      for name, core of (super 'core', undefined, opts) when core?.provider?
-        match = core.provider.resolve? type, key, opts
+      for name, core of (super 'core', undefined, opts)
+        provider = core.get 'provider'
+        match = provider?.resolve type, key, opts
         break if match?
     return match
 
