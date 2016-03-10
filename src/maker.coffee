@@ -39,6 +39,7 @@ class Maker extends Composer
     .then (res) -> (new Linker res).load input.links...
     .then (res) -> (new Provider res).load input.provides...
     .then (res) ->
+      input.main ?= (engine) -> @emit 'start', engine
       class extends Core
         @set name: input.name, origin: origin, provider: res
         @bind input

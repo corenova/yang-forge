@@ -7,7 +7,7 @@ Maker = require './maker'
 class Engine extends Maker.Container
 
   # an Engine runs Core(s)
-  run: (cores...) -> cores.forEach (core) => core.emit 'start', this
+  run: (cores...) -> cores.forEach (core) => core.invoke 'main', this
 
 #
 # declare exports

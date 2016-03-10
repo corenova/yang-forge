@@ -64,6 +64,21 @@ module yangforge {
     }
   }
 
+  grouping output-format {
+    leaf format {
+      description "specify output format";
+      type enumeration {
+        enum yaml;
+        enum json;
+        enum tree;
+        enum xml;
+        enum pretty;
+      }
+      units f;
+      default pretty;
+    }
+  }
+
   grouping unique-element {
     leaf id { type yang:uuid; }
     leaf name { type string { length 0..100; } }
@@ -185,9 +200,10 @@ module yangforge {
               enum json;
               enum tree;
               enum xml;
+              enum pretty;
             }
             units f;
-            default yaml;
+            default pretty;
           }
           leaf space {
             description "number of spaces to use for JSON output";

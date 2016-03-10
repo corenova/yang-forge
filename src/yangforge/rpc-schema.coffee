@@ -1,21 +1,21 @@
 fs = require 'fs'
 
 module.exports = (input, output, done) ->
-  app = @parent
+  core = @parent
+  provider = core.meta 'provider'
+
   options = input.get 'options'
-  schema = (input.get 'arguments')[0]
-  schema = options.eval if options.eval?
+  schemas = (input.get 'arguments').map (x) ->
+    if /^[\-\w\.]+$/.test x then fs.readFileSync x, 'utf-8'
+    else x
+  schemas.push options.eval if options.eval?
+
+  schema = schemas.pop()
   result = switch
-    when options.load
-      source = app.load "!yang #{schema}", async: false
-      for name, model of source.properties
-        console.info "absorbing a new model '#{name}' into running forge"
-        app.attach name, model
-      source.constructor
-    when options.compile then app.compile "!yang #{schema}"
-    when options.preprocess then (app.preprocess "!yang #{schema}").schema
-    else app.parse "!yang #{schema}"
-  result = (app.render result, options)
+    when options.compile    then provider.compile schema
+    when options.preprocess then (provider.preprocess schema).schema
+    else provider.parse schema
+  result = (provider.dump result, options)
   unless options.output?
     output.set result
     return done()

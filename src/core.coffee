@@ -8,8 +8,6 @@ traverse = require 'traverse'
 tosource = require 'tosource'
 assert   = require 'assert'
 # sys =      require 'child_process'
-# treeify =  require 'treeify'
-# js2xml =   require 'js2xmlparser'
 
 class Core extends yang.Module
   @set synth: 'core'
@@ -25,6 +23,9 @@ class Core extends yang.Module
       (new Feature data, this).invoke 'main', args...
       .then (res) -> console.log res
       .catch (err) -> console.error err
+
+  render: (data=this, opts={}) ->
+    return data.toSource opts if Runtime.instanceof data
 
   @toSource: (opts={}) ->
     source = @extract()
@@ -65,17 +66,6 @@ class Core extends yang.Module
   attach: -> super; @emit 'attach', arguments...
 
   toString: -> "Core:#{@meta 'name'}"
-
-  render: (data=this, opts={}) ->
-    return data.toSource opts if Runtime.instanceof data
-
-    switch opts.format
-      when 'json' then JSON.stringify data, null, opts.space
-      when 'yaml'
-        ((require 'prettyjson').render? data, opts) ? (yaml.dump data, lineWidth: -1)
-      when 'tree' then treeify.asTree data, true
-      when 'xml' then js2xml 'schema', data, prettyPrinting: indentString: '  '
-      else data
 
   info: (options={}) ->
     summarize = (what) ->
