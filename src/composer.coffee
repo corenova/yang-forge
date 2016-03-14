@@ -7,9 +7,16 @@ url     = require 'url'
 path    = require 'path'
 fs      = require 'fs'
 request = require 'superagent'
+yang    = require 'yang-js'
 
-class Composer extends (require 'yang-js').Compiler
-  # accepts: variable arguments of target input(s)
+# for dump only...
+yaml     = require 'js-yaml'
+traverse = require 'traverse'
+pretty   = require 'prettyjson'
+treeify  = require 'treeify'
+
+class Composer extends yang.Dictionary
+  # accepts: variable arguments of target input link(s)
   # returns: Promise for one or more generated output(s)
   load: (input, rest...) ->
     return promise.all (Composer::load.call this, x for x in arguments) if arguments.length > 1
@@ -25,9 +32,8 @@ class Composer extends (require 'yang-js').Compiler
   compose: (input, origin) -> throw @error "must be overriden by implementing class"
 
   # handles relative link paths if 'origin' is defined
-  normalize: (link) ->
+  normalize: (link, origin=(@resolve 'origin')) ->
     console.debug? "[Composer:normalize] #{url.format link}"
-    origin = @resolve 'origin'
     origin = url.parse origin if typeof origin is 'string'
     return link unless origin instanceof url.Url
 
@@ -61,5 +67,31 @@ class Composer extends (require 'yang-js').Compiler
         resolve (require link.pathname)
       else
         reject "unrecognized protocol '#{link.protocol}' for retrieving #{url.format link}"
+
+  dump: (obj, opts={}) ->
+    opts.space  ?= 2
+    opts.format ?= 'json'
+    opts.encoding ?= 'utf8'
+
+    obj = (traverse obj).map (x) -> switch
+      when synth.instanceof x
+        o = meta: x.extract()
+        delete o.meta.bindings
+        @update synth.copy o, x.get 'bindings'
+      when x instanceof Function and opts.format in ['json','pretty']
+        @update tosource x
+
+    out = switch opts.format
+      when 'json'   then JSON.stringify obj, null, opts.space
+      when 'yaml'   then yaml.dump obj, lineWidth: -1
+      when 'tree'   then treeify.asTree obj, true
+      when 'pretty' then pretty.render obj, opts
+      when 'yang'   then super obj, opts
+      #when 'xml'  then js2xml 'schema', obj, prettyPrinting: indentString: '  '
+      else obj
+
+    switch opts.encoding
+      when 'base64' then (new Buffer out).toString 'base64'
+      else out
 
 module.exports = Composer

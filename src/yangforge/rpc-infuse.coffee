@@ -1,3 +1,5 @@
+# infuse - loads core(s) into engine
+
 module.exports = (input, output, done) ->
   app = @parent
   sources = input.get 'sources'

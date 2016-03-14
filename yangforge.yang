@@ -64,7 +64,7 @@ module yangforge {
     }
   }
 
-  grouping output-format {
+  grouping output-format-options {
     leaf format {
       description "specify output format";
       type enumeration {
@@ -76,6 +76,22 @@ module yangforge {
       }
       units f;
       default pretty;
+    }
+    leaf space {
+      description "number of spaces to use for JSON output";
+      type uint8 { range 0..8; }
+      units s;
+      default 1;
+    }
+    leaf encoding {
+      description "specify output data encoding";
+      type enumeration {
+        enum base64;
+        enum utf8;
+        enum gzip;
+      }
+      units x;
+      default utf8;
     }
   }
 
@@ -128,30 +144,16 @@ module yangforge {
 
   rpc info {
     if-feature cli;
-    description "shows info about a specific module";
+    description "shows info about a specific core";
     input {
       uses cli-command {
         refine arguments {
           config true;
-          units "name";
+          units "core";
           max-elements 1;
         }
         augment options {
-          leaf format {
-            description "specify output format (yaml, json)";
-            type enumeration {
-              enum yaml;
-              enum json;
-            }
-            units f;
-            default yaml;
-          }
-          leaf space {
-            description "number of spaces to use for JSON output";
-            type uint8 { range 0..8; }
-            units s;
-            default 2;
-          }
+          uses output-format-options;
           leaf verbose {
             description "increase verbosity";
             type empty;
@@ -173,6 +175,7 @@ module yangforge {
           max-elements 1;
         }
         augment options {
+          // following options should be a case/switch statement
           leaf preprocess {
             description "perform preprocess operation on the input";
             type boolean;
@@ -183,36 +186,14 @@ module yangforge {
             type boolean;
             units c;
           }
-          leaf load {
-            description "perform load operation on the input";
-            type boolean;
-            units l;
-          }
           leaf eval {
             description "pass a string from the command line as input";
             type textarea;
             units e;
           }
-          leaf format {
-            description "specify output format";
-            type enumeration {
-              enum yaml;
-              enum json;
-              enum tree;
-              enum xml;
-              enum pretty;
-            }
-            units f;
-            default pretty;
-          }
-          leaf space {
-            description "number of spaces to use for JSON output";
-            type uint8 { range 0..8; }
-            units s;
-            default 1;
-          }
+          uses output-format-options;
           leaf output {
-            description "set the output filename for compiled schema";
+            description "set the output filename";
             type string;
             units o;
           }
@@ -270,11 +251,6 @@ module yangforge {
             description "set the output filename for generated build";
             type string;
             units o;
-          }
-          leaf gzip {
-            description "gzip compress the build output";
-            type boolean;
-            units z;
           }
         }
       }

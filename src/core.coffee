@@ -4,14 +4,13 @@ console.debug ?= console.log if process.env.yang_debug?
 yang     = require 'yang-js'
 yaml     = require 'js-yaml'
 events   = require 'events'
-traverse = require 'traverse'
-tosource = require 'tosource'
 assert   = require 'assert'
-# sys =      require 'child_process'
 
 class Core extends yang.Module
   @set synth: 'core'
   @mixin events.EventEmitter
+
+  constructor: (data, @engine) -> super
 
   enable: (feature, data, args...) ->
     Feature = (@meta 'provider').resolve 'feature', feature
@@ -23,45 +22,6 @@ class Core extends yang.Module
       (new Feature data, this).invoke 'main', args...
       .then (res) -> console.log res
       .catch (err) -> console.error err
-
-  render: (data=this, opts={}) ->
-    return data.toSource opts if Runtime.instanceof data
-
-  @toSource: (opts={}) ->
-    source = @extract()
-    delete source.bindings
-
-    self = this
-    source = (traverse source).map (x) ->
-      if self.instanceof x
-        obj = x.extract 'overrides'
-        self.copy obj, x.get 'bindings'
-        @update obj
-        @after (y) ->
-          for k, v of y when k isnt 'overrides'
-            unless v?
-              delete y[k]
-              continue
-            # TODO: checking for b to be Array is hackish
-            for a, b of v when b instanceof Array
-              y.overrides ?= {}
-              y.overrides["#{k}.#{a}"] = b
-          @update y.overrides, true
-
-    source = switch opts.format
-      when 'yaml' then yaml.dump source, lineWidth: -1
-      when 'json'
-        opts.space ?= 2
-        source = (traverse source).map (x) ->
-          if x instanceof Function
-            @update self.objectify '!js/function', tosource x
-        JSON.stringify source, null, opts.space
-      when 'tree' then treeify.asTree source, true
-      else
-        source
-    switch opts.encoding
-      when 'base64' then (new Buffer source).toString 'base64'
-      else source
 
   attach: -> super; @emit 'attach', arguments...
 

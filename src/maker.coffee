@@ -55,6 +55,42 @@ class Maker extends Composer
       console.error e
       return new Core config
 
+  dump2: (obj, opts={}) ->
+    source = @extract()
+    delete source.bindings
+
+    self = this
+    source = (traverse source).map (x) ->
+      if self.instanceof x
+        obj = x.extract 'overrides'
+        self.copy obj, x.get 'bindings'
+        @update obj
+        @after (y) ->
+          for k, v of y when k isnt 'overrides'
+            unless v?
+              delete y[k]
+              continue
+            # TODO: checking for b to be Array is hackish
+            for a, b of v when b instanceof Array
+              y.overrides ?= {}
+              y.overrides["#{k}.#{a}"] = b
+          @update y.overrides, true
+
+    source = switch opts.format
+      when 'yaml' then yaml.dump source, lineWidth: -1
+      when 'json'
+        opts.space ?= 2
+        source = (traverse source).map (x) ->
+          if x instanceof Function
+            @update self.objectify '!js/function', tosource x
+        JSON.stringify source, null, opts.space
+      when 'tree' then treeify.asTree source, true
+      else
+        source
+    switch opts.encoding
+      when 'base64' then (new Buffer source).toString 'base64'
+      else source
+
 class Container extends Maker
   # enable inspecting inside defined core(s) during lookup
   resolve: (type, key, opts={}) ->

@@ -1,4 +1,4 @@
-# machine - load, transform, run cores
+# engine - load and run cores
 
 console.debug ?= console.log if process.env.yang_debug?
 

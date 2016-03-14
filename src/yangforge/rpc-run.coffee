@@ -1,7 +1,8 @@
+# run - conditionally loads core(s) into engine and runs them
+
 module.exports = (input, output, done) ->
-  app = @parent
+  core = @parent
   features = input.get 'options'
-  console.log "forgery firing up..."
   for name, arg of features when arg? and arg isnt false
     console.debug? "#{name} with #{arg}"
     features[name] = (app.resolve 'feature', name)?.run? this, features
