@@ -1,7 +1,7 @@
 {
   "name": "yangforge",
   "version": "0.12.0",
-  "description": "Forge new relationships. Join the social network of machines.",
+  "description": "Model-driven application composition",
   "keywords": [
     "yang",
     "yang-js",
@@ -29,7 +29,7 @@
     "yfc"
   ],
   "preferGlobal": true,
-  "author": "Peter Lee <peter@intercloud.net>",
+  "author": "Peter Lee <peter@corenova.com>",
   "homepage": "https://github.com/saintkepha/yangforge",
   "license": "Apache-2.0",
   "repository": "saintkepha/yangforge",
@@ -48,7 +48,7 @@
     "prettyjson": "^1.1.3",
     "tosource": "^1.0.0",
     "superagent": "^1.4.0",
-    "yang-js": "^0.12.16"
+    "yang-js": "^0.12.20"
   },
   "bundleDependencies": [
     "clim",

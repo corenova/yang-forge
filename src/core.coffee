@@ -13,7 +13,7 @@ class Core extends yang.Module
   constructor: (data, @engine) -> super
 
   enable: (feature, data, args...) ->
-    Feature = (@meta 'provider').resolve 'feature', feature
+    Feature = (@meta 'maker').resolve 'feature', feature
     assert Feature instanceof Function,
       "cannot enable incompatible feature"
 
@@ -26,6 +26,9 @@ class Core extends yang.Module
   attach: -> super; @emit 'attach', arguments...
 
   toString: -> "Core:#{@meta 'name'}"
+
+  run: -> @invoke 'main', arguments...
+
 
   info: (options={}) ->
     summarize = (what) ->

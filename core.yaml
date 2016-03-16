@@ -1,28 +1,34 @@
 name: forge
 version: 0.12.0
-description: Provides application composition and publication facilities
+description: Provides model-driven application composition facilities
 author: Peter Lee <peter@corenova.com>
 license: Apache-2.0
 keywords:
-  - build
   - parse
   - compile
+  - run
   - translate
-  - publish
   - yang
+  - cli
+  - express
+  - restjson
+  - websocket
+  - complex-types
+  - ietf-yang-types
+  - ietf-inet-types
+  - iana-crypt-hash
 
-contains: # one or more bundled cores
-  - !npm  ./package.json
-  - !core ./common
-  #- !core ./example
+main: # the essence of the core
   - !feature ./lib/feature/cli
   - !feature ./lib/feature/express
   - !feature ./lib/feature/restjson
   - !feature ./lib/feature/websocket
-
-links: # one or more remote machines
-  - !machine interlink.io
-
-provides: # one or more specs and schemas
-  - !spec   ./yangforge.yaml
-  - !schema ./yangforge.yang
+  - !spec    ./standard/complex-types.yaml
+  - !schema  ./standard/complex-types.yang
+  - !schema  ./standard/ietf-yang-types.yang
+  - !schema  ./standard/ietf-inet-types.yang
+  - !schema  ./standard/iana-crypt-hash.yang
+  - !spec    ./yangforge.yaml
+  - !schema  ./yangforge.yang
+  # future...
+  #- !schema ./standard/ietf-yang-library.yang

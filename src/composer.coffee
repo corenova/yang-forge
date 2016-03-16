@@ -15,7 +15,7 @@ traverse = require 'traverse'
 pretty   = require 'prettyjson'
 treeify  = require 'treeify'
 
-class Composer extends yang.Dictionary
+class Composer
   # accepts: variable arguments of target input link(s)
   # returns: Promise for one or more generated output(s)
   load: (input, rest...) ->
