@@ -1,9 +1,11 @@
-# yangforge -- forge YANG modules to compose apps
+# yangforge 
+
+YANG package manager and runtime engine
 
 [![Join the chat at https://gitter.im/saintkepha/yangforge](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/saintkepha/yangforge?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
-`yfc` is the command shell for the YangForge framework, providing
-schema-driven application lifecycle management.
+`yfc` is the command utility providing schema-driven application
+lifecycle management.
 
 `YangForge` provides runtime JavaScript execution based on YANG schema
 modeling language as defined in IETF drafts and standards
@@ -17,16 +19,16 @@ modeling language as defined in IETF drafts and standards
 Basically, the framework enables YANG schema language to *become* a
 **programming** language.
 
-It also utilizes YAML with custom tags to construct a portable module
-with embedded code.
-
 It is written primarily using [CoffeeScript](http://coffeescript.org)
 and runs on [Node.js](http://nodejs.org) and the **web browser** (yes, it's isomorphic).
 
-This software is **sponsored** by
-[ClearPath Networks](http://www.clearpathnet.com) on behalf of the
-[OPNFV](http://opnfv.org) (Open Platform for Network Functions
-Virtualization) community. For a reference implementation created entirely utilizing `YangForge`, please take a look at [OPNFV Promise](http://github.com/opnfv/promise) which provides future resource/capacity management (reservations/allocations) for virtualized infrastructure.
+This software is brought to you by [Corenova](http://www.corenova.com)
+on behalf of the [OPNFV](http://opnfv.org) (Open Platform for Network
+Functions Virtualization) community. For a reference implementation
+created entirely utilizing `YangForge`, please take a look at [OPNFV
+Promise](http://github.com/opnfv/promise) which provides future
+resource/capacity management (reservations/allocations) for
+virtualized infrastructure.
 
 Please note that this project is under **active development**. Be sure
 to check back often as new updates are being pushed regularly.
