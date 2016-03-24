@@ -1,25 +1,28 @@
 {
-  "name": "yangforge",
+  "name": "yang-forge",
   "version": "0.12.0",
   "description": "YANG package manager and runtime engine",
   "keywords": [
     "yang",
-    "json",
     "restjson",
     "restconf",
     "build",
+    "deploy",
     "translate",
     "package",
     "publish",
+    "run",
+    "engine",
+    "core",
     "forge",
     "rfc6020",
     "yfc"
   ],
   "preferGlobal": true,
   "author": "Peter Lee <peter@corenova.com>",
-  "homepage": "https://github.com/saintkepha/yangforge",
+  "homepage": "https://github.com/corenova/yang-forge",
   "license": "Apache-2.0",
-  "repository": "saintkepha/yangforge",
+  "repository": "corenova/yang-forge",
   "main": "lib/index.js",
   "bin": {
     "yfc": "bin/yfc"
@@ -27,7 +30,7 @@
   "dependencies": {
     "colors": "^1.1.2",
     "commander": "^2.9.0",
-    "yang-cc": "^1.0.6"
+    "yang-cc": "^1.0.9"
   },
   "optionalDependencies": {
     "body-parser": "^1.13.2",

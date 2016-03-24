@@ -12,7 +12,7 @@ module.exports = (input, output, done) ->
 
   schemas = input.get 'arguments'
   unless schemas.length > 0
-    output.set "running yangforge"
+    output.set "running yang-forge-core"
     return done()
 
   res = core.origin.compose schemas

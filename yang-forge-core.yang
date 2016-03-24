@@ -1,4 +1,4 @@
-module yangforge {
+module yang-forge-core {
   prefix yfc;
 
   import ietf-yang-types { prefix yang; }

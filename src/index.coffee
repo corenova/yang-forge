@@ -1,8 +1,8 @@
-# yangforge - load and build cores
+# yang-forge - load and build cores
 
 module.exports = (->
   @set basedir: __dirname
   @include '..'
-  @link './yangforge'
-  @compose 'yangforge'
+  @link '.'
+  @compose 'yang-forge-core'
 ).call (require 'yang-cc')

@@ -2,11 +2,11 @@
 
 express = require 'express'
 
-sourceRouter = (->
+coreRouter = (->
   @route '/'
   .all (req, res, next) ->
-    if (req.target?.meta? 'synth') is 'source'
-      console.log "source router: #{req.originalUrl}"
+    if (req.target?.meta? 'synth') is 'core'
+      console.log "core router: #{req.originalUrl}"
       next()
     else next 'route'
   .options (req, res, next) ->
@@ -19,7 +19,7 @@ sourceRouter = (->
         description: 'update configuration for this source'
       COPY:
         description: 'get a copy of this source for cloning it elsewhere'
-  .report (req, res, next) -> 
+  .report (req, res, next) ->
     res.locals.result = req.target.info(); next()
   .copy (req, res, next) ->
     res.locals.result = req.target.export(); next()
@@ -132,7 +132,7 @@ listRouter = (->
 
   @delete '/:key', (req, res, next) ->
     return next 'route' unless req.target.remove?
-    
+
     req.target.remove req.params.key
     model = req.target.seek synth: (v) -> v in [ 'store', 'model' ]
     model.save()
@@ -159,9 +159,9 @@ module.exports = ((target) ->
     res.locals.result = req.target.serialize()
     next()
 
-  @use sourceRouter, storeRouter, modelRouter, objectRouter, listRouter
+  @use coreRouter, storeRouter, modelRouter, objectRouter, listRouter
   # nested loop back to self to process additional sub-routes
   @use '/:target', this
-  
+
   return this
 ).bind express.Router()

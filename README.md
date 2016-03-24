@@ -1,8 +1,6 @@
-# yangforge 
+# yang-forge 
 
 YANG package manager and runtime engine
-
-[![Join the chat at https://gitter.im/saintkepha/yangforge](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/saintkepha/yangforge?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
 `yfc` is the command utility providing schema-driven application
 lifecycle management.
@@ -35,11 +33,11 @@ to check back often as new updates are being pushed regularly.
 
 ## Installation
 ```bash
-$ npm install -g yangforge
+$ npm install -g yang-forge
 ```
 
 You must have `node >= 0.10.28` as a minimum requirement to run
-`yangforge`.
+`yang-forge`.
 
 ## Usage
 ```
@@ -271,9 +269,7 @@ with documentation all-in-one.
 ## License
   [Apache 2.0](LICENSE)
 
-[npm-image]: https://img.shields.io/npm/v/yangforge.svg
-[npm-url]: https://npmjs.org/package/yangforge
-[downloads-image]: https://img.shields.io/npm/dm/yangforge.svg
-[downloads-url]: https://npmjs.org/package/yangforge
-[history-image]: https://nodei.co/npm-dl/yangforge.png?height=3
-[history-url]: https://nodei.co/npm/yangforge
+[npm-image]: https://img.shields.io/npm/v/yang-forge.svg
+[npm-url]: https://npmjs.org/package/yang-forge
+[downloads-image]: https://img.shields.io/npm/dm/yang-forge.svg
+[downloads-url]: https://npmjs.org/package/yang-forge

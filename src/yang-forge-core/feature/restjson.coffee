@@ -44,9 +44,8 @@ module.exports = ->
   ).call express()
 
   console.log "restjson generation complete"
-  @express?.then (res) ->
+  if @express?
     console.info "restjson: binding to /restjson".grey
-    res.app.use "/restjson", restjson
-    return res
+    @express.app.use "/restjson", restjson
 
   return restjson
