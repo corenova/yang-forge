@@ -3,6 +3,6 @@
 module.exports = (->
   @set basedir: __dirname
   @include '..'
-  @link '../lib/feature'
+  @link './yangforge'
   @compose 'yangforge'
 ).call (require 'yang-cc')

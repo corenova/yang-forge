@@ -32,7 +32,7 @@
     "promise": "^7.0.4",
     "superagent": "^1.4.0",
     "tosource": "^1.0.0",
-    "yang-cc": "^1.0.4"
+    "yang-cc": "^1.0.5"
   },
   "bundleDependencies": [
     "clim",

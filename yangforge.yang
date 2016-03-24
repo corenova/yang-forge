@@ -371,16 +371,9 @@ module yangforge {
 
   rpc infuse {
     if-feature restjson;
-    description "absorb requested target module(s) into current runtime";
+    description "absorb core(s) into current active core";
     input {
-      list targets {
-        key "source";
-        leaf source { type string; mandatory true; }
-        container data {
-          description "initial configuration data for the source module";
-        }
-      }
-      leaf-list sources { type string; }
+      leaf-list cores { type binary; }
     }
     output {
       leaf message { type string; }

@@ -1,13 +1,17 @@
-# run - conditionally loads core(s) into engine and runs them
+# run - conditionally loads module(s) into core and runs them
+#
+# CLI-only feature
 
 module.exports = (input, output, done) ->
   core = @parent
   features = input.get 'options'
   for name, arg of features when arg? and arg isnt false
     console.debug? "#{name} with #{arg}"
-    features[name] = (app.resolve 'feature', name)?.run? this, features
+    core.run name, arg
+    #features[name] = (app.resolve 'feature', name)?.run? this, features
 
-  @invoke 'infuse', targets: (input.get 'arguments').map (e) -> source: e
+  res = core.origin.compose (input.get 'arguments')
+  @invoke 'infuse', cores: res.dump()
   .then (res) =>
     modules = res.get 'modules'
     output.set "running with: " + (['yangforge'].concat modules...)
