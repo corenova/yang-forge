@@ -25,19 +25,10 @@
     "yfc": "bin/yfc"
   },
   "dependencies": {
-    "clim": "^1.1.1",
     "colors": "^1.1.2",
     "commander": "^2.9.0",
-    "prettyjson": "^1.1.3",
-    "promise": "^7.0.4",
-    "superagent": "^1.4.0",
-    "tosource": "^1.0.0",
-    "yang-cc": "^1.0.5"
+    "yang-cc": "^1.0.6"
   },
-  "bundleDependencies": [
-    "clim",
-    "promise"
-  ],
   "optionalDependencies": {
     "body-parser": "^1.13.2",
     "errorhandler": "^1.4.1",
@@ -47,7 +38,6 @@
     "socket.io-client": "^1.3.7"
   },
   "devDependencies": {
-    "browserify": "^11.2.0",
     "mocha": "~2.0.1",
     "should": "~3.1.3"
   },

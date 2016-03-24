@@ -2,6 +2,7 @@
 
 module.exports = (input, output, done) ->
   try
+    console.warn 'infusing cores...'
     res = @parent.merge (input.get 'cores')
     output.set 'message', 'request processed successfully'
     output.set 'modules', res

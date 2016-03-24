@@ -1,4 +1,3 @@
-browserify = require 'browserify'
 zlib = require 'zlib'
 fs = require 'fs'
 

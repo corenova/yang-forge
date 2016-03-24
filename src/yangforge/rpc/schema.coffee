@@ -2,7 +2,6 @@ fs = require 'fs'
 
 module.exports = (input, output, done) ->
   core = @parent
-  provider = core.meta 'provider'
 
   options = input.get 'options'
   schemas = (input.get 'arguments').map (x) ->
@@ -12,10 +11,11 @@ module.exports = (input, output, done) ->
 
   schema = schemas.pop()
   result = switch
-    when options.compile    then provider.compile schema
-    when options.preprocess then (provider.preprocess schema).schema
-    else provider.parse schema
-  result = (provider.dump result, options)
+    when options.compile    then core.origin.compile schema
+    when options.preprocess then (core.origin.preprocess schema).schema
+    else core.origin.parse schema
+
+  result = (core.dump result, options)
   unless options.output?
     output.set result
     return done()

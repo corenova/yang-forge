@@ -13,7 +13,7 @@ errorhandler = require 'errorhandler'
 
 module.exports = (port=5000) ->
   # TODO: also check if same port number?
-  return @runtime.express if @runtime.express?
+  return @express if @express?
 
   app = (->
     env = process.env.NODE_ENV ? 'development'

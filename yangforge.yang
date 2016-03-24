@@ -332,9 +332,9 @@ module yangforge {
             default true;
           }
           leaf websocket {
-              description "enables socket.io interface";
-              type boolean;
-              default true;
+            description "enables socket.io interface";
+            type boolean;
+            default false;
           }
         }
       }
@@ -373,7 +373,7 @@ module yangforge {
     if-feature restjson;
     description "absorb core(s) into current active core";
     input {
-      leaf-list cores { type binary; }
+      leaf-list cores { type string; }
     }
     output {
       leaf message { type string; }

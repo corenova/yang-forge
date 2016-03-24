@@ -10,7 +10,12 @@ module.exports = (input, output, done) ->
     core.run name, arg
     #features[name] = (app.resolve 'feature', name)?.run? this, features
 
-  res = core.origin.compose (input.get 'arguments')
+  schemas = input.get 'arguments'
+  unless schemas.length > 0
+    output.set "running yangforge"
+    return done()
+
+  res = core.origin.compose schemas
   @invoke 'infuse', cores: res.dump()
   .then (res) =>
     modules = res.get 'modules'
