@@ -360,6 +360,18 @@ module yang-forge-core {
 
   // RPC definitions for server instance
 
+  rpc infuse {
+    if-feature restjson;
+    description "absorb core(s) into current active core";
+    input {
+      leaf-list cores { type string; }
+    }
+    output {
+      leaf message { type string; }
+      leaf-list modules { type string; }
+    }
+  }
+  
   rpc enable {
     description "enables passed-in set of feature(s) for the current runtime";
     input {
@@ -377,29 +389,6 @@ module yang-forge-core {
     }
     output {
       list features { uses unique-element; key "id"; }
-    }
-  }
-
-  rpc infuse {
-    if-feature restjson;
-    description "absorb core(s) into current active core";
-    input {
-      leaf-list cores { type string; }
-    }
-    output {
-      leaf message { type string; }
-      leaf-list modules { type string; }
-    }
-  }
-
-  rpc defuse {
-    if-feature restjson;
-    description "discard requested target module(s) from current runtime";
-    input {
-      leaf-list names { type string; }
-    }
-    output {
-      leaf message { type string; }
     }
   }
 }
