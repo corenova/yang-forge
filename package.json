@@ -30,7 +30,7 @@
   "dependencies": {
     "colors": "^1.1.2",
     "commander": "^2.9.0",
-    "yang-cc": "^1.0.9"
+    "yang-cc": "^1.0.10"
   },
   "optionalDependencies": {
     "body-parser": "^1.13.2",
