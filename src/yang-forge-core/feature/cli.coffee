@@ -21,6 +21,7 @@ module.exports = (name, argv) ->
     .version Object.keys(model.meta 'revision')[0]
     .description (model.meta 'description')
     .option '--no-color', 'disable color output'
+    .option '-v, --verbose', 'increase verbosity', false
 
   for action, rpc of (model.meta 'rpc')
     continue unless rpc['if-feature'] is 'cli'
@@ -44,7 +45,7 @@ module.exports = (name, argv) ->
       else rpc.description
 
     if rpc.input?.container?.options?
-      for k, v of rpc.input.container.options when typeof v is 'object'
+      for ext, v of rpc.input.container.options when typeof v is 'object'
         for key, option of v
           optstring = "--#{key}"
           if option.units?
@@ -66,15 +67,19 @@ module.exports = (name, argv) ->
           if !!option.default
             optdesc += " (default: #{option.default})"
 
-          defaultValue = switch type
-            when 'boolean' then (option.default is 'true')
-            else option.default
-          if defaultValue? and !!defaultValue
-            console.debug? "setting option #{key} with default: #{defaultValue}"
-            cmd.option optstring, optdesc, defaultValue
-          else
-            console.debug? "setting option #{key}: #{optdesc}"
-            cmd.option optstring, optdesc
+          args = [ optstring, optdesc ]
+          switch
+            when option.default? and !!option.default
+              console.debug? "setting option #{key} with default: #{option.default}"
+              args.push switch type
+                when 'boolean' then (option.default is 'true')
+                else option.default
+
+            when ext is 'leaf-list'
+              console.debug? "setting option #{key} with accumulation func"
+              args.push ((x,y) -> y.concat x), []
+
+          cmd.option args...
 
     do (cmd, action, status) ->
       cmd.action ->
@@ -92,9 +97,9 @@ module.exports = (name, argv) ->
               console.debug? "action '#{action}' completed"
               console.info res.get()
             .catch (err) ->
-              console.error err if err?.context
+              if program.verbose
+                console.error err
               console.error "#{err}".red
-              cmd.help()
         catch e
           console.error "#{e}".red
           cmd.help()

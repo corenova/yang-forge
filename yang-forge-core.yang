@@ -26,20 +26,20 @@ module yang-forge-core {
   }
 
   feature cli {
-    description "When enabled, generates command-line interface";
+    description "When available, generates command-line interface";
   }
 
   feature express {
-    description "When enabled, generates HTTP/HTTPS web server instance";
+    description "When available, generates HTTP/HTTPS web server instance";
   }
   
   feature restjson {
-    description "When enabled, generates REST/JSON web services interface";
+    description "When available, generates REST/JSON web services interface";
     if-feature express;
   }
 
   feature websocket {
-    description "When enabled, generates socket.io websocket interface";
+    description "When available, generates socket.io websocket interface";
     if-feature express;
   }
 
@@ -49,6 +49,15 @@ module yang-forge-core {
     }
     description
       "The textarea type represents a string that can be multi-line";
+  }
+
+  typedef path {
+    type string {
+      length "1..max";
+      pattern '^[\\\/\-\w\.]+$'; // might be too restrictive...
+    }
+    description
+      "The path type represents a string that can be a directory or file";
   }
 
   grouping cli-command {
@@ -71,8 +80,10 @@ module yang-forge-core {
         enum yaml;
         enum json;
         enum tree;
-        enum xml;
+        enum yang;
         enum pretty;
+        // coming soon... I think
+        //enum xml;
       }
       units f;
       default pretty;
@@ -81,7 +92,7 @@ module yang-forge-core {
       description "number of spaces to use for JSON output";
       type uint8 { range 0..8; }
       units s;
-      default 1;
+      default 2;
     }
     leaf encoding {
       description "specify output data encoding";
@@ -154,11 +165,6 @@ module yang-forge-core {
         }
         augment options {
           uses output-format-options;
-          leaf verbose {
-            description "increase verbosity";
-            type empty;
-            units v;
-          }
         }
       }
     }
@@ -175,12 +181,17 @@ module yang-forge-core {
           max-elements 1;
         }
         augment options {
-          // following options should be a case/switch statement
-          leaf preprocess {
-            description "perform preprocess operation on the input";
-            type boolean;
-            units p;
+          leaf-list include {
+            description "add directory to compiler search path";
+            type path;
+            units I;
           }
+          leaf-list link {
+            description "add directory to linker search path";
+            type path;
+            units L;
+          }
+          // following options should be a case/switch statement
           leaf compile {
             description "perform compile operation on the input";
             type boolean;
