@@ -1,0 +1,420 @@
+module yang-forge-core {
+  prefix yfc;
+
+  import ietf-yang-types { prefix yang; }
+  //import ietf-yang-library { prefix yanglib; }
+
+  organization
+    "ClearPath Networks NFV R&D Group";
+
+  contact
+    "Web:  <http://www.clearpathnet.com>
+     Code: <http://github.com/clearpath-networks/yangforge>
+
+     Author: Peter K. Lee <mailto:plee@clearpathnet.com>";
+
+  description
+    "This module provides YANG package management and runtime engine operations";
+
+  revision 2016-03-25 {
+    description "Enhanced with 0.12.x functionality";
+  }
+  
+  revision 2015-09-23 {
+    description "Enhanced with 0.10.x functionality";
+  }
+  
+  revision 2015-05-04 {
+    description "Initial revision";
+    reference "RFC-6020";
+  }
+
+  feature cli {
+    description "When available, generates command-line interface";
+  }
+
+  feature express {
+    description "When available, generates HTTP/HTTPS web server instance";
+  }
+  
+  feature restjson {
+    description "When available, generates REST/JSON web services interface";
+    if-feature express;
+  }
+
+  feature websocket {
+    description "When available, generates socket.io websocket interface";
+    if-feature express;
+  }
+
+  typedef textarea {
+    type string {
+      length "1..max";
+    }
+    description
+      "The textarea type represents a string that can be multi-line";
+  }
+
+  typedef path {
+    type string {
+      length "1..max";
+      pattern '^[\\\/\-\w\.]+$'; // might be too restrictive...
+    }
+    description
+      "The path type represents a string that can be a directory or file";
+  }
+
+  typedef core-package {
+    type string {
+      pattern '^composition {'; // should be more explicit...
+    }
+    description
+      "The core-package type represents a serialized output of the composition payload";
+  }
+
+  grouping cli-command {
+    description
+      "The cli-command schema provides general schema format for defining CLI interface RPC input format";
+    leaf-list arguments {
+      description "The arguments should be 'refined' by uses to override config to true if used";
+      type string;
+      config false;
+    }
+    container options {
+      description "Placeholder to be 'augmented' during uses to add additional leaf nodes";
+    }
+  }
+
+  grouping composition-options {
+    description
+      "The composition-options schema is used when generating processed output";
+    
+    leaf-list include {
+      description "add directory to compiler search path";
+      type path;
+      units I;
+    }
+    leaf-list link {
+      description "add directory to linker search path";
+      type path;
+      units L;
+    }
+    leaf output {
+      description "set the output filename for generated result";
+      type string;
+      units o;
+    }
+  }
+  
+  grouping output-format-options {
+    leaf format {
+      description "specify output format";
+      type enumeration {
+        enum yaml;
+        enum json;
+        enum tree;
+        enum yang;
+        enum pretty;
+        // coming soon... I think
+        //enum xml;
+      }
+      units f;
+      default pretty;
+    }
+    leaf space {
+      description "number of spaces to use for JSON output";
+      type uint8 { range 0..8; }
+      units s;
+      default 2;
+    }
+    leaf encoding {
+      description "specify output data encoding";
+      type enumeration {
+        enum base64;
+        enum utf8;
+        enum gzip;
+      }
+      units x;
+      default utf8;
+    }
+  }
+
+  grouping unique-element {
+    leaf id { type yang:uuid; }
+    leaf name { type string { length 0..100; } }
+    leaf description { type string { length 0..2048; } }
+    leaf enabled { type boolean; default false; }
+  }
+  
+  container runtime {
+    config false;
+
+    uses unique-element;
+
+    leaf owner { type yang:uuid; }
+    leaf forgery { type string; }
+    list modules {
+      description
+        "Provides state information about active modules for the current runtime context";
+      uses unique-element;
+      key "name";
+    }
+    list features {
+      description
+        "Provides state information about active features for the current runtime context";
+      uses unique-element;
+      key "name";
+    }
+  }
+
+  container registry {
+    if-feature registry-service;
+    description "Provides module repository service for publish/install";
+    list modules {
+      key "name";
+      uses unique-element;
+      leaf data {
+        type binary;
+        description "Binary type data must be 'explicitly' accessed to retrieve content";
+      }
+      leaf size { type uint32; units 'Bytes'; mandatory true; }
+      leaf checksum { type string; mandatory true; }
+    }
+  }
+  
+  // RPC definitions for CLI
+
+  // Common Utilities
+
+  rpc schema {
+    if-feature cli;
+    description "process a specific YANG schema file or string";
+    input {
+      uses cli-command {
+        refine arguments {
+          config true;
+          units "file";
+          max-elements 1;
+        }
+        augment options {
+          leaf compile {
+            description "perform compile operation on the input";
+            type boolean;
+            units c;
+          }
+          leaf eval {
+            description "pass a string from the command line as input";
+            type textarea;
+            units e;
+          }
+          uses composition-options;
+          uses output-format-options;
+        }
+      }
+    }
+  }
+
+  // Lifecycle Utilities
+  
+  rpc build {
+    if-feature cli;
+    description "package the module(s) for deployment/publishing";
+    input {
+      uses cli-command {
+        refine arguments {
+          config true;
+          units "file";
+        }
+        augment options {
+          uses composition-options;
+          leaf sign {
+            description "specify signing key to encrypt the generated build";
+            type path;
+          }
+        }
+      }
+    }
+  }
+
+  rpc inspect {
+    if-feature cli;
+    description "inspect a given core package file to extract metadata";
+    input {
+      uses cli-command {
+        refine arguments {
+          config true;
+          units "core";
+          min-elements 1;
+          max-elements 1;
+        }
+        augment options {
+          uses output-format-options;
+        }
+      }
+    }
+  }
+
+  rpc run {
+    if-feature cli;
+    description "runs one or more core(s) and module(s)";
+    input {
+      uses cli-command {
+        refine arguments {
+          config true;
+          units "module";
+        }
+        augment options {
+          leaf express {
+            description "enables express web server on a specified port";
+            type union {
+              type uint16;
+              type binary;
+            }
+            default 5000;
+          }
+          leaf restjson {
+            description "enables REST/JSON interface";
+            type boolean;
+            default true;
+          }
+          leaf websocket {
+            description "enables socket.io interface";
+            type boolean;
+            default false;
+          }
+        }
+      }
+    }
+  }
+
+  rpc deploy {
+    if-feature cli;
+    description "deploy core(s) into target endpoint";
+    status planned;
+  }
+
+  // RPC definitions for registry interactions
+
+  rpc info {
+    if-feature cli;
+    description "shows info about a published core from the registry";
+    input {
+      uses cli-command {
+        refine arguments {
+          config true;
+          units "core";
+          max-elements 1;
+        }
+        augment options {
+          uses output-format-options;
+        }
+      }
+    }
+    status planned;
+  }
+
+  rpc search {
+    if-feature cli;
+    description "search the registry for cores matching keywords";
+    input {
+      uses cli-command {
+        refine arguments {
+          config true;
+          units "keyword";
+        }
+      }
+    }
+    status planned;
+  }
+
+  rpc publish {
+    if-feature cli;
+    description "publish package to upstream registry";
+    input {
+      uses cli-command {
+        augment options {
+          leaf registry {
+            description "The base URL of the package registry";
+            type string;
+            units r;
+            default "http://yangforge.intercloud.net";
+          }
+        }
+      }
+    }
+    status planned;
+  }
+
+  // RPC definition for advanced methods
+  
+  rpc translate {
+    if-feature cli;
+    description "translates input configuration data according to available YANG schema(s)";
+    input {
+      uses cli-command {
+        refine arguments {
+          config true;
+          units "file";
+          max-elements 1;
+        }
+        augment options {
+          leaf format {
+            description "specify output format";
+            type enumeration {
+              enum yaml;
+              enum json;
+              enum tree;
+              enum xml;
+            }
+            units f;
+            default yaml;
+          }
+          leaf output {
+            description "set the output filename";
+            type string;
+            units o;
+          }
+        }
+      }
+    }
+    status planned;
+  }
+
+  // RPC definitions for server instance
+
+  rpc infuse {
+    if-feature restjson;
+    description "absorb a core into current active core";
+    input {
+      leaf core { type core-package; }
+      container data {
+        description
+          "initial configuration to apply for the infused core (optional)";
+      }
+    }
+    output {
+      leaf message { type string; }
+      leaf-list modules { type string; }
+    }
+  }
+  
+  rpc enable {
+    description "enables passed-in set of feature(s) for the current runtime";
+    input {
+      leaf-list features { type string; }
+    }
+    output {
+      list features { uses unique-element; key "id"; }
+    }
+  }
+
+  rpc disable {
+    description "disables passed-in set of feature(s) for the current runtime";
+    input {
+      leaf-list features { type string; }
+    }
+    output {
+      list features { uses unique-element; key "id"; }
+    }
+  }
+}

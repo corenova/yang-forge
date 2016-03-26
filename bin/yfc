@@ -1,2 +1,3 @@
 #!/usr/bin/env node
-require('..').run('cli')
+
+require('..').run('cli', 'yang-forge-core', process.argv)
