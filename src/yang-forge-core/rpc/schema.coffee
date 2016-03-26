@@ -16,7 +16,7 @@ module.exports = (input, output, done) ->
   ycc.include opts.include
   ycc.link opts.link
 
-  schemas = (input.get 'arguments').map (x) ->
+  schemas = args.map (x) ->
     if /^[\-\w\.]+$/.test x then fs.readFileSync x, 'utf-8'
     else x
   schemas.push opts.eval if opts.eval?

@@ -20,8 +20,8 @@ module.exports = (name, argv) ->
   program
     .version Object.keys(model.meta 'revision')[0]
     .description (model.meta 'description')
-    .option '--no-color', 'disable color output'
     .option '-v, --verbose', 'increase verbosity', false
+    .option '--no-color', 'disable color output'
 
   for action, rpc of (model.meta 'rpc')
     continue unless rpc['if-feature'] is 'cli'

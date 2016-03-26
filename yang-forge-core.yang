@@ -16,6 +16,10 @@ module yang-forge-core {
   description
     "This module provides YANG v1 language based schema compilations.";
 
+  revision 2016-03-25 {
+    description "Enhanced with 0.12.x functionality";
+  }
+  
   revision 2015-09-23 {
     description "Enhanced with 0.10.x functionality";
   }
@@ -182,23 +186,6 @@ module yang-forge-core {
 
   // Common Utilities
 
-  rpc info {
-    if-feature cli;
-    description "shows info about a specific core";
-    input {
-      uses cli-command {
-        refine arguments {
-          config true;
-          units "core";
-          max-elements 1;
-        }
-        augment options {
-          uses output-format-options;
-        }
-      }
-    }
-  }
-
   rpc schema {
     if-feature cli;
     description "process a specific YANG schema file or string";
@@ -227,38 +214,6 @@ module yang-forge-core {
     }
   }
 
-  rpc translate {
-    if-feature cli;
-    description "translates input configuration data according to available YANG schema(s)";
-    input {
-      uses cli-command {
-        refine arguments {
-          config true;
-          units "file";
-          max-elements 1;
-        }
-        augment options {
-          leaf format {
-            description "specify output format";
-            type enumeration {
-              enum yaml;
-              enum json;
-              enum tree;
-              enum xml;
-            }
-            units f;
-            default yaml;
-          }
-          leaf output {
-            description "set the output filename";
-            type string;
-            units o;
-          }
-        }
-      }
-    }
-  }
-
   // Lifecycle Utilities
   
   rpc build {
@@ -269,7 +224,6 @@ module yang-forge-core {
         refine arguments {
           config true;
           units "file";
-          max-elements 1;
         }
         augment options {
           uses composition-options;
@@ -282,6 +236,24 @@ module yang-forge-core {
     }
   }
 
+  rpc inspect {
+    if-feature cli;
+    description "inspect a given core package file to extract metadata";
+    input {
+      uses cli-command {
+        refine arguments {
+          config true;
+          units "core";
+          min-elements 1;
+          max-elements 1;
+        }
+        augment options {
+          uses output-format-options;
+        }
+      }
+    }
+  }
+
   rpc run {
     if-feature cli;
     description "runs one or more core(s) and module(s)";
@@ -289,7 +261,7 @@ module yang-forge-core {
       uses cli-command {
         refine arguments {
           config true;
-          units "modules";
+          units "module";
         }
         augment options {
           leaf express {
@@ -320,7 +292,41 @@ module yang-forge-core {
     description "deploy core(s) into target endpoint";
     status planned;
   }
-  
+
+  // RPC definitions for registry interactions
+
+  rpc info {
+    if-feature cli;
+    description "shows info about a published core from the registry";
+    input {
+      uses cli-command {
+        refine arguments {
+          config true;
+          units "core";
+          max-elements 1;
+        }
+        augment options {
+          uses output-format-options;
+        }
+      }
+    }
+    status planned;
+  }
+
+  rpc search {
+    if-feature cli;
+    description "search the registry for cores matching keywords";
+    input {
+      uses cli-command {
+        refine arguments {
+          config true;
+          units "keyword";
+        }
+      }
+    }
+    status planned;
+  }
+
   rpc publish {
     if-feature cli;
     description "publish package to upstream registry";
@@ -338,7 +344,42 @@ module yang-forge-core {
     }
     status planned;
   }
+
+  // RPC definition for advanced methods
   
+  rpc translate {
+    if-feature cli;
+    description "translates input configuration data according to available YANG schema(s)";
+    input {
+      uses cli-command {
+        refine arguments {
+          config true;
+          units "file";
+          max-elements 1;
+        }
+        augment options {
+          leaf format {
+            description "specify output format";
+            type enumeration {
+              enum yaml;
+              enum json;
+              enum tree;
+              enum xml;
+            }
+            units f;
+            default yaml;
+          }
+          leaf output {
+            description "set the output filename";
+            type string;
+            units o;
+          }
+        }
+      }
+    }
+    status planned;
+  }
+
   // RPC definitions for server instance
 
   rpc infuse {
