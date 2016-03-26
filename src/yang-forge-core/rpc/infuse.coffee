@@ -2,7 +2,9 @@
 
 module.exports = (input, output, done) ->
   try
-    res = @parent.merge (input.get 'cores')
+    core = input.get 'core'
+    return done() unless core?
+    res = @parent.merge (input.get 'core')
     output.set 'message', 'request processed successfully'
     output.set 'modules', res
     done()

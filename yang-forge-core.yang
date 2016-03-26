@@ -60,6 +60,14 @@ module yang-forge-core {
       "The path type represents a string that can be a directory or file";
   }
 
+  typedef core-package {
+    type string {
+      pattern '^composition {'; // should be more explicit...
+    }
+    description
+      "The core-package type represents a serialized output of the composition payload";
+  }
+
   grouping cli-command {
     description
       "The cli-command schema provides general schema format for defining CLI interface RPC input format";
@@ -73,6 +81,27 @@ module yang-forge-core {
     }
   }
 
+  grouping composition-options {
+    description
+      "The composition-options schema is used when generating processed output";
+    
+    leaf-list include {
+      description "add directory to compiler search path";
+      type path;
+      units I;
+    }
+    leaf-list link {
+      description "add directory to linker search path";
+      type path;
+      units L;
+    }
+    leaf output {
+      description "set the output filename for generated result";
+      type string;
+      units o;
+    }
+  }
+  
   grouping output-format-options {
     leaf format {
       description "specify output format";
@@ -181,17 +210,6 @@ module yang-forge-core {
           max-elements 1;
         }
         augment options {
-          leaf-list include {
-            description "add directory to compiler search path";
-            type path;
-            units I;
-          }
-          leaf-list link {
-            description "add directory to linker search path";
-            type path;
-            units L;
-          }
-          // following options should be a case/switch statement
           leaf compile {
             description "perform compile operation on the input";
             type boolean;
@@ -202,12 +220,8 @@ module yang-forge-core {
             type textarea;
             units e;
           }
+          uses composition-options;
           uses output-format-options;
-          leaf output {
-            description "set the output filename";
-            type string;
-            units o;
-          }
         }
       }
     }
@@ -249,7 +263,7 @@ module yang-forge-core {
   
   rpc build {
     if-feature cli;
-    description "package the application for deployment/publishing";
+    description "package the module(s) for deployment/publishing";
     input {
       uses cli-command {
         refine arguments {
@@ -258,70 +272,19 @@ module yang-forge-core {
           max-elements 1;
         }
         augment options {
-          leaf output {
-            description "set the output filename for generated build";
-            type string;
-            units o;
+          uses composition-options;
+          leaf sign {
+            description "specify signing key to encrypt the generated build";
+            type path;
           }
         }
       }
     }
   }
 
-  rpc config {
-    if-feature cli;
-    description "manage yangforge service configuration";
-    input {
-      uses cli-command {
-        // choice argument {
-        //   case set {
-        //     container argument {
-        //       leaf key { type string; mandatory true; }
-        //       leaf value { type string; mandatory true; }
-        //     }
-        //   }
-        //   case get {
-        //     leaf argument { type string; mandatory true; units key; }
-        //   }
-        //   case delete {
-        //     leaf argument { type string; mandatory true; units key; }
-        //   }
-        //   case list {
-        //     leaf argument { type empty; }
-        //   }
-        // }
-      }
-    }
-    status planned;
-  }
-  
-  rpc deploy {
-    if-feature cli;
-    description "deploy application into yangforge endpoint";
-    status planned;
-  }
-  
-  rpc publish {
-    if-feature cli;
-    description "publish package to upstream registry";
-    input {
-      uses cli-command {
-        augment options {
-          leaf registry {
-            description "The base URL of the package registry";
-            type string;
-            units r;
-            default "http://yangforge.intercloud.net";
-          }
-        }
-      }
-    }
-    status planned;
-  }
-  
   rpc run {
     if-feature cli;
-    description "runs one or more modules and/or schemas";
+    description "runs one or more core(s) and module(s)";
     input {
       uses cli-command {
         refine arguments {
@@ -352,19 +315,41 @@ module yang-forge-core {
     }
   }
 
-  rpc sign {
+  rpc deploy {
     if-feature cli;
-    description "sign package to ensure authenticity";
+    description "deploy core(s) into target endpoint";
     status planned;
   }
-
+  
+  rpc publish {
+    if-feature cli;
+    description "publish package to upstream registry";
+    input {
+      uses cli-command {
+        augment options {
+          leaf registry {
+            description "The base URL of the package registry";
+            type string;
+            units r;
+            default "http://yangforge.intercloud.net";
+          }
+        }
+      }
+    }
+    status planned;
+  }
+  
   // RPC definitions for server instance
 
   rpc infuse {
     if-feature restjson;
-    description "absorb core(s) into current active core";
+    description "absorb a core into current active core";
     input {
-      leaf-list cores { type string; }
+      leaf core { type core-package; }
+      container data {
+        description
+          "initial configuration to apply for the infused core (optional)";
+      }
     }
     output {
       leaf message { type string; }

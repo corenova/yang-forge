@@ -30,7 +30,7 @@ module.exports = (input, output, done) ->
     when x instanceof Function and x.extract?
       o = meta: x.extract()
       delete o.meta.bindings
-      @update x.copy o, x.get 'bindings'
+      @update ycc.copy o, x.get 'bindings'
     when x instanceof Function and opts.format in ['json','pretty']
       if x.func instanceof Function
         @update x.func.toString()
