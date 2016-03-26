@@ -14,7 +14,7 @@ module yang-forge-core {
      Author: Peter K. Lee <mailto:plee@clearpathnet.com>";
 
   description
-    "This module provides YANG v1 language based schema compilations.";
+    "This module provides YANG package management and runtime engine operations";
 
   revision 2016-03-25 {
     description "Enhanced with 0.12.x functionality";
