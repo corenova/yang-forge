@@ -266,10 +266,7 @@ module yang-forge-core {
         augment options {
           leaf express {
             description "enables express web server on a specified port";
-            type union {
-              type uint16;
-              type binary;
-            }
+            type uint16;
             default 5000;
           }
           leaf restjson {

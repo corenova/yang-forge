@@ -1,4 +1,4 @@
-# YangForge Examples
+# YangForge CLI Examples
 
 The following guide provides walkthrough on various commands available
 using the `yfc` command-line-interface utility. The example modules
@@ -8,20 +8,21 @@ and schema used can be all found within this directory.
 ```
 $ yfc schema -h
 
-
   Usage: schema [options] [file]
 
-  process a specific YANG schema file
+  process a specific YANG schema file or string
 
   Options:
 
-    -h, --help             output usage information
-    -p, --preprocess       perform preprocess operation on the input
-    -c, --compile          perform compile operation on the input
-    -e, --eval [string]    pass a string from the command line as input
-    -f, --format [string]  specify output format (yaml, json) (default: yaml)
-    -s, --space [uint8]    number of spaces to use for JSON output (default: 1)
-    -o, --output [string]  set the output filename for compiled schema
+    -h, --help                                 output usage information
+    -c, --compile                              perform compile operation on the input
+    -e, --eval [textarea]                      pass a string from the command line as input
+    -o, --output [string]                      set the output filename for generated result
+    -f, --format [yaml|json|tree|yang|pretty]  specify output format (default: pretty)
+    -s, --space [uint8]                        number of spaces to use for JSON output (default: 2)
+    -x, --encoding [base64|utf8|gzip]          specify output data encoding (default: utf8)
+    -I, --include [path]                       add directory to compiler search path
+    -L, --link [path]                          add directory to linker search path
 ```
 
 You can `--eval` a YANG schema **string** directly for dynamic parsing:
@@ -57,52 +58,51 @@ $ yfc schema -e 'module hello-world { description "a test"; leaf hello { type st
 }
 ```
 
-The `schema` command by default performs `parse` on the passed in
-schema content (string or file).
+The `schema` command by default performs `preprocess` on the passed in
+schema content (string or file).  The utility will retrieve any
+`include/import` statements found within the schema and perform all
+schema manipulations such as *grouping*, *uses*, *refine*, *augment*,
+etc. Basically, it will flag any validation errors while producing an
+output that should represent what the schema would look like just
+before `compile`.
 
-If you run the command with `--preprocess`, the utility will perform
-`preprocess` stages on the passed in YANG schema content which
-retrieves any `include/import` statements found within the schema and
-perform all schema manipulations such as *grouping*, *uses*, *refine*,
-*augment*, etc. Basically, it will flag any validation errors while
-producing an output that should represent what the schema would look
-like just before `compile`.
-
-If you run the command with `--compile`, the utility will perform
-`parse`, `preprocess`, and proceed to construct all elements. If any
-errors occur during *construction* it will be flagged and when
+If you run the command with `--compile`, the utility will attempt to
+construct an active instance for elements with `construct` handler. If
+any errors occur during *construction* it will be flagged and when
 successfully compiled, it will produce an output which will be ready
 for direct instantiation without further compilation by `yfc`.
 
 ## Using the `run` command
 
-The real power of `YangForge` is actualized when **yangforged**
-modules are run using one or more **dynamic interface
-generators**.
+The real power of `YangForge` is actualized when modules are run using
+one or more **dynamic interface generators**.
 
 ```
 $ yfc run -h
 
-  Usage: run [options] [modules...]
+  Usage: run [options] [module...]
 
-  runs one or more modules and/or schemas
+  runs one or more core(s) and module(s)
 
   Options:
 
     -h, --help          output usage information
-    --cli               enables commmand-line-interface
-    --express [number]  enables express web server on a specified port (default: 5000)
+    --express [uint16]  enables express web server on a specified port (default: 5000)
     --restjson          enables REST/JSON interface (default: true)
-    --autodoc           enables auto-generated documentation interface (default: false)
+    --websocket         enables socket.io interface (default: false)
 ```
 
 ### Running a dynamically *compiled* schema instance
 
 You can `run` a YANG schema **file** and instantiate it immediately:
 ```bash
-$ yfc run examples/jukebox.yang
+$ yfc run example/jukebox.yang
+running in development mode
 express: listening on 5000
-restjson: binding forgery to /restjson
+generating REST/JSON interface...
+restjson generation complete
+restjson: binding to /restjson
+running with: synthesizer,yang-forge-core,example-jukebox
 ```
 Once it's running, you can issue HTTP calls:
 ```bash
@@ -130,11 +130,11 @@ $ curl localhost:5000/restjson/example-jukebox/jukebox/library
 }
 ```
 
-### Running a *forged* module (YAML)
+### Running a *forged* module
 
 You can run a *forged* module (packaged with code behaviors) as follows:
 ```bash
-$ yfc run examples/ping.yaml
+$ yfc run examples/ping
 express: listening on 5000
 restjson: binding forgery to /restjson
 ```
@@ -242,35 +242,10 @@ $ curl -X POST localhost:5000/restjson/ping/send-echo -H 'Content-Type: applicat
 }
 ```
 
-### Running *arbitrary* mix of modules (even **remote** sources)
-
-The `run` command allows you to pass in as many modules as you want to
-instantiate. The following example will also *listen* on a different
-port.
-```bash
-$ yfc run --express 5555 examples/jukebox.yang examples/ping.yaml
-express: listening on 5555
-restjson: binding forgery to /restjson
-```
-You can also dynamically retrieve/run modules from **remote** systems.
-```bash
-$ yfc run github:saintkepha/yangforge/master/examples/jukebox.yang
-express: listening on 5000
-restjson: binding forgery to /restjson
-```
-
-In the example above, **github:** is simply a short-hand for
-https://raw.githubusercontent.com so you can retrieve any arbitrary
-YAML/YANG modules from the web (http/https) and give things a go.
-
-The **remote** fetching capability is internally invoking the `import`
-asynchronous promise routine and you can use it with the `yfc info`
-command as well.
-
 ### Running `YangForge` natively as a stand-alone instance
 
 When you issue `run` without any target module(s) as argument, it runs
-the internal `YangForge` module using defaults:
+the internal `yang-forge-core` module using defaults:
 
 ```bash
 $ yfc run
@@ -282,11 +257,11 @@ Once it's running, you can inquire about its capabilities by issuing
 HTTP REPORT call (similar output available via CLI using `yfc info`):
 
 ```bash
-$ curl -X REPORT localhost:5000/restjson/yangforge
+$ curl -X REPORT localhost:5000/restjson/yang-forge-core
 ```
 ```json
 {
-  "name": "yangforge",
+  "name": "yang-forge-core",
   "description": "YANG driven JS application builder",
   "license": "Apache-2.0",
   "keywords": [
@@ -330,7 +305,6 @@ $ curl -X REPORT localhost:5000/restjson/yangforge
   },
   "operations": {
     "build": "package the application for deployment",
-    "config": "manage yangforge service configuration",
     "deploy": "deploy application into yangforge endpoint",
     "info": "shows info about a specific module",
     "publish": "publish package to upstream registry",
@@ -340,8 +314,6 @@ $ curl -X REPORT localhost:5000/restjson/yangforge
     "enable": "enables passed-in set of feature(s) for the current runtime",
     "disable": "disables passed-in set of feature(s) for the current runtime",
     "infuse": "absorb requested target module(s) into current runtime",
-    "defuse": "discard requested target module(s) from current runtime",
-    "export": "export existing target module for remote execution"
   }
 }
 ```
