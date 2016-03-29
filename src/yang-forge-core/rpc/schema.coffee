@@ -16,14 +16,10 @@ module.exports = (input, output, done) ->
   ycc.include opts.include
   ycc.link opts.link
 
-  schemas = args.map (x) ->
-    if /^[\-\w\.]+$/.test x then fs.readFileSync x, 'utf-8'
-    else x
-  schemas.push opts.eval if opts.eval?
+  schema = opts.eval ? fs.readFileSync args[0], 'utf-8'
 
-  schema = schemas.pop()
   obj = switch
-    when opts.compile    then ycc.compile schema
+    when opts.compile then ycc.compile schema
     else (ycc.preprocess schema).schema
 
   obj = (traverse obj).map (x) -> switch
