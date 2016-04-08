@@ -294,9 +294,8 @@ $ curl -X REPORT localhost:5000/restjson/yang-forge-core
         "reference": "RFC-6020"
       }
     },
-    "organization": "ClearPath Networks NFV R&D Group",
-    "contact": "Web:  <http://www.clearpathnet.com>\nCode: <http://github.com/clearpath-networks/yangforge>\n\nAuthor: Peter K. Lee <mailto:plee@clearpathnet.com>",
-    "include": "yang-v1-extensions"
+    "organization": "Corenova R&D Group",
+    "contact": "Web:  <http://www.corenova.com>\nCode: <http://github.com/corenova/yang-forge>\n\nAuthor: Peter K. Lee <mailto:peter@corenova.com>"
   },
   "features": {
     "cli": "When enabled, generates command-line interface for the module",

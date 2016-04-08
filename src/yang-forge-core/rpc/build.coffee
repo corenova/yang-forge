@@ -17,7 +17,7 @@ module.exports = (input, output, done) ->
   ycc.include opts.include
   ycc.link opts.link
 
-  core = ycc.compose args
+  core = ycc.load args
   console.debug? core
 
   unless opts.output?

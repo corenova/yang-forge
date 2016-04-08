@@ -5,13 +5,13 @@ module yang-forge-core {
   //import ietf-yang-library { prefix yanglib; }
 
   organization
-    "ClearPath Networks NFV R&D Group";
+    "Corenova R&D Group";
 
   contact
-    "Web:  <http://www.clearpathnet.com>
-     Code: <http://github.com/clearpath-networks/yangforge>
+    "Web:  <http://www.corenova.com>
+     Code: <http://github.com/corenova/yang-forge>
 
-     Author: Peter K. Lee <mailto:plee@clearpathnet.com>";
+     Author: Peter K. Lee <mailto:peter@corenova.com>";
 
   description
     "This module provides YANG package management and runtime engine operations";

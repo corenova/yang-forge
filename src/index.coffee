@@ -4,5 +4,5 @@ module.exports = (->
   @set basedir: __dirname
   @include '..'
   @link '.'
-  @compose 'yang-forge-core'
+  @load 'yang-forge-core'
 ).call (require 'yang-cc')
