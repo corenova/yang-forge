@@ -18,11 +18,13 @@ module.exports = (input, output, done) ->
     .include opts.include
     .link opts.link
 
-  res = (ycc.load args).dump meta: opts
-  unless opts.output?
-    output.set res
-    return done()
+  (ycc.load args).dump meta: opts
+  .then (res) ->
+    unless opts.output?
+      output.set res
+      return done()
 
-  fs.writeFile opts.output, res, 'utf8', (err) ->
-    output.set "output saved to '#{opts.output}'"
-    if err? then done err else done()
+    fs.writeFile opts.output, res, 'utf8', (err) ->
+      output.set "output saved to '#{opts.output}'"
+      if err? then done err else done()
+  .catch (err) -> done err

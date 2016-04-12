@@ -14,7 +14,7 @@ passport = require 'passport'
 module.exports = ->
   console.log "generating REST/JSON interface..."
 
-  yrouter  = (require './restjson-router') this
+  yrouter  = (require './feature:restjson:router') this
 
   restjson = (->
     @use bp.urlencoded(extended:true), bp.json(strict:true), passport.initialize()

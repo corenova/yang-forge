@@ -33,8 +33,7 @@
     "js-yaml": "^3.5.5",
     "prettyjson": "^1.1.3",
     "traverse": "^0.6.6",
-    "treeify": "^1.0.1",
-    "yang-cc": "^1.0.18"
+    "treeify": "^1.0.1"
   },
   "optionalDependencies": {
     "body-parser": "^1.13.2",
@@ -46,10 +45,12 @@
   },
   "devDependencies": {
     "mocha": "~2.0.1",
-    "should": "~3.1.3"
+    "should": "~3.1.3",
+	"yang-cc": "^1.0.18"
   },
   "engines": {
-    "node": ">=0.10.28"
+    "node": ">=0.10.28",
+	"yang-cc": ">=1.0.18"
   },
   "scripts": {
     "prepublish": "coffee -o lib -c src",
