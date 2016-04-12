@@ -12,18 +12,17 @@ module.exports = (input, output, done) ->
     # should handle this case differently?
     return done()
 
-  ycc = new ycc.Composer ycc # make a fresh copy
-  ycc.set basedir: process.cwd()
-  ycc.include opts.include
-  ycc.link opts.link
+  ycc = # make a fresh copy
+    (new ycc.Composer ycc)
+    .set basedir: process.cwd()
+    .include opts.include
+    .link opts.link
 
-  core = ycc.load args
-  console.debug? core
-
+  res = (ycc.load args).dump meta: opts
   unless opts.output?
-    output.set core.dump()
+    output.set res
     return done()
 
-  fs.writeFile opts.output, core.dump(), 'utf8', (err) ->
+  fs.writeFile opts.output, res, 'utf8', (err) ->
     output.set "output saved to '#{opts.output}'"
     if err? then done err else done()

@@ -105,6 +105,28 @@ module yang-forge-core {
       units o;
     }
   }
+
+  grouping composition-metadata {
+    description
+      "collection of composition meta-data to be tagged with generated output during build";
+    
+    leaf contact {
+      description "provide contact info";
+      type string;
+    }
+    leaf description {
+      description "provide brief description";
+      type textarea;
+    }
+    leaf organization {
+      description "provide organization detail";
+      type string;
+    }
+    leaf reference {
+      description "provide a pointer to get more info about this composition";
+      type string;
+    }
+  }
   
   grouping output-format-options {
     leaf format {
@@ -227,9 +249,11 @@ module yang-forge-core {
         }
         augment options {
           uses composition-options;
+          uses composition-metadata;
           leaf sign {
             description "specify signing key to encrypt the generated build";
             type path;
+            units s;
           }
         }
       }
