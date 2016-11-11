@@ -1,0 +1,56 @@
+module node-commander {
+  /*
+   * Features
+   */
+  feature commander {
+    description
+      "Commander is a CLI utility generator module.";
+  }
+  /*
+   * Groupings
+   */
+  grouping cli-command {
+    description
+      "The cli-command schema provides general schema format for defining CLI interface RPC input format";
+    leaf-list arguments {
+      description "The arguments should be 'refined' by uses to override config to true if used";
+      type string;
+      config false;
+    }
+    container options {
+      description "Placeholder to be 'augmented' during uses to add additional leaf nodes";
+    }
+  }
+  grouping output-format-options {
+    leaf format {
+      description "specify output format";
+      type enumeration {
+        enum yaml;
+        enum json;
+        enum tree;
+        enum yang;
+        enum pretty;
+        // coming soon... I think
+        //enum xml;
+      }
+      units f;
+      default pretty;
+    }
+    leaf space {
+      description "Number of spaces to use for JSON output";
+      type uint8 { range 0..8; }
+      units s;
+      default 2;
+    }
+    leaf encoding {
+      description "Specify output data encoding";
+      type enumeration {
+        enum base64;
+        enum utf8;
+        enum gzip;
+      }
+      units x;
+      default utf8;
+    }
+  }
+}

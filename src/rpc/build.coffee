@@ -1,12 +1,8 @@
-# rpc build - generates the core composition
 
-ycc  = require 'yang-cc'
-fs   = require 'fs'
-#zlib = require 'zlib'
 
-module.exports = (input, output, done) ->
-  args = input.get 'arguments'
-  opts = input.get 'options'
+module.exports = (input, resolve, reject) ->
+  args = input.arguments
+  opts = input.options
 
   unless args.length > 0
     # should handle this case differently?
@@ -28,3 +24,5 @@ module.exports = (input, output, done) ->
       output.set "output saved to '#{opts.output}'"
       if err? then done err else done()
   .catch (err) -> done err
+
+  

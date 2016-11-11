@@ -33,6 +33,10 @@ $ npm install -g yang-forge
 You must have `node >= 0.10.28` as a minimum requirement to run
 `yang-forge`.
 
+
+package.json -> yang-forge-package -> package.yang
+
+
 ## Usage
 ```
   Usage: yfc [options] [command]

@@ -1,0 +1,86 @@
+module node-package-manager {
+  namespace "urn:ietf:params:xml:ns:yang:node-package-manager";
+  prefix npm;
+  yang-version 1.1;
+
+  import yang-meta-types { prefix meta; }
+  include node-package-specification;
+  
+  organization
+    "Corenova Technologies, Inc.";
+  contact
+    "Peter K. Lee <peter@corenova.com>";
+  
+  description
+    "This module provides model-driven abstractions for Node.js Package Manager";
+
+  revision 2016-11-08 {
+    description
+      "Initial revision.";
+  }
+  
+  /*
+   * Groupings
+   */
+  grouping packages-list {
+    list package {
+      key "name version";
+      uses npm:package-manifest;
+      action serialize {
+        description
+          "The serialize converts current package manifest object into string
+         format based on requested output format.";
+        input {
+          leaf format {
+            type enumeration {
+              enum json;
+              enum yaml;
+            }
+            default json;
+          }
+        }
+        output {
+          leaf data {
+            description "contains the serialized package manifest data";
+            type string;
+          }
+        }
+      }
+    }
+  }
+  /*
+   * Configuration data nodes
+   */
+  container registry {
+    config false;
+    uses npm:packages-list;
+  }
+  /*
+   * Remote Procedure Operations
+   */
+  rpc query {
+    description
+      "Query NPM repository for information about package(s)";
+    //alias info, show
+    input {
+      list package {
+        leaf name {
+          type npm:package-name;
+        }
+        leaf source {
+          type meta:semantic-version-match;
+        }
+        min-elements 1;
+        max-elements 50;
+      }
+    }
+    output {
+      uses npm:packages-list {
+        refine "package" {
+          min-elements 1;
+        }
+      }
+    }
+  }
+  
+}

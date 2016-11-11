@@ -1,7 +1,7 @@
 # Command-line interface feature module
 #
 # This feature add-on module enables dynamic command-line interface
-# generation based on available runtime `app` instance.
+# generation based on Yang Expression instance.
 #
 # It utilizes the [commander](http://github.com/tj/commander.js) utility
 # to dynamically construct the command line processing engine and
@@ -9,13 +9,10 @@
 # arguments.
 program = require 'commander'
 colors  = require 'colors'
-assert  = require 'assert'
 
-module.exports = (name, argv) ->
-  model = @access name
-  assert model?,
-    "unable to locate '#{name}' module inside current core"
-
+module.exports = (model, argv) ->
+  return unless model?
+  
   # 1. Setup some default execution context
   program
     .version Object.keys(model.meta 'revision')[0]

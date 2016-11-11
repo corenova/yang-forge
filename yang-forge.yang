@@ -1,0 +1,103 @@
+module yang-forge {
+  namespace "urn:ietf:params:xml:ns:yang:yang-forge";
+  prefix forge;
+  yang-version 1.1;
+
+  import ietf-yang-types   { prefix yang; }
+  import yang-meta-types   { prefix meta; }
+  import node-package-manager { prefix npm; }
+
+  organization
+    "Corenova Technologies, Inc.";
+  contact
+    "Peter K. Lee <peter@corenova.com>";
+  description
+    "This module provides YANG schema and package management operations";
+
+  revision 2016-11-09 {
+    description "Updated to YANG 1.1 and revised with npm and commander module dependencies";
+  }
+  revision 2016-03-25 {
+    description "Enhanced with 0.12.x functionality";
+  }
+  revision 2015-09-23 {
+    description "Enhanced with 0.10.x functionality";
+  }
+  revision 2015-05-04 {
+    description "Initial revision";
+  }
+  /*
+   * Groupings
+   */
+  grouping package-manifest {
+    description
+      "Enhanced package information containing one-or-more manifests for dependency package(s).";
+    uses npm:package-manifest {
+      augment "dependencies/required" {
+        uses npm:packages-list;
+        leaf is-local {
+          description
+            "computed to true if 'source' value is local-file-dependency, otherwise false";
+          config false;
+          type boolean;
+        }
+        leaf outdated {
+          config false;
+          type boolean;
+        }
+      }
+    }
+    list model {
+      key name;
+      leaf name {
+        type yang:yang-identifier;
+      }
+      leaf source {
+        type meta:file-name;
+      }
+    }
+    container stats {
+      config false;
+      leaf created {
+        type yang:date-and-time;
+      }
+      leaf modified {
+        type yang:date-and-time;
+      }
+      leaf revision-count {
+        type uint32;
+        units "revs";
+        description "Number of revisions for the package";
+      }
+    }
+  }
+  /*
+   * Remote Procedure Operations
+   */
+  rpc transform {
+    description
+      "Transforms input JSON or JS object source into forge:package-manifest data model.";
+    input {
+      anydata source {
+        description "JSON text or JS object representing package.json content";
+        mandatory true;
+      }
+    }
+    output {
+      uses forge:package-manifest;
+    }
+  }
+  rpc inspect {
+    description
+      "Inspect a package and assess state of required dependencies.";
+    input {
+      leaf package {
+        type npm:package-source;
+        mandatory true;
+      }
+    }
+    output {
+      uses forge:package-manifest;
+    }
+  }
+}

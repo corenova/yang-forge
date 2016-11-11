@@ -1,0 +1,342 @@
+submodule node-package-specification {
+  belongs-to node-package-manager { prefix npm; }
+
+  import ietf-yang-types { prefix yang; }
+  import ietf-inet-types { prefix inet; }
+  import yang-meta-types { prefix meta; }
+
+  /*
+   * Identities
+   */
+  identity repository;
+  identity git {
+    base repository;
+  }
+  identity svn {
+    base repository;
+  }
+  identity gist {
+    base repository;
+  }
+  identity bitbucket {
+    base repository;
+  }
+  identity gitlab {
+    base repository;
+  }
+  /*
+   * Type Definitions
+   */
+  typedef package-name {
+    type meta:meta-identifier;
+  }
+  typedef package-source {
+    type package-name {
+      pattern '.+(@.+)?$';
+    }
+  }
+  typedef local-file-dependency {
+    type string {
+      pattern '^(file:|[.~/]|\.\.)';
+    }
+  }
+  typedef dependency-source {
+    type union {
+      type local-file-dependency;
+      type meta:semantic-version-match;
+      type meta:empty-string;
+      type meta:wildcard;
+      type inet:uri;
+    }
+  }
+  typedef platform {
+    type enumeration {
+      enum aix;
+      enum android;
+      enum darwin;
+      enum freebsd;
+      enum linux;
+      enum openbsd;
+      enum sunos;
+      enum win32;
+    }
+  }
+  typedef arch {
+    type enumeration {
+      enum arm;
+      enum ia32;
+      enum x64;
+      enum mips;
+    }
+  }
+  /*
+   * Groupings
+   */
+  grouping person-info {
+    choice format {
+      case short {
+        leaf value {
+          type union {
+            type meta:person-contact;
+            type string; // be forgiving about precise format
+          }
+        }
+      }
+      case full {
+        leaf name {
+          type meta:person-name;
+          mandatory true;
+        }
+        leaf email {
+          type meta:email-address;
+        }
+        leaf url {
+          type inet:uri;
+        }
+      }
+    }
+  }
+  grouping package-manifest {
+    description
+      "Package manifest data model based on NPM package.json format.";
+    reference
+      "https://docs.npmjs.com/files/package.json";
+    grouping dependency-item {
+      leaf name {
+        type package-name;
+        mandatory true;
+      }
+      leaf source {
+        type dependency-source;
+        mandatory true;
+      }
+    }
+    leaf name {
+      type package-name {
+        length 1..214;
+      }
+      mandatory true;
+    }
+    leaf version {
+      type meta:semantic-version;
+      description "Version of module being packaged";
+      mandatory true;
+    }
+    leaf license {
+      type meta:license;
+      default "Proprietary";
+    }
+    leaf description {
+      type meta:description;
+      description "Description of the module";
+    }
+    container author {
+      uses person-info;
+    }
+    leaf-list keywords {
+      type meta:meta-identifier;
+    }
+    leaf homepage {
+      type inet:uri;
+    }
+    container bugs {
+      choice format {
+        case short {
+          leaf value {
+            type inet:uri;
+          }
+        }
+        case full {
+          leaf url {
+            type inet:uri;
+          }
+          leaf email {
+            type meta:email-address;
+          }
+        }
+      }
+    }
+    container repository {
+      choice format {
+        case short {
+          leaf value {
+            type string;
+          }
+        }
+        case full {
+          leaf type {
+            type identityref {
+              base repository;
+            }
+          }
+          leaf url {
+            type inet:uri;
+          }
+        }
+      }
+    }
+    container config {
+      // can be any object
+    }
+    container main {
+      leaf source {
+        type union {
+          type local-file-dependency;
+          type meta:file-name;
+        }
+      }
+    }
+    list contributor {
+      uses person-info;
+    }
+    leaf-list maintainers {
+      type meta:person-contact;
+    }
+    list revision {
+      key "version";
+      leaf version {
+        type meta:semantic-version;
+      }
+      leaf timestamp {
+        type yang:date-and-time;
+      }
+    }
+    container dist {
+      leaf shasum {
+        type string;
+      }
+      leaf tarball {
+        type inet:uri;
+      }
+    }
+    container dependencies {
+      reference
+        "https://docs.npmjs.com/files/package.json#dependencies";
+      list required {
+        key "name";
+        uses dependency-item;
+      }
+      list development {
+        key "name";
+        uses dependency-item;
+      }
+      list optional {
+        key "name";
+        uses dependency-item;
+      }
+      list peer {
+        key "name";
+        uses dependency-item;
+      }
+      leaf-list bundled {
+        type leafref {
+          path "../required/name";
+        }
+      }
+    }
+    container assets {
+      list script {
+        reference
+          "https://docs.npmjs.com/files/package.json#scripts";
+        key "action";
+        leaf action {
+          type string;
+        }
+        leaf command {
+          type string;
+        }
+      }
+      leaf-list files {
+        reference
+          "https://docs.npmjs.com/files/package.json#files";
+        type meta:file-name;
+      }
+      container directories {
+        reference
+          "https://docs.npmjs.com/files/package.json#directories";
+        // TODO: validate this section?
+      }
+      leaf-list man {
+        reference
+          "https://docs.npmjs.com/files/package.json#man";
+        type meta:file-name;
+      }
+      list executable {
+        reference
+          "https://docs.npmjs.com/files/package.json#bin";
+        choice format {
+          case short {
+            leaf value {
+              type meta:file-name;
+            }
+          }
+          case full {
+            uses dependency-item;
+          }
+        }
+      }
+    }
+    container policy {
+      list engine {
+        reference
+          "https://docs.npmjs.com/files/package.json#engines";
+        key "name";
+        uses dependency-item;
+      }
+      leaf-list os {
+        reference
+          "https://docs.npmjs.com/files/package.json#os";
+        type platform;
+      }
+      leaf-list cpu {
+        reference
+          "https://docs.npmjs.com/files/package.json#cpu";
+        type arch;
+      }
+      leaf global {
+        reference
+          "https://docs.npmjs.com/files/package.json#preferGlobal";
+        type boolean;
+        default false;
+      }
+      leaf private {
+        reference
+          "https://docs.npmjs.com/files/package.json#private";
+        type boolean;
+        default false;
+      }
+      container publishing {
+        reference
+          "https://docs.npmjs.com/files/package.json#publishConfig";
+      }
+    }
+    container extras {
+      description
+        "any other extra key/value mappings not part of package.json specification.";
+    }
+  }
+  /*
+   * Configuration data nodes
+   */
+  container specification {
+    leaf-list keywords {
+      type meta:meta-identifier;
+    }
+  }
+  /*
+   * Remote Procedure Operations
+   */
+  rpc transform {
+    description
+      "Transforms input JSON or JS object source into package-manifest data model.";
+    input {
+      anydata source {
+        description "JSON text or JS object representing package.json content";
+        mandatory true;
+      }
+    }
+    output {
+      uses package-manifest;
+    }
+  }
+}
