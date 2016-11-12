@@ -18,11 +18,11 @@ chooseFormat = (x) ->
   else x
 
 dependencies2list = (obj) ->
-  return unless typeof obj is 'object'
+  return unless obj instanceof Object
   name: k, source: v for k, v of obj
 
 scripts2list = (obj) ->
-  return unless typeof obj is 'object'
+  return unless obj instanceof Object
   action: k, command: v for k, v of obj
   
 module.exports = require('../schema/node-package-manager.yang').bind {
@@ -47,7 +47,9 @@ module.exports = require('../schema/node-package-manager.yang').bind {
       when 'string' then JSON.parse @input.source
       else @input.source
 
-    # bypass transform if already matching schema
+    # bypass transform if already matches schema
+    match = @get("/registry/package/#{src.name}+#{src.version}")
+    return (@output = match) if match?
     return (@output = src) if src.policy?
 
     debug? "transforming '#{src.name}' package into package-manifest data model"
@@ -87,8 +89,8 @@ module.exports = require('../schema/node-package-manager.yang').bind {
         directories: src.directories
         script:      scripts2list src.scripts
         executable: switch typeof src.bin
-          when 'object' then dependencies2list src.bin
-          else [ value: src.bin ]
+          when 'string' then [ value: src.bin ]
+          else dependencies2list src.bin
       policy:
         engine:  dependencies2list src.engines
         os:      src.os
@@ -99,12 +101,18 @@ module.exports = require('../schema/node-package-manager.yang').bind {
       extras: extras
 
   query: ->
-    pkgs = @input.package.map (x) ->
-      return x.name unless x.source?
-      "#{x.name}@#{x.source}"
-    debug? "query npm registry for #{pkgs}"
-    transformer = @in('/transform')
     store = @in('/registry/package')
+    cached = []
+    pkgs = @input.package.reduce ((a,pkg) ->
+      hit = store.get("#{pkg.name}+#{pkg.source}")
+      if hit? then cached.push hit
+      else a.push if pkg.source? then "#{pkg.name}@#{pkg.source}" else pkg.name
+      return a
+    ), []
+    debug? "[query] found #{cached.length} cached entries" if cached.length
+    return @output = package: cached unless pkgs.length
+    debug? "[query] checking npm registry for #{pkgs}"
+    transformer = @in('/transform')
     @output =
       registry.view pkgs...
       .then (res) ->
@@ -112,6 +120,6 @@ module.exports = require('../schema/node-package-manager.yang').bind {
       .then (res) ->
         debug? "merging #{res.length} packages into internal registry"
         store.merge res, force: true
-        package: res
+        package: cached.concat res
         
 }

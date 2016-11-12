@@ -26,7 +26,7 @@ module.exports = require('../yang-forge.yang').bind {
       @in('/npm:transform').do @input
       .then (output) ->
         debug? "transforming '#{output.name}' package into package-manifest data model"
-        if typeof output.extras?.models is 'object'
+        if output.extras?.models instanceof Object
           output.model = (name: k, source: v for k, v of output.extras.models)
         return output
         

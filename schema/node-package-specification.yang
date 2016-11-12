@@ -32,7 +32,7 @@ submodule node-package-specification {
   }
   typedef package-source {
     type package-name {
-      pattern '.+(@.+)?$';
+      pattern '.+(@.+)?$'; // need a better pattern
     }
   }
   typedef local-file-dependency {
@@ -313,30 +313,6 @@ submodule node-package-specification {
     container extras {
       description
         "any other extra key/value mappings not part of package.json specification.";
-    }
-  }
-  /*
-   * Configuration data nodes
-   */
-  container specification {
-    leaf-list keywords {
-      type meta:meta-identifier;
-    }
-  }
-  /*
-   * Remote Procedure Operations
-   */
-  rpc transform {
-    description
-      "Transforms input JSON or JS object source into package-manifest data model.";
-    input {
-      anydata source {
-        description "JSON text or JS object representing package.json content";
-        mandatory true;
-      }
-    }
-    output {
-      uses package-manifest;
     }
   }
 }

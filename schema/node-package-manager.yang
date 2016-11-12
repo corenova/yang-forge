@@ -51,6 +51,11 @@ module node-package-manager {
   /*
    * Configuration data nodes
    */
+  container specification {
+    leaf-list keywords {
+      type meta:meta-identifier;
+    }
+  }
   container registry {
     config false;
     uses npm:packages-list;
@@ -58,6 +63,19 @@ module node-package-manager {
   /*
    * Remote Procedure Operations
    */
+  rpc transform {
+    description
+      "Transforms input JSON or JS object source into package-manifest data model.";
+    input {
+      anydata source {
+        description "JSON text or JS object representing package.json content";
+        mandatory true;
+      }
+    }
+    output {
+      uses package-manifest;
+    }
+  }
   rpc query {
     description
       "Query NPM repository for information about package(s)";
@@ -82,5 +100,4 @@ module node-package-manager {
       }
     }
   }
-  
 }
