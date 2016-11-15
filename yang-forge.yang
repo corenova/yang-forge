@@ -29,12 +29,14 @@ module yang-forge {
   /*
    * Groupings
    */
-  grouping package-manifest {
+  grouping package-analysis {
     description
       "Enhanced package information containing one-or-more manifests for dependency package(s).";
     uses npm:package-manifest {
       augment "dependencies/required" {
-        uses npm:packages-list;
+        uses forge:analysis-list {
+          when "not(../is-local)";
+        }
         leaf is-local {
           description
             "computed to true if 'source' value is local-file-dependency, otherwise false";
@@ -64,11 +66,23 @@ module yang-forge {
       leaf modified {
         type yang:date-and-time;
       }
-      leaf revision-count {
+      leaf total-revision-count {
         type uint32;
         units "revs";
         description "Number of revisions for the package";
       }
+      leaf newer-revision-count {
+        type uint32;
+        description "Number of newer revisions for the package name/version";
+      }
+      uses npm:source-stats;
+    }
+  }
+  grouping analysis-list {
+    list package {
+      key "name version";
+      uses forge:package-analysis;
+      //uses npm:package-manifest;
     }
   }
   /*
@@ -76,7 +90,7 @@ module yang-forge {
    */
   rpc transform {
     description
-      "Transforms input JSON or JS object source into forge:package-manifest data model.";
+      "Transforms input JSON or JS object source into forge:package-analysis data model.";
     input {
       anydata source {
         description "JSON text or JS object representing package.json content";
@@ -84,7 +98,7 @@ module yang-forge {
       }
     }
     output {
-      uses forge:package-manifest;
+      uses forge:package-analysis;
     }
   }
   rpc inspect {
@@ -97,7 +111,7 @@ module yang-forge {
       }
     }
     output {
-      uses forge:package-manifest;
+      uses forge:package-analysis;
     }
   }
 }

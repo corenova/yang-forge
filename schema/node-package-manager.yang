@@ -18,6 +18,10 @@ module node-package-manager {
     description
       "Initial revision.";
   }
+
+  feature controller {
+    description "System provides transaction controller support.";
+  }
   
   /*
    * Groupings
@@ -48,6 +52,63 @@ module node-package-manager {
       }
     }
   }
+  grouping implicit-package-sources-list {
+    list package {
+      key "name source";
+      leaf name {
+        type npm:package-name;
+      }
+      leaf source {
+        type union {
+          type meta:semantic-version-match;
+          type string {
+            pattern "^latest$";
+          }
+        }
+        default "latest";
+      }
+    }
+  }
+  grouping explicit-package-sources-list {
+    list package {
+      key "name source";
+      leaf name {
+        type npm:package-name;
+      }
+      leaf source {
+        type union {
+          type meta:semantic-version;
+          type string {
+            pattern "^latest$";
+          }
+        }
+        default "latest";
+      }
+    }
+  }
+  grouping source-stats {
+    leaf bytes {
+      type uint32;
+      default 0;
+    }
+    leaf-list contents {
+      type meta:file-name;
+    }
+  }
+  grouping sources-list {
+    list source {
+      key id;
+      leaf id {
+        type leafref {
+          path "/registry/package/dist/shasum";
+        }
+      }
+      leaf data {
+        type binary;
+      }
+      uses npm:source-stats;
+    }
+  }
   /*
    * Configuration data nodes
    */
@@ -58,7 +119,42 @@ module node-package-manager {
   }
   container registry {
     config false;
-    uses npm:packages-list;
+    uses npm:packages-list {
+      augment "package/dist" {
+        leaf cached {
+          type boolean;
+          default false;
+        }
+      }
+    }
+    uses npm:sources-list {
+      augment "source" {
+        leaf exists {
+          type boolean;
+          default false;
+        }
+      }
+    }
+    leaf packages-count {
+      type uint32;
+      default 0;
+    }
+    leaf sources-count {
+      type uint32;
+      default 0;
+    }
+  }
+  container policy {
+    container cache {
+      leaf enabled {
+        type boolean;
+        default true;
+      }
+      leaf directory {
+        type meta:file-name;
+        default "/tmp/npm-cache";
+      }
+    }
   }
   /*
    * Remote Procedure Operations
@@ -73,23 +169,20 @@ module node-package-manager {
       }
     }
     output {
-      uses package-manifest;
+      uses npm:package-manifest;
     }
   }
   rpc query {
+    if-feature npm:controller;
     description
       "Query NPM repository for information about package(s)";
     //alias info, show
     input {
-      list package {
-        leaf name {
-          type npm:package-name;
+      uses npm:implicit-package-sources-list {
+        refine package {
+          min-elements 1;
+          max-elements 50;
         }
-        leaf source {
-          type meta:semantic-version-match;
-        }
-        min-elements 1;
-        max-elements 50;
       }
     }
     output {
@@ -98,6 +191,22 @@ module node-package-manager {
           min-elements 1;
         }
       }
+    }
+  }
+  rpc fetch {
+    if-feature npm:controller;
+    description
+      "Fetch package(s) to internal local filesystem.";
+    input {
+      uses npm:explicit-package-sources-list {
+        refine package {
+          min-elements 1;
+          max-elements 50;
+        }
+      }
+    }
+    output {
+      uses npm:sources-list;
     }
   }
 }

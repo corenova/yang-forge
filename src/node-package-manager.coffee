@@ -1,6 +1,6 @@
 require 'yang-js'
 debug = require('debug')('yang-forge:npm') if process.env.DEBUG?
-
+fs = require 'fs'
 registry = require './npm-registry'
 cache = {}
 
@@ -27,6 +27,8 @@ scripts2list = (obj) ->
   
 module.exports = require('../schema/node-package-manager.yang').bind {
 
+  'feature(controller)': -> @content ?= registry
+  
   'grouping(packages-list)/package/serialize': ->
     manifest = @parent.toJSON(false)
 
@@ -41,6 +43,29 @@ module.exports = require('../schema/node-package-manager.yang').bind {
       ]
 
   '/registry': -> @content ?= package: []
+  
+  '/registry/package/dist/cached': ->
+    key = @get('../shasum')
+    @content = @get("/registry/source/#{key}/exists") is true
+
+  '/registry/source': ->
+    unless @content?
+      debug? "[#{@path}] update"
+      cachedir = @get('/policy/cache/directory')
+      keys = @get('/registry/package/dist/shasum')
+      return unless keys?
+      keys = [ keys ] unless Array.isArray keys
+      @content = keys.map (x) -> id: x
+    
+  '/registry/source/exists': ->
+    id = @get('../id')
+    cachedir = @get('/policy/cache/directory')
+    @content = fs.existsSync "#{cachedir}/#{id}"
+
+  '/registry/packages-count': -> @content = @get('../package').length
+  '/registry/sources-count':  -> @content = @get('../source').length
+
+  '/policy': -> @content ?= cache: {}
   
   transform: ->
     src = switch typeof @input.source
@@ -101,10 +126,11 @@ module.exports = require('../schema/node-package-manager.yang').bind {
       extras: extras
 
   query: ->
-    store = @in('/registry/package')
+    controller = registry
+    packages = @in('/registry/package')
     cached = []
     pkgs = @input.package.reduce ((a,pkg) ->
-      hit = store.get("#{pkg.name}+#{pkg.source}")
+      hit = packages.get("#{pkg.name}+#{pkg.source}")
       if hit? then cached.push hit
       else a.push if pkg.source? then "#{pkg.name}@#{pkg.source}" else pkg.name
       return a
@@ -114,12 +140,23 @@ module.exports = require('../schema/node-package-manager.yang').bind {
     debug? "[query] checking npm registry for #{pkgs}"
     transformer = @in('/transform')
     @output =
-      registry.view pkgs...
+      controller.view pkgs...
       .then (res) ->
         Promise.all res.map (x) -> transformer.do source: x
       .then (res) ->
         debug? "merging #{res.length} packages into internal registry"
-        store.merge res, force: true
+        packages.merge res, force: true
         package: cached.concat res
+
+  fetch: ->
+    controller = registry
+    sources = @in('/registry/source')
+    cachedir = @get('/policy/cache/directory')
+    @output =
+      @in('/query').do @input
+      .then (output) -> controller.cache cachedir, output.package...
+      .then (res) ->
+        sources.merge res, force: true
+        source: res
         
 }
