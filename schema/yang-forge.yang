@@ -29,24 +29,33 @@ module yang-forge {
   /*
    * Groupings
    */
-  grouping package-analysis {
+  grouping core-manifest {
     description
-      "Enhanced package information containing one-or-more manifests for dependency package(s).";
-    uses npm:package-manifest {
-      augment "dependencies/required" {
-        uses forge:analysis-list {
-          when "not(../is-local)";
-        }
-        leaf is-local {
-          description
-            "computed to true if 'source' value is local-file-dependency, otherwise false";
-          config false;
-          type boolean;
-        }
-        leaf outdated {
-          config false;
-          type boolean;
-        }
+      "The core essence of the module contained in the package.";
+    leaf id {
+      config false;
+      type yang:uuid;
+    }
+    leaf package {
+      type leafref {
+        path "/npm:registry/package/id";
+      }
+      mandatory true;
+    }
+    leaf source {
+      type leafref {
+        path "/npm:registry/source/id";
+      }
+      mandatory true;
+    }
+    leaf-list dependency {
+      type leafref {
+        path "/forge:registry/core/id";
+      }
+    }
+    leaf-list dependent {
+      type leafref {
+        path "/forge:registry/core/id";
       }
     }
     list model {
@@ -58,32 +67,18 @@ module yang-forge {
         type meta:file-name;
       }
     }
-    container stats {
-      config false;
-      leaf created {
-        type yang:date-and-time;
-      }
-      leaf modified {
-        type yang:date-and-time;
-      }
-      leaf total-revision-count {
-        type uint32;
-        units "revs";
-        description "Number of revisions for the package";
-      }
-      leaf newer-revision-count {
-        type uint32;
-        description "Number of newer revisions for the package name/version";
-      }
-      uses npm:source-stats;
+  }
+  grouping cores-list {
+    list core {
+      key "name version";
+      uses forge:core-manifest;
     }
   }
-  grouping analysis-list {
-    list package {
-      key "name version";
-      uses forge:package-analysis;
-      //uses npm:package-manifest;
-    }
+  /*
+   * Configuration data nodes
+   */
+  container registry {
+    uses cores-list;
   }
   /*
    * Remote Procedure Operations
@@ -101,16 +96,35 @@ module yang-forge {
       uses forge:package-analysis;
     }
   }
-  rpc inspect {
+  rpc query {
     description
-      "Inspect a package and assess state of required dependencies.";
+      "Query NPM registry recursively for information about package(s)"
     input {
-      leaf package {
-        type npm:package-source;
-        mandatory true;
+      uses npm:package-selection-list {
+        refine "package" {
+          min-elements 1;
+          max-elements 10;
+        }
       }
     }
     output {
+      uses forge:package-analysis-list {
+        refine "package" {
+          min-elements 1;
+        }
+      }
+    }
+  }
+  rpc build {
+    description
+      "Build a core-manifest for a specified package.";
+    input {
+      uses npm:package-selection;
+    }
+    output {
+      uses forge:package-analysis-list {
+        
+      }
       uses forge:package-analysis;
     }
   }

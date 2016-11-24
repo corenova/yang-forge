@@ -28,11 +28,8 @@ submodule node-package-specification {
    * Type Definitions
    */
   typedef package-name {
-    type meta:meta-identifier;
-  }
-  typedef package-source {
-    type package-name {
-      pattern '.+(@.+)?$'; // need a better pattern
+    type meta:meta-identifier {
+      length 1..214;
     }
   }
   typedef local-file-dependency {
@@ -112,9 +109,7 @@ submodule node-package-specification {
       }
     }
     leaf name {
-      type package-name {
-        length 1..214;
-      }
+      type package-name;
       mandatory true;
     }
     leaf version {
@@ -191,15 +186,6 @@ submodule node-package-specification {
     }
     leaf-list maintainers {
       type meta:person-contact;
-    }
-    list revision {
-      key "version";
-      leaf version {
-        type meta:semantic-version;
-      }
-      leaf timestamp {
-        type yang:date-and-time;
-      }
     }
     container dist {
       leaf shasum {
