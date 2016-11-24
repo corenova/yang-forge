@@ -64,8 +64,9 @@ module.exports =
 
       return fetching[shasum] = new Promise (resolve, reject) ->
         parse = targz().createParseStream()
-        contents = []
-        parse.on 'entry', (entry) -> contents.push entry.path
+        files = []
+        parse.on 'entry', (entry) ->
+          files.push path: entry.path, size: entry.size, mtime: entry.props.mtime.toJSON()
         parse.on 'end', ->
           if cached
             bytes = stream.bytesRead
@@ -74,7 +75,7 @@ module.exports =
           resolve
             id: shasum
             bytes: bytes
-            contents: contents
+            file: files
         parse.on 'error', (err) ->
           console.error "parse error on #{filename}"
           reject err

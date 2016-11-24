@@ -137,8 +137,17 @@ module node-package-manager {
         type uint32;
         default 0;
       }
-      leaf-list contents {
-        type meta:file-name;
+      list file {
+        leaf path {
+          type meta:file-name;
+        }
+        leaf size {
+          type uint16;
+          units "bytes";
+        }
+        leaf mtime {
+          type yang:date-and-time;
+        }
       }
       leaf data {
         type binary;
