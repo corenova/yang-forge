@@ -30,7 +30,7 @@ module node-package-manager {
     leaf name {
       type npm:package-name;
     }
-    list revision {
+    list release {
       key "version";
       leaf version {
         type meta:semantic-version;
@@ -46,11 +46,9 @@ module node-package-manager {
         config false;
         type instance-identifier;
       }
-    }
-    leaf current {
-      config false;
-      type leafref {
-        path "../revision/version";
+      leaf schema {
+        config false;
+        type instance-identifier;
       }
     }
     leaf created {
@@ -61,11 +59,16 @@ module node-package-manager {
       config false;
       type yang:date-and-time;
     }
-    leaf revisions-count {
+    leaf latest {
       config false;
-      type uint32;
-      units "revs";
-      description "Number of revisions for the project";
+      type leafref {
+        path "../release/version";
+      }
+    }
+    leaf releases-count {
+      config false;
+      type uint16;
+      default 0;
     }
     container downloads {
       config false;
@@ -98,14 +101,12 @@ module node-package-manager {
     list package {
       key "name version";
       uses npm:package-manifest;
-      action trace {
-        description
-          "Recursively follow required external dependencies and returns the
-           dependency tree.";
+      action require {
+
       }
       action serialize {
         description
-          "Converts current package manifest object into string format based on
+          "Serializes current package manifest object into string format based on
            requested output format.";
         input {
           leaf format {
@@ -133,13 +134,17 @@ module node-package-manager {
           path "/registry/package/dist/shasum";
         }
       }
-      leaf bytes {
-        type uint32;
-        default 0;
+      leaf manifest {
+        type instance-identifier;
+        //must 'starts-with(.,'/npm:registry/package')';
       }
       list file {
-        leaf path {
+        //unique "name";
+        leaf name {
           type meta:file-name;
+        }
+        leaf mode {
+          type uint16;
         }
         leaf size {
           type uint16;
@@ -148,9 +153,32 @@ module node-package-manager {
         leaf mtime {
           type yang:date-and-time;
         }
+        action load {
+          output {
+            leaf text {
+              type string;
+            }
+            list require {
+              key "id";
+              leaf id {
+                type meta:file-name;
+              }
+              leaf ref {
+                type instance-identifier;
+              }
+            }
+          }
+        }
       }
-      leaf data {
-        type binary;
+      leaf files-count {
+        config false;
+        type uint16;
+        default 0;
+      }
+      leaf files-size {
+        config false;
+        type uint32;
+        default 0;
       }
     }
   }
@@ -210,9 +238,9 @@ module node-package-manager {
   /*
    * Remote Procedure Operations
    */
-  rpc transform {
+  rpc parse {
     description
-      "Transforms input JSON or JS object source into npm:package-manifest data model.";
+      "Parses input JSON or JS object source into npm:package-manifest data model.";
     input {
       anydata source {
         description "JSON text or JS object representing package.json content";
@@ -236,10 +264,6 @@ module node-package-manager {
       }
     }
     output {
-      leaf projects {
-        type uint32;
-        default 0;
-      }
       leaf packages {
         type uint32;
         default 0;
@@ -252,8 +276,7 @@ module node-package-manager {
   }
   rpc query {
     description
-      "Query local registry for matching package manifest(s)";
-    //alias info, show
+      "Query NPM registry for information about package(s)";
     input {
       uses npm:package-selection;
     }

@@ -1,8 +1,9 @@
 require 'yang-js'
 debug = require('debug')('yang-forge:npm') if process.env.DEBUG?
 co = require 'co'
-fs = require 'fs'
+fs = require 'co-fs'
 semver = require 'semver'
+detect = require 'detective'
 registry = require './feature/remote-registry'
 
 # put it in npm-utils
@@ -34,22 +35,6 @@ module.exports = require('../schema/node-package-manager.yang').bind {
     manifest = @parent.toJSON(false)
     # TODO need to convert back to package.json format
 
-  'grouping(packages-list)/package/trace': ->
-    { name, version } = @get('..')
-    debug? "[trace] #{name}@#{version}"
-    isLocal = @schema.lookup('typedef','local-file-dependency').convert
-    deps = @get('../dependencies/required').filter (x) ->
-      try return false if isLocal x.source
-      return true
-    @output = Promise.all deps.map (dep) =>
-      @in('/npm:query').do dep
-      .then (output) ->
-        # TODO: need to resolve parallel duplicate dependency query
-        Promise.all output.package.map (pkg) -> pkg.trace()
-      .then (res) ->
-        debug? "TRACE result"
-        "#{dep.name}": res
-
   '/specification': ->
     @content ?=
       keywords: [
@@ -67,25 +52,23 @@ module.exports = require('../schema/node-package-manager.yang').bind {
     registry.stat @get('../name')
     .then (stat) -> downloads.content = stat
 
-  '/registry/project/current': ->
+  '/registry/project/latest': ->
     modified = @get('../modified')
-    @content = @get("../revision[timestamp = '#{modified}']/version")
+    @content = @get("../release[timestamp = '#{modified}']/version")
   '/registry/project/created': ->
-    @content ?= @get('../revision[1]').timestamp
+    @content ?= @get('../release[1]').timestamp
   '/registry/project/modified': ->
-    revisions = @get('../revision')
-    @content = revisions[revisions.length-1].timestamp
-  '/registry/project/revisions-count': ->
-    @content = @get('../revision').length
-  '/registry/project/downloads': ->
-    @content ?= Promise.resolve registry.stat @get('../name')
-  '/registry/project/revision/package': ->
+    releases = @get('../release')
+    @content = releases[releases.length-1].timestamp
+  '/registry/project/releases-count': ->
+    @content = @get('../release').length
+  '/registry/project/release/package': ->
     name = @get('../../../name')
     version = @get('../version')
     unless @content?
       match = @in("/npm:registry/package/#{name}+#{version}")
       @content = "#{match.path}" if match?
-  '/registry/project/revision/source': ->
+  '/registry/project/release/source': ->
     pkgpath = @get('../package')
     return unless pkgpath?
     srcid = @get("#{pkgpath}/dist/shasum")
@@ -100,6 +83,46 @@ module.exports = require('../schema/node-package-manager.yang').bind {
       return unless keys?
       keys = [ keys ] unless Array.isArray keys
       @content = keys.map (x) -> id: x
+  '/registry/source/files-count': ->
+    @content ?= @get('../file')?.length
+  '/registry/source/files-size': ->
+    @content ?= @get('../file')?.reduce ((size, i) -> size += i.size), 0
+
+  '/registry/source/file/load': ->
+    files = @in('../../../file')
+    cachedir = @get('/npm:policy/cache/directory')
+    srcdir   = @get('../../../id')
+    filename = @get('../name')
+    cacheloc = path.resolve cachedir, srcdir, filename
+    basedir  = path.join filename, '..'
+
+    isLocal = @schema.lookup('typedef','local-file-dependency').convert
+    resolveDependency = (dep) ->
+      debug? "[load:resolve] resolving #{dep} for #{filename}"
+      local = try isLocal dep catch then false
+      id: dep
+      ref: switch
+        when not local
+          unless dep of process.binding('natives')
+            # TODO: need to handle dep = foo/bar
+            "/npm:registry/project/#{dep}"
+        else
+          dep = path.join basedir, dep
+          for check in [ dep, dep+'.js', path.join(dep,'index.js') ]
+            match = files.in(".[name = '#{check}']")
+            break if match?
+          "#{match.path}" if match?
+
+    @output ?= co =>
+      debug? "[load] #{filename}"
+      try
+        src = yield fs.readFile cacheloc, 'utf-8'
+        return text: src unless path.extname(filename) in [ '.js', '.node' ]
+        seen = {}
+        requires = detect(src).filter (x) -> not seen[x] and seen[x] = true
+        debug? "[load] #{filename} requires #{requires}"
+        return text: src, require: requires.map resolveDependency
+      catch e then return text: src, error: e
 
   '/registry/projects-count': -> @content = @get('../project')?.length
   '/registry/packages-count': -> @content = @get('../package')?.length
@@ -107,17 +130,17 @@ module.exports = require('../schema/node-package-manager.yang').bind {
 
   '/policy': -> @content ?= cache: {}
   
-  transform: ->
+  parse: ->
     src = switch typeof @input.source
       when 'string' then JSON.parse @input.source
       else @input.source
 
-    # bypass transform if already matches schema
+    # bypass parse if already matches schema
     match = @get("/registry/package/#{src.name}+#{src.version}")
     return (@output = match) if match?
     return (@output = src) if src.policy?
 
-    debug? "transforming '#{src.name}@#{src.version}' package into package-manifest data model"
+    debug? "parsing '#{src.name}@#{src.version}' package into package-manifest data model"
 
     keywords = @get('/specification/keywords')
     extras = {}
@@ -163,11 +186,11 @@ module.exports = require('../schema/node-package-manager.yang').bind {
       extras: extras
 
   sync: ->
-    transform = @in('/npm:transform')
-    projects  = @in('/npm:registry/project')
-    packages  = @in('/npm:registry/package')
-    sources   = @in('/npm:registry/source')
-    cachedir  = @get('/npm:policy/cache/directory')
+    parse    = @in('/npm:parse')
+    projects = @in('/npm:registry/project')
+    packages = @in('/npm:registry/package')
+    sources  = @in('/npm:registry/source')
+    cachedir = @get('/npm:policy/cache/directory')
 
     isLocal = @schema.lookup('typedef','local-file-dependency').convert
 
@@ -179,7 +202,7 @@ module.exports = require('../schema/node-package-manager.yang').bind {
       debug? "[sync] checking npm registry for #{pkgs}"
       pkgs = yield registry.view pkgs...
       debug? "[sync] match #{pkgs.length} package manifests from npm registry"
-      pkgs = yield pkgs.map (pkg) -> transform.do source: pkg
+      pkgs = yield pkgs.map (pkg) -> parse.do source: pkg
       deps = pkgs.reduce ((a, pkg) ->
         return a unless pkg.dependencies.required?
         a.concat pkg.dependencies.required.filter (x) ->
@@ -194,23 +217,25 @@ module.exports = require('../schema/node-package-manager.yang').bind {
       pkgs = pkgs.filter (pkg) -> not packages.in("#{pkg.name}+#{pkg.version}")?
       debug? "[sync] found #{pkgs.length} new package manifests"
       srcs = yield registry.fetch cachedir, pkgs...
-      seen = {}
-      projs = pkgs.filter (pkg) ->
-        return false if projects.in(pkg.name)? or seen[pkg.name]
-        seen[pkg.name] = true
-      # TODO: need to update revision(s) if different
-      projs = projs.map (pkg) ->
-        { versions=[], time={} } = pkg.extras
-        name: pkg.name
-        revision: versions.map (ver) ->
-          version: ver
-          timestamp: time[ver] ? time[ver.replace('-','')]
-      debug? "[sync] merging #{projs.length} project(s) into internal registry"
-      projects.merge(projs, force: true).in('update')?.forEach (f) -> f.do()
+
       debug? "[sync] merging #{pkgs.length} package(s) into internal registry"
       packages.merge pkgs, force: true
       debug? "[sync] merging #{srcs.length} source(s) into internal registry"
       sources.merge srcs, force: true
+      
+      seen = {}
+      projs = pkgs.filter (pkg) ->
+        return false if projects.in(pkg.name)? or seen[pkg.name]
+        seen[pkg.name] = true
+      # TODO: need to update release(s) if different
+      projs = projs.map (pkg) ->
+        { versions=[], time={} } = pkg.extras
+        name: pkg.name
+        release: versions.map (ver) ->
+          version: ver
+          timestamp: time[ver] ? time[ver.replace('-','')]
+      debug? "[sync] merging #{projs.length} project(s) into internal registry"
+      projects.merge(projs, force: true).in('update')?.forEach (f) -> f.do()
       return {
         projects: projs.length
         packages: pkgs.length
@@ -218,13 +243,14 @@ module.exports = require('../schema/node-package-manager.yang').bind {
       }
 
   query: ->
+    { name, source } = @input
+    packages = @in('/npm:registry/package')
     @output =
       @in('/npm:sync').do package: [ @input ]
       .then =>
-        { name, source } = @input
         project = @get("/npm:registry/project/#{name}")
-        source = project.current if source is 'latest'
-        project.revision
+        source = project.latest if source is 'latest'
+        project.release
           .filter (rev) -> semver.satisfies rev.version, source
           .map (rev) => @get(rev.package)
       .then (res) -> package: res

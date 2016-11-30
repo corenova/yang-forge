@@ -1,9 +1,10 @@
 debug = require('debug')('yang-forge:remote-registry') if process.env.DEBUG?
 co = require 'co'
-fs = require 'fs'
+fs = require 'co-fs'
 path = require 'path'
 npm = require 'npm'
-targz = require 'tar.gz'
+gunzip = require 'gunzip-maybe'
+tar = require 'tar-fs'
 request = require 'superagent'
 thunkify = require 'thunkify'
 load = thunkify npm.load
@@ -53,32 +54,37 @@ module.exports =
     yield pkgs.map (pkg) ->
       { shasum, tarball } = pkg.dist
       return fetching[shasum] if fetching.hasOwnProperty(shasum)
-      filename = path.resolve(to, shasum)
-      cached = fs.existsSync(filename)
-      if cached
-        debug? "[fetch] local #{pkg.name}@#{pkg.version} from #{filename}"
-        stream = fs.createReadStream(filename)
-      else
-        debug? "[fetch] remote #{pkg.name}@#{pkg.version} from #{tarball}"
-        stream = request.get(tarball)
 
+      pkgtag = "#{pkg.name}@#{pkg.version}"
+      target = path.resolve(to, shasum)
+      cached = yield fs.exists(target)
+      files = []
+      extract = tar.extract target, {
+        map: (header) ->
+          return header if cached
+          components = path.normalize(header.name).split(path.sep)
+          components.shift()
+          header.name = path.join components...
+          return header
+        ignore: (name, header) ->
+          return true if header.type isnt 'file'
+          copy = Object.assign {}, header
+          copy.mtime = header.mtime.toJSON()
+          files.push copy
+          debug? "[fetch] extract #{header.name} from #{pkgtag}"
+          return cached
+      }
+      if cached
+        debug? "[fetch] local #{pkgtag} from #{target}"
+        stream = tar.pack target
+      else
+        debug? "[fetch] remote #{pkgtag} from #{tarball}"
+        stream = request.get(tarball).pipe(gunzip())
+      stream.pipe extract
       return fetching[shasum] = new Promise (resolve, reject) ->
-        parse = targz().createParseStream()
-        files = []
-        parse.on 'entry', (entry) ->
-          files.push path: entry.path, size: entry.size, mtime: entry.props.mtime.toJSON()
-        parse.on 'end', ->
-          if cached
-            bytes = stream.bytesRead
-          else
-            bytes = stream.response.header['content-length']
+        extract.on 'error', (err) -> reject err
+        extract.on 'finish', ->
+          debug? "[fetch] extracted #{files.length} files from #{pkgtag}"
           resolve
             id: shasum
-            bytes: bytes
             file: files
-        parse.on 'error', (err) ->
-          console.error "parse error on #{filename}"
-          reject err
-        stream.pipe(parse)
-        stream.pipe(fs.createWriteStream filename) unless cached
-        
