@@ -1,28 +1,29 @@
 module node-package-manager {
-  namespace "urn:ietf:params:xml:ns:yang:node-package-manager";
+  namespace "urn:corenova:yang:node-package-manager";
   prefix npm;
   yang-version 1.1;
 
   import yang-meta-types { prefix meta; }
+  import file-system { prefix fs; }
+  import node-js-types { prefix node; }
   include node-package-specification;
   
   organization
     "Corenova Technologies, Inc.";
   contact
     "Peter K. Lee <peter@corenova.com>";
-  
   description
-    "This module provides model-driven abstractions for Node.js Package Manager";
-
+    "This module provides model-driven abstractions for Node.js Package Manager Registry";
   revision 2016-11-08 {
     description
       "Initial revision.";
   }
-
+  /*
+   * Features
+   */
   feature remote-registry {
     description "System provides remote registry transaction capability.";
   }
-  
   /*
    * Groupings
    */
@@ -38,15 +39,7 @@ module node-package-manager {
       leaf timestamp {
         type yang:date-and-time;
       }
-      leaf package {
-        config false;
-        type instance-identifier;
-      }
-      leaf source {
-        config false;
-        type instance-identifier;
-      }
-      leaf schema {
+      leaf manifest {
         config false;
         type instance-identifier;
       }
@@ -100,9 +93,41 @@ module node-package-manager {
   grouping packages-list {
     list package {
       key "name version";
-      uses npm:package-manifest;
-      action require {
-
+      uses npm:package-manifest {
+        augment "dependencies" {
+          leaf scanned {
+            type boolean;
+            default false;
+          }
+          leaf-list used {
+            when "../scanned = true()";
+            type union {
+              type identityref {
+                base node:native-module;
+              }
+              type leafref {
+                path "../required/name";
+              }
+            }
+          }
+          leaf-list unused {
+            when "../scanned = true()";
+            type leafref {
+              path "../required/name";
+            }
+          }
+        }
+      }
+      leaf source {
+        type instance-identifier;
+        // must "starts-with(value(),'/npm:registry/source')"
+      }
+      action scan {
+        output {
+          leaf scanned {
+            type boolean;
+          }
+        }
       }
       action serialize {
         description
@@ -128,57 +153,30 @@ module node-package-manager {
   }
   grouping sources-list {
     list source {
-      key id;
-      leaf id {
-        type leafref {
-          path "/registry/package/dist/shasum";
-        }
-      }
-      leaf manifest {
-        type instance-identifier;
-        //must 'starts-with(.,'/npm:registry/package')';
-      }
-      list file {
-        //unique "name";
-        leaf name {
-          type meta:file-name;
-        }
-        leaf mode {
-          type uint16;
-        }
-        leaf size {
-          type uint16;
-          units "bytes";
-        }
-        leaf mtime {
-          type yang:date-and-time;
-        }
-        action load {
-          output {
-            leaf text {
-              type string;
+      key "name";
+      uses fs:archive {
+        augment "file" {
+          leaf scanned {
+            type boolean;
+            default false;
+          }
+          leaf-list imports {
+            type npm:package-name;
+          }
+          leaf-list includes {
+            type leafref {
+              path "../../../../file/name";
             }
-            list require {
-              key "id";
-              leaf id {
-                type meta:file-name;
-              }
-              leaf ref {
-                type instance-identifier;
+          }
+          action scan {
+            //when "(../format = 'js') or (../format = 'node')";
+            output {
+              leaf scanned {
+                type boolean;
               }
             }
           }
         }
-      }
-      leaf files-count {
-        config false;
-        type uint16;
-        default 0;
-      }
-      leaf files-size {
-        config false;
-        type uint32;
-        default 0;
       }
     }
   }
@@ -208,7 +206,8 @@ module node-package-manager {
   container registry {
     config false;
     uses npm:projects-list;
-    uses npm:packages-list;
+    uses npm:packages-list {
+    }
     uses npm:sources-list;
     leaf projects-count {
       type uint32;
@@ -221,6 +220,47 @@ module node-package-manager {
     leaf sources-count {
       type uint32;
       default 0;
+    }
+    action sync {
+      if-feature npm:remote-registry;
+      description
+        "Synchronize with NPM registry for information about package(s)";
+      input {
+        leaf host {
+          type inet:uri;
+          default "registry.npmjs.org";
+        }
+        list package {
+          key "name source";
+          uses npm:package-selection;
+          min-elements 1;
+          max-elements 50;
+        }
+      }
+      output {
+        leaf packages {
+          type uint32;
+          default 0;
+        }
+        leaf sources {
+          type uint32;
+          default 0;
+        }
+      }
+    }
+    action query {
+      description
+        "Query NPM registry for information about package(s)";
+      input {
+        uses npm:package-selection;
+      }
+      output {
+        uses npm:packages-list {
+          refine "package" {
+            min-elements 1;
+          }
+        }
+      }
     }
   }
   container policy {
@@ -249,43 +289,6 @@ module node-package-manager {
     }
     output {
       uses npm:package-manifest;
-    }
-  }
-  rpc sync {
-    if-feature npm:remote-registry;
-    description
-      "Synchronize with NPM registry for information about package(s)";
-    input {
-      list package {
-        key "name source";
-        uses npm:package-selection;
-        min-elements 1;
-        max-elements 50;
-      }
-    }
-    output {
-      leaf packages {
-        type uint32;
-        default 0;
-      }
-      leaf sources {
-        type uint32;
-        default 0;
-      }
-    }
-  }
-  rpc query {
-    description
-      "Query NPM registry for information about package(s)";
-    input {
-      uses npm:package-selection;
-    }
-    output {
-      uses npm:packages-list {
-        refine "package" {
-          min-elements 1;
-        }
-      }
     }
   }
 }

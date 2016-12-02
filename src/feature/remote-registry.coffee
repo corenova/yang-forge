@@ -86,5 +86,5 @@ module.exports =
         extract.on 'finish', ->
           debug? "[fetch] extracted #{files.length} files from #{pkgtag}"
           resolve
-            id: shasum
+            name: shasum
             file: files

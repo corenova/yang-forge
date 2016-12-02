@@ -1,0 +1,76 @@
+module file-system {
+  namespace "urn:corenova:yang:file-system";
+  prefix fs;
+  yang-version 1.1;
+
+  import yang-meta-types { prefix meta; }
+  import ietf-yang-types { prefix yang; }
+
+  organization
+    "Corenova Technologies, Inc.";
+  contact
+    "Peter K. Lee <peter@corenova.com>";
+  
+  description
+    "This module provides model-driven abstractions for file system";
+
+  revision 2016-11-30 {
+    description
+      "Initial revision.";
+  }
+
+  /*
+   * Groupings
+   */
+  grouping file {
+    leaf name {
+      type meta:file-name;
+    }
+    leaf mode {
+      type uint16;
+    }
+    leaf size {
+      type uint16;
+      units "bytes";
+    }
+    leaf mtime {
+      type yang:date-and-time;
+    }
+    leaf format {
+      type string;
+    }
+    action read {
+      description
+        "Read content of the file from the file system";
+      output {
+        anydata data;
+      }
+    }
+    action write {
+      input {
+        anydata data;
+      }
+    }
+  }
+  grouping archive {
+    leaf name {
+      type meta:file-name;
+    }
+    list file {
+      uses fs:file;
+    }
+    leaf files-count {
+      config false;
+      type uint16;
+      default 0;
+    }
+    leaf files-size {
+      config false;
+      type uint32;
+      default 0;
+    }
+    action extract {
+      status planned;
+    }
+  }
+}

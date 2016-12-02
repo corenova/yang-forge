@@ -1,9 +1,16 @@
 # yang-forge - bound schema for 'yang-forge.yang'
 require 'yang-js'
+path = require 'path'
 debug = require('debug')('yang-forge') if process.env.DEBUG?
 
 module.exports = require('../schema/yang-forge.yang').bind {
 
+  '/npm:registry/source/file/load/output/exports': ->
+      wrapper: [
+        '(function (exports, require, module, __filename, __dirname) { '
+        '\n});'
+      ]
+  
   transform: ->
     @output =
       @in('/npm:transform').do @input

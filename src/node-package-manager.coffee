@@ -45,6 +45,8 @@ module.exports = require('../schema/node-package-manager.yang').bind {
         'os', 'cpu', 'preferGlobal', 'private', 'publishConfig'
       ]
 
+  '/policy': -> @content ?= cache: {}
+
   '/registry': -> @content ?= project: [], package: []
 
   '/registry/project/update': ->
@@ -62,18 +64,39 @@ module.exports = require('../schema/node-package-manager.yang').bind {
     @content = releases[releases.length-1].timestamp
   '/registry/project/releases-count': ->
     @content = @get('../release').length
-  '/registry/project/release/package': ->
+  '/registry/project/release/manifest': ->
     name = @get('../../../name')
     version = @get('../version')
     unless @content?
       match = @in("/npm:registry/package/#{name}+#{version}")
       @content = "#{match.path}" if match?
-  '/registry/project/release/source': ->
-    pkgpath = @get('../package')
-    return unless pkgpath?
-    srcid = @get("#{pkgpath}/dist/shasum")
-    match = @in("/npm:registry/source/#{srcid}")
+
+  '/registry/package/source': ->
+    shasum = @get("../dist/shasum")
+    match = @in("/npm:registry/source/#{shasum}")
     @content = "#{match.path}" if match?
+
+  '/registry/package/scan': ->
+    { name, version, main, dependencies } = @get('..')
+    main = path.normalize main.source
+    srcref = @get('../source')
+    debug? "[scan(#{name}@#{version})] using #{main} from #{srcref}"
+    @output = co =>
+      archive = @get(srcref)
+      main = archive.$("file[name = '#{main}']")
+      yield main.scan()
+      seen = {}
+      deps = archive.$("file/imports").filter (x) -> x?
+      deps = [].concat(deps...).filter (x) -> not seen[x] and seen[x] = true
+      debug? "[scan(#{name}@#{version})] found #{deps.length} pkg dependencies: #{deps}"
+      dependencies.used = deps
+      dependencies.scanned = true
+      debug? dependencies
+
+  '/registry/package/dependencies/unused': ->
+    requires = @get('../required/name') ? []
+    used = @get('../used') ? []
+    @content = requires.filter (x) -> used.indexOf(x) < 0
 
   '/registry/source': ->
     unless @content?
@@ -82,110 +105,68 @@ module.exports = require('../schema/node-package-manager.yang').bind {
       keys = @get('/npm:registry/package/dist/shasum')
       return unless keys?
       keys = [ keys ] unless Array.isArray keys
-      @content = keys.map (x) -> id: x
+      @content = keys.map (x) -> name: x
+      
+  # TODO: below should be bound to 'file-system' module
   '/registry/source/files-count': ->
     @content ?= @get('../file')?.length
   '/registry/source/files-size': ->
     @content ?= @get('../file')?.reduce ((size, i) -> size += i.size), 0
-
-  '/registry/source/file/load': ->
-    files = @in('../../../file')
+  '/registry/source/file/read': ->
     cachedir = @get('/npm:policy/cache/directory')
-    srcdir   = @get('../../../id')
-    filename = @get('../name')
-    cacheloc = path.resolve cachedir, srcdir, filename
-    basedir  = path.join filename, '..'
+    archive  = @get('../../../name')
+    entry    = @get('../name')
+    filename = path.resolve cachedir, archive, entry
+    debug? "[read(#{entry})] retrieving from the file system"
+    @output = co -> data: yield fs.readFile filename, 'utf-8'
 
+  '/registry/source/file/scan': ->
+    files = @in('../../../file')
+    entry = @get('..')
+    basedir = path.join entry.name, '..'
     isLocal = @schema.lookup('typedef','local-file-dependency').convert
-    resolveDependency = (dep) ->
-      debug? "[load:resolve] resolving #{dep} for #{filename}"
-      local = try isLocal dep catch then false
-      id: dep
-      ref: switch
-        when not local
-          unless dep of process.binding('natives')
-            # TODO: need to handle dep = foo/bar
-            "/npm:registry/project/#{dep}"
-        else
-          dep = path.join basedir, dep
-          for check in [ dep, dep+'.js', path.join(dep,'index.js') ]
-            match = files.in(".[name = '#{check}']")
-            break if match?
-          "#{match.path}" if match?
-
-    @output ?= co =>
-      debug? "[load] #{filename}"
-      try
-        src = yield fs.readFile cacheloc, 'utf-8'
-        return text: src unless path.extname(filename) in [ '.js', '.node' ]
-        seen = {}
-        requires = detect(src).filter (x) -> not seen[x] and seen[x] = true
-        debug? "[load] #{filename} requires #{requires}"
-        return text: src, require: requires.map resolveDependency
-      catch e then return text: src, error: e
-
+    
+    @output = co =>
+      debug? "[scan(#{entry.name})] enter (scanned = #{entry.scanned})"
+      return scanned: true if entry.scanned
+      file = yield @in('../read').do()
+      seen = {}
+      try requires = detect(file.data).filter (x) -> not seen[x] and seen[x] = true
+      catch e then @throw "unable to detect dependencies on #{entry.name}"
+        
+      debug? "[scan(#{entry.name})] requires: #{requires}"
+      imports  = []
+      includes = []
+      matches = []
+      for dep in requires
+        debug? "[scan(#{entry.name})] resolving #{dep}"
+        local = try isLocal dep catch then false
+        unless local
+          debug? "[scan(#{entry.name})] skip external dependency: #{dep}"
+          imports.push dep
+          continue
+        dep = path.join basedir, dep
+        for check in [ dep, dep+'.js', path.join(dep,'index.js') ]
+          debug? "[scan(#{entry.name})] checking #{check}"
+          match = files.in(".[name = '#{check}']")
+          break if match?
+        unless match?
+          @throw "unable to resolve local #{dep} for #{entry}"
+        debug? "[scan(#{entry.name})] found local dependency: #{check}"
+        includes.push check
+        matches.push match
+      debug? "[scan(#{entry.name}] found #{imports.length} imports and #{includes.length} includes"
+      entry.__.merge { scanned: true, imports: imports, includes: includes }, force: true
+      yield matches.map (x) -> x.in('scan').do()
+      scanned: true
+        
   '/registry/projects-count': -> @content = @get('../project')?.length
   '/registry/packages-count': -> @content = @get('../package')?.length
   '/registry/sources-count':  -> @content = @get('../source')?.length
 
-  '/policy': -> @content ?= cache: {}
-  
-  parse: ->
-    src = switch typeof @input.source
-      when 'string' then JSON.parse @input.source
-      else @input.source
+  # Registry Actions
 
-    # bypass parse if already matches schema
-    match = @get("/registry/package/#{src.name}+#{src.version}")
-    return (@output = match) if match?
-    return (@output = src) if src.policy?
-
-    debug? "parsing '#{src.name}@#{src.version}' package into package-manifest data model"
-
-    keywords = @get('/specification/keywords')
-    extras = {}
-    extras[k] = v for k, v of src when k not in keywords
-
-    @output = 
-      name:        src.name
-      version:     src.version
-      license:     src.license
-      description: src.description
-      homepage:    src.homepage
-      bugs:        chooseFormat src.bugs
-      repository:  chooseFormat src.repository
-      config:      src.config
-      main:
-        source:    src.main
-      author:      chooseFormat src.author
-      keywords:    src.keywords
-      maintainers: src.maintainers
-      contributor: src.contributors?.map? (x) -> chooseFormat x
-      dist:        src.dist
-      dependencies:
-        required:    dependencies2list src.dependencies
-        development: dependencies2list src.devDependencies
-        optional:    dependencies2list src.optionalDependencies
-        peer:        dependencies2list src.peerDependencies
-        bundled:     src.bundledDependencies ? src.bundleDependencies
-      assets:
-        man:         src.man
-        files:       src.files
-        directories: src.directories
-        script:      scripts2list src.scripts
-        executable: switch typeof src.bin
-          when 'string' then [ value: src.bin ]
-          else dependencies2list src.bin
-      policy:
-        engine:  dependencies2list src.engines
-        os:      src.os
-        cpu:     src.cpu
-        global:  src.preferGlobal
-        private: src.private
-        publishing: src.publishConfig
-      extras: extras
-
-  sync: ->
+  '/registry/sync': ->
     parse    = @in('/npm:parse')
     projects = @in('/npm:registry/project')
     packages = @in('/npm:registry/package')
@@ -242,17 +223,73 @@ module.exports = require('../schema/node-package-manager.yang').bind {
         sources: srcs.length
       }
 
-  query: ->
+  '/registry/query': ->
     { name, source } = @input
     packages = @in('/npm:registry/package')
-    @output =
-      @in('/npm:sync').do package: [ @input ]
-      .then =>
-        project = @get("/npm:registry/project/#{name}")
-        source = project.latest if source is 'latest'
-        project.release
-          .filter (rev) -> semver.satisfies rev.version, source
-          .map (rev) => @get(rev.package)
-      .then (res) -> package: res
+    @output = co =>
+      yield @in('/npm:registry/sync').do package: [ @input ]
+      project = @get("/npm:registry/project/#{name}")
+      source = project.latest if source is 'latest'
+      res = project.release
+        .filter (rev) -> semver.satisfies rev.version, source
+        .map (rev) => @get(rev.manifest)
+      package: res
+
+  # Module Remote Procedure Operations
+
+  parse: ->
+    src = switch typeof @input.source
+      when 'string' then JSON.parse @input.source
+      else @input.source
+
+    # bypass parse if already matches schema
+    match = @get("/registry/package/#{src.name}+#{src.version}")
+    return (@output = match) if match?
+    return (@output = src) if src.policy?
+
+    debug? "parsing '#{src.name}@#{src.version}' package into package-manifest data model"
+
+    keywords = @get('/specification/keywords')
+    extras = {}
+    extras[k] = v for k, v of src when k not in keywords
+
+    @output = 
+      name:        src.name
+      version:     src.version
+      license:     src.license
+      description: src.description
+      homepage:    src.homepage
+      bugs:        chooseFormat src.bugs
+      repository:  chooseFormat src.repository
+      config:      src.config
+      main:
+        source:    src.main
+      author:      chooseFormat src.author
+      keywords:    src.keywords
+      maintainers: src.maintainers
+      contributor: src.contributors?.map? (x) -> chooseFormat x
+      dist:        src.dist
+      dependencies:
+        required:    dependencies2list src.dependencies
+        development: dependencies2list src.devDependencies
+        optional:    dependencies2list src.optionalDependencies
+        peer:        dependencies2list src.peerDependencies
+        bundled:     src.bundledDependencies ? src.bundleDependencies
+      assets:
+        man:         src.man
+        files:       src.files
+        directories: src.directories
+        script:      scripts2list src.scripts
+        executable: switch typeof src.bin
+          when 'string' then [ value: src.bin ]
+          else dependencies2list src.bin
+      policy:
+        engine:  dependencies2list src.engines
+        os:      src.os
+        cpu:     src.cpu
+        global:  src.preferGlobal
+        private: src.private
+        publishing: src.publishConfig
+      extras: extras
       
 }

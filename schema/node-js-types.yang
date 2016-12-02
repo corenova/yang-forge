@@ -1,0 +1,125 @@
+module node-js-types {
+  namespace "urn:corenova:yang:node-js-types";
+  prefix node;
+  yang-version 1.1;
+
+  organization
+    "Corenova Technologies, Inc.";
+  contact
+    "Peter K. Lee <peter@corenova.com>";
+  description
+    "This module provides common types for Node.js environment";
+  revision 2016-12-01 {
+    description
+      "Initial revision.";
+  }
+  /*
+   * Identities
+   */
+  identity native-module {
+    description
+      "Identifiers for Node.js built-in native modules";
+  }
+  identity assert {
+    base native-module;
+  }
+  identity buffer {
+    base native-module;
+  }
+  identity child_process {
+    base native-module;
+  }
+  identity console {
+    base native-module;
+  }
+  identity constants {
+    base native-module;
+  }
+  identity crypto {
+    base native-module;
+  }
+  identity cluster {
+    base native-module;
+  }
+  identity dgram {
+    base native-module;
+  }
+  identity dns {
+    base native-module;
+  }
+  identity domain {
+    base native-module;
+  }
+  identity events {
+    base native-module;
+  }
+  identity fs {
+    base native-module;
+  }
+  identity http {
+    base native-module;
+  }
+  identity https {
+    base native-module;
+  }
+  identity module {
+    base native-module;
+  }
+  identity net {
+    base native-module;
+  }
+  identity os {
+    base native-module;
+  }
+  identity path {
+    base native-module;
+  }
+  identity process {
+    base native-module;
+  }
+  identity punycode {
+    base native-module;
+  }
+  identity querystring {
+    base native-module;
+  }
+  identity readline {
+    base native-module;
+  }
+  identity repl {
+    base native-module;
+  }
+  identity stream {
+    base native-module;
+  }
+  identity string_decoder {
+    base native-module;
+  }
+  identity sys {
+    base native-module;
+  }
+  identity timers {
+    base native-module;
+  }
+  identity tls {
+    base native-module;
+  }
+  identity tty {
+    base native-module;
+  }
+  identity url {
+    base native-module;
+  }
+  identity util {
+    base native-module;
+  }
+  identity v8 {
+    base native-module;
+  }
+  identity vm {
+    base native-module;
+  }
+  identity zlib {
+    base native-module;
+  }
+}
