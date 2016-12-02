@@ -172,7 +172,11 @@ module yang-forge {
    * Configuration Data Node Extensions
    */
   augment "/npm:registry/package" {
-    action load {
+    leaf linked {
+      type boolean;
+      default false;
+    }
+    action link {
       output {
         uses forge:component;
       }

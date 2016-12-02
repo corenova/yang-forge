@@ -21,7 +21,7 @@ chooseFormat = (x) ->
 
 dependencies2list = (obj) ->
   return unless obj instanceof Object
-  name: k, source: v for k, v of obj
+  name: k, match: v for k, v of obj
 
 scripts2list = (obj) ->
   return unless obj instanceof Object
@@ -34,6 +34,49 @@ module.exports = require('../schema/node-package-manager.yang').bind {
   'grouping(packages-list)/package/serialize': ->
     manifest = @parent.toJSON(false)
     # TODO need to convert back to package.json format
+
+  'grouping(packages-list)/package/scan': ->
+    { name, version, dependencies } = pkg = @get('..')
+    main = path.normalize pkg.main.source
+    debug? "[scan(#{name}@#{version})] using '#{main}' from #{pkg.source}"
+    @output = co =>
+      return valid: true if pkg.scanned
+      archive = @get(pkg.source)
+      main = yield archive.resolve main
+      yield main.scan tag: true
+      seen = {}
+      deps = archive.$("file[scanned = true()]/imports").filter (x) -> x?
+      deps = [].concat(deps...).filter (x) -> not seen[x] and seen[x] = true
+      debug? "[scan(#{name}@#{version})] found #{deps.length} pkg dependencies: #{deps}"
+      missing = []
+      for dep in deps when dep not of process.binding('natives')
+        d = dependencies.$("required/#{dep}")
+        if d? then d.used = true else missing.push dep
+      dependencies.missing = missing
+      pkg.scanned = true
+
+      output = yield @in('/registry/query').do
+        package: dependencies.$("required[used = true()]")
+        filter: 'latest'
+        sync: false
+      yield output.package.map (pkg) -> pkg.scan()
+      
+      return {
+        valid: true
+      }
+
+  'grouping(sources-list)/source/resolve': ->
+    name = @input
+    files = @in('../file')
+    # TODO: handle case where 'name' is pointing at a directory with package.json
+    for check in [ name, name+'.js', path.join(name,'index.js') ]
+      match = files.get(".[name = '#{check}']")
+      break if match?
+    @output = match
+
+  'grouping(sources-list)/source/extract': ->
+    { to, essence } = @input
+    
 
   '/specification': ->
     @content ?=
@@ -76,28 +119,6 @@ module.exports = require('../schema/node-package-manager.yang').bind {
     match = @in("/npm:registry/source/#{shasum}")
     @content = "#{match.path}" if match?
 
-  '/registry/package/scan': ->
-    { name, version, main, dependencies } = @get('..')
-    main = path.normalize main.source
-    srcref = @get('../source')
-    debug? "[scan(#{name}@#{version})] using #{main} from #{srcref}"
-    @output = co =>
-      archive = @get(srcref)
-      main = archive.$("file[name = '#{main}']")
-      yield main.scan()
-      seen = {}
-      deps = archive.$("file/imports").filter (x) -> x?
-      deps = [].concat(deps...).filter (x) -> not seen[x] and seen[x] = true
-      debug? "[scan(#{name}@#{version})] found #{deps.length} pkg dependencies: #{deps}"
-      dependencies.used = deps
-      dependencies.scanned = true
-      debug? dependencies
-
-  '/registry/package/dependencies/unused': ->
-    requires = @get('../required/name') ? []
-    used = @get('../used') ? []
-    @content = requires.filter (x) -> used.indexOf(x) < 0
-
   '/registry/source': ->
     unless @content?
       debug? "[#{@path}] update"
@@ -106,7 +127,7 @@ module.exports = require('../schema/node-package-manager.yang').bind {
       return unless keys?
       keys = [ keys ] unless Array.isArray keys
       @content = keys.map (x) -> name: x
-      
+
   # TODO: below should be bound to 'file-system' module
   '/registry/source/files-count': ->
     @content ?= @get('../file')?.length
@@ -121,16 +142,17 @@ module.exports = require('../schema/node-package-manager.yang').bind {
     @output = co -> data: yield fs.readFile filename, 'utf-8'
 
   '/registry/source/file/scan': ->
-    files = @in('../../../file')
+    { tag } = @input
+    archive = @get('../../..')
     entry = @get('..')
     basedir = path.join entry.name, '..'
     isLocal = @schema.lookup('typedef','local-file-dependency').convert
     
     @output = co =>
-      debug? "[scan(#{entry.name})] enter (scanned = #{entry.scanned})"
-      return scanned: true if entry.scanned
+      return valid: true if entry.scanned
       file = yield @in('../read').do()
       seen = {}
+      debug? "[scan(#{entry.name})] detecting dependencies"
       try requires = detect(file.data).filter (x) -> not seen[x] and seen[x] = true
       catch e then @throw "unable to detect dependencies on #{entry.name}"
         
@@ -146,19 +168,17 @@ module.exports = require('../schema/node-package-manager.yang').bind {
           imports.push dep
           continue
         dep = path.join basedir, dep
-        for check in [ dep, dep+'.js', path.join(dep,'index.js') ]
-          debug? "[scan(#{entry.name})] checking #{check}"
-          match = files.in(".[name = '#{check}']")
-          break if match?
+        match = yield archive.resolve dep
         unless match?
           @throw "unable to resolve local #{dep} for #{entry}"
-        debug? "[scan(#{entry.name})] found local dependency: #{check}"
-        includes.push check
+        debug? "[scan(#{entry.name})] found local dependency: #{match.name}"
+        includes.push match.name
         matches.push match
       debug? "[scan(#{entry.name}] found #{imports.length} imports and #{includes.length} includes"
-      entry.__.merge { scanned: true, imports: imports, includes: includes }, force: true
-      yield matches.map (x) -> x.in('scan').do()
-      scanned: true
+      entry.__.merge { tagged: tag, scanned: true, imports: imports, includes: includes }, force: true
+      
+      yield matches.map (x) => x.scan @input
+      valid: true
         
   '/registry/projects-count': -> @content = @get('../project')?.length
   '/registry/packages-count': -> @content = @get('../package')?.length
@@ -167,6 +187,7 @@ module.exports = require('../schema/node-package-manager.yang').bind {
   # Registry Actions
 
   '/registry/sync': ->
+    { host, force } = @input
     parse    = @in('/npm:parse')
     projects = @in('/npm:registry/project')
     packages = @in('/npm:registry/package')
@@ -178,7 +199,13 @@ module.exports = require('../schema/node-package-manager.yang').bind {
     # recursively discover new packages from registry
     seen = {}
     discover = co.wrap (pkgs...) ->
-      pkgs = pkgs.map (pkg) -> "#{pkg.name}@#{pkg.source}"
+      pkgs = pkgs.map (pkg) ->
+        { name, match } = pkg
+        unless force or match is 'latest'
+          exists = projects.get(name)
+          if exists? and semver.satisfies exists.latest, match
+            match += " > #{exists.latest}"
+        "#{name}@#{match}"
       pkgs = pkgs.filter (pkg) -> not seen[pkg] and seen[pkg] = true
       debug? "[sync] checking npm registry for #{pkgs}"
       pkgs = yield registry.view pkgs...
@@ -187,7 +214,7 @@ module.exports = require('../schema/node-package-manager.yang').bind {
       deps = pkgs.reduce ((a, pkg) ->
         return a unless pkg.dependencies.required?
         a.concat pkg.dependencies.required.filter (x) ->
-          try return false if isLocal x.source
+          try return false if isLocal x.match
           return true
       ), []
       return pkgs unless deps.length
@@ -203,7 +230,8 @@ module.exports = require('../schema/node-package-manager.yang').bind {
       packages.merge pkgs, force: true
       debug? "[sync] merging #{srcs.length} source(s) into internal registry"
       sources.merge srcs, force: true
-      
+      debug? "[sync] source merge done"
+        
       seen = {}
       projs = pkgs.filter (pkg) ->
         return false if projects.in(pkg.name)? or seen[pkg.name]
@@ -215,8 +243,12 @@ module.exports = require('../schema/node-package-manager.yang').bind {
         release: versions.map (ver) ->
           version: ver
           timestamp: time[ver] ? time[ver.replace('-','')]
+          
       debug? "[sync] merging #{projs.length} project(s) into internal registry"
-      projects.merge(projs, force: true).in('update')?.forEach (f) -> f.do()
+      updates = projects.merge(projs, force: true).in('update')
+      switch
+        when updates? and Array.isArray updates then updates.forEach (f) -> f.do()
+        when updates? then updates.do()
       return {
         projects: projs.length
         packages: pkgs.length
@@ -224,16 +256,29 @@ module.exports = require('../schema/node-package-manager.yang').bind {
       }
 
   '/registry/query': ->
-    { name, source } = @input
-    packages = @in('/npm:registry/package')
+    pkgs = @input.package
+    pkgs ?= [ @input ]
     @output = co =>
-      yield @in('/npm:registry/sync').do package: [ @input ]
-      project = @get("/npm:registry/project/#{name}")
-      source = project.latest if source is 'latest'
-      res = project.release
-        .filter (rev) -> semver.satisfies rev.version, source
-        .map (rev) => @get(rev.manifest)
-      package: res
+      if @input.sync then yield @in('/npm:registry/sync').do package: pkgs
+      matches = []
+      for { name, match } in pkgs
+        project = @get("/npm:registry/project/#{name}")
+        continue unless project? # should throw error?
+        match = project.latest if match is 'latest'
+        revs = project.release
+          .filter (rev) -> semver.satisfies rev.version, match
+        continue unless revs.length # should throw error?
+        res = switch @input.filter
+          when 'earliest' then @get(revs[0].manifest)
+          when 'latest'   then @get(revs[revs.length-1].manifest)
+          else revs.map (rev) => @get(rev.manifest)
+        if @input.filter is 'all'
+          debug? "[query] #{name}@#{match} matched #{res.length} releases"
+          matches.push res...
+        else
+          debug? "[query] #{name}@#{match} for #{@input.filter} matched version #{res.version}"
+          matches.push res
+      package: matches
 
   # Module Remote Procedure Operations
 

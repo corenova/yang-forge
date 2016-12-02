@@ -95,26 +95,16 @@ module node-package-manager {
       key "name version";
       uses npm:package-manifest {
         augment "dependencies" {
-          leaf scanned {
+          leaf-list missing {
+            when "../scanned = true()";
+            type npm:package-name;
+          }
+        }
+        augment "dependencies/required" {
+          when "../scanned = true()";
+          leaf used {
             type boolean;
             default false;
-          }
-          leaf-list used {
-            when "../scanned = true()";
-            type union {
-              type identityref {
-                base node:native-module;
-              }
-              type leafref {
-                path "../required/name";
-              }
-            }
-          }
-          leaf-list unused {
-            when "../scanned = true()";
-            type leafref {
-              path "../required/name";
-            }
           }
         }
       }
@@ -122,10 +112,18 @@ module node-package-manager {
         type instance-identifier;
         // must "starts-with(value(),'/npm:registry/source')"
       }
+      leaf scanned {
+        type boolean;
+        default false;
+      }
       action scan {
         output {
-          leaf scanned {
+          leaf valid {
             type boolean;
+            default false;
+          }
+          leaf-list requires {
+            type npm:package-name;
           }
         }
       }
@@ -170,13 +168,24 @@ module node-package-manager {
           }
           action scan {
             //when "(../format = 'js') or (../format = 'node')";
-            output {
-              leaf scanned {
+            input {
+              leaf tag {
                 type boolean;
+                default false;
+              }
+            }
+            output {
+              leaf valid {
+                type boolean;
+                default false;
               }
             }
           }
         }
+      }
+      action resolve {
+        description
+          "attempts to resolve 'input' name and return a matching 'file' entry";
       }
     }
   }
@@ -185,7 +194,7 @@ module node-package-manager {
       type npm:package-name;
       mandatory true;
     }
-    leaf source {
+    leaf match {
       type union {
         type meta:semantic-version-match;
         type string {
@@ -230,8 +239,12 @@ module node-package-manager {
           type inet:uri;
           default "registry.npmjs.org";
         }
+        leaf force {
+          type boolean;
+          default false;
+        }
         list package {
-          key "name source";
+          key "name match";
           uses npm:package-selection;
           min-elements 1;
           max-elements 50;
@@ -252,14 +265,33 @@ module node-package-manager {
       description
         "Query NPM registry for information about package(s)";
       input {
-        uses npm:package-selection;
-      }
-      output {
-        uses npm:packages-list {
-          refine "package" {
-            min-elements 1;
+        choice select {
+          case single {
+            uses npm:package-selection;
+          }
+          case multiple {
+            list package {
+              uses npm:package-selection;
+              min-elements 1;
+              max-elements 50;
+            }
           }
         }
+        leaf filter {
+          type enumeration {
+            enum earliest;
+            enum latest;
+            enum all;
+          }
+          default all;
+        }
+        leaf sync {
+          type boolean;
+          default false;
+        }
+      }
+      output {
+        uses npm:packages-list;
       }
     }
   }

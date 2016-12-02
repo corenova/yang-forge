@@ -5,7 +5,22 @@ debug = require('debug')('yang-forge') if process.env.DEBUG?
 
 module.exports = require('../schema/yang-forge.yang').bind {
 
-  '/npm:registry/source/file/load/output/exports': ->
+  '/npm:registry/package/forge': ->
+    { base } = @input
+    { name, version, dependencies } = pkg = @get('..')
+    debug? "[forge(#{name}@#{version})] using #{pkg.source}"
+    @output = co =>
+      res = yield pkg.scan()
+      archive = @get(source)
+      yield archive.extract to: base, filter: tagged: true
+
+      seen = {}
+      cores = archive.$("file[scanned = true()]/includes").filter (x) -> x?
+      cores = [].concat(cores...).filter (x) -> not seen[x] and seen[x] = true
+      
+
+
+    
       wrapper: [
         '(function (exports, require, module, __filename, __dirname) { '
         '\n});'

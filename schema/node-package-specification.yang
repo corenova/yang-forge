@@ -37,7 +37,7 @@ submodule node-package-specification {
       pattern '^(file:|[.~/]|\.\.)';
     }
   }
-  typedef dependency-source {
+  typedef dependency-match {
     type union {
       type local-file-dependency;
       type meta:semantic-version-match;
@@ -103,8 +103,8 @@ submodule node-package-specification {
         type package-name;
         mandatory true;
       }
-      leaf source {
-        type dependency-source;
+      leaf match {
+        type dependency-match;
         mandatory true;
       }
     }
@@ -179,6 +179,7 @@ submodule node-package-specification {
           type local-file-dependency;
           type meta:file-name;
         }
+        default "index.js";
       }
     }
     list contributor {

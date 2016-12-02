@@ -5,6 +5,7 @@ module file-system {
 
   import yang-meta-types { prefix meta; }
   import ietf-yang-types { prefix yang; }
+  import ietf-inet-types { prefix inet; }
 
   organization
     "Corenova Technologies, Inc.";
@@ -58,6 +59,10 @@ module file-system {
     }
     list file {
       uses fs:file;
+      leaf tagged {
+        type boolean;
+        default false;
+      }
     }
     leaf files-count {
       config false;
@@ -70,7 +75,12 @@ module file-system {
       default 0;
     }
     action extract {
-      status planned;
+      input {
+        leaf to {
+          type inet:uri;
+        }
+        anydata filter;
+      }
     }
   }
 }
