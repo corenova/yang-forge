@@ -124,6 +124,7 @@ module node-package-manager {
           }
           list dependency {
             key "name version";
+            
             leaf name {
               type npm:package-name;
               mandatory true;

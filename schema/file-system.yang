@@ -37,12 +37,15 @@ module file-system {
     leaf mtime {
       type yang:date-and-time;
     }
+    leaf store {
+      type instance-identifier;
+    }
     leaf format {
       type string;
     }
     action read {
       description
-        "Read content of the file from the file system";
+        "Read content of the file from the store";
       output {
         anydata data;
       }
@@ -54,11 +57,18 @@ module file-system {
     }
   }
   grouping archive {
-    leaf name {
+    uses fs:file;
+    leaf directory {
+      description
+        "if store is not defined, use this to access local file system";
       type meta:file-name;
     }
     list file {
-      uses fs:file;
+      uses fs:file {
+        refine "store" {
+          config false;
+        }
+      }
       leaf tagged {
         type boolean;
         default false;
@@ -74,12 +84,21 @@ module file-system {
       type uint32;
       default 0;
     }
+    action tag {
+      input {
+        leaf-list files {
+          type meta:file-name;
+          min-elements 1;
+        }
+      }
+    }
     action extract {
       input {
         leaf to {
           type inet:uri;
+          mandatory true;
         }
-        anydata filter;
+        container filter;
       }
     }
   }

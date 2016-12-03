@@ -1,30 +1,29 @@
 # yang-forge - bound schema for 'yang-forge.yang'
 require 'yang-js'
-path = require 'path'
 debug = require('debug')('yang-forge') if process.env.DEBUG?
+co = require 'co'
+path = require 'path'
 
 module.exports = require('../schema/yang-forge.yang').bind {
 
-  '/npm:registry/package/forge': ->
-    { base } = @input
-    { name, version, dependencies } = pkg = @get('..')
-    debug? "[forge(#{name}@#{version})] using #{pkg.source}"
+  '/npm:registry/package/forge:build': ->
+    pkg = @get('..')
+    base = path.join @input.base, pkg.name
     @output = co =>
+      debug? "[build(#{pkg.name}@#{pkg.version})] using #{pkg.source}"
       res = yield pkg.scan()
-      archive = @get(source)
-      yield archive.extract to: base, filter: tagged: true
-
-      seen = {}
-      cores = archive.$("file[scanned = true()]/includes").filter (x) -> x?
-      cores = [].concat(cores...).filter (x) -> not seen[x] and seen[x] = true
-      
-
-
+      archive = @get(pkg.source)
+      yield archive.extract to: base, filter: { tagged: true }
+      base = path.join base, 'node_modules'
+      for dep in res.dependency
+        debug? "[build(#{pkg.name}@#{pkg.version})] building #{dep.name} #{dep.version}"
+        depkg = @get("/npm:registry/package/#{dep.name}+#{dep.version}")
+        yield depkg.$('forge:build',true).do base: base
     
-      wrapper: [
-        '(function (exports, require, module, __filename, __dirname) { '
-        '\n});'
-      ]
+      # wrapper: [
+      #   '(function (exports, require, module, __filename, __dirname) { '
+      #   '\n});'
+      # ]
   
   transform: ->
     @output =
@@ -34,42 +33,4 @@ module.exports = require('../schema/yang-forge.yang').bind {
         if output.extras?.models instanceof Object
           output.model = (name: k, source: v for k, v of output.extras.models)
         return output
-
-  build: ->
-    cores = @in('/forge:registry/core')
-    pkg = undefined
-    core = {}
-    @output = 
-      @in('/npm:query').do @input
-      .then (output) =>
-        packages = output.package
-        deps = output.$('package/dependencies/required[is-local=false()]') ? []
-        @in('/forge:build').do package: deps
-        .then (output) -> output.core
-      .then (cores) =>
-        core.dependency = cores.map (core) -> core.id
-        @in('/npm:fetch').do package: [ pkg ]
-        .then (output) -> output.source
-      .then (sources) =>
-
-        res = cores.merge core, force: true
-        
-        package: pkg.id
-        source: pkg.dist.shasum
-        
-        @in('/npm:fetch').do output
-        
-      .then (output) => @in('/transform').do source: output.package[0]
-      .then (pkg) =>
-        debug? "inspecting '#{pkg.name}' package dependencies"
-        @in('/inspect').do package: pkg.$('dependencies/required[is-local=false()]')
-        .then (output) -> 
-          output.package.forEach (x) ->
-            item = pkg.$("dependencies/required/#{x.name}")
-            item.package ?= []
-            item.package.push x
-          return pkg
-      .then (pkg) ->
-        return pkg
-
 }

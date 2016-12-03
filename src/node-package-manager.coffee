@@ -1,7 +1,6 @@
 require 'yang-js'
 debug = require('debug')('yang-forge:npm') if process.env.DEBUG?
 co = require 'co'
-fs = require 'co-fs'
 semver = require 'semver'
 detect = require 'detective'
 registry = require './feature/remote-registry'
@@ -40,32 +39,58 @@ module.exports = require('../schema/node-package-manager.yang').bind {
     main = path.normalize pkg.main.source
     debug? "[scan(#{name}@#{version})] using '#{main}' from #{pkg.source}"
     @output = co =>
-      return valid: true if pkg.scanned
-      archive = @get(pkg.source)
-      main = yield archive.resolve main
-      yield main.scan tag: true
-      seen = {}
-      deps = archive.$("file[scanned = true()]/imports").filter (x) -> x?
-      deps = [].concat(deps...).filter (x) -> not seen[x] and seen[x] = true
-      debug? "[scan(#{name}@#{version})] found #{deps.length} pkg dependencies: #{deps}"
-      missing = []
-      for dep in deps when dep not of process.binding('natives')
-        d = dependencies.$("required/#{dep}")
-        if d? then d.used = true else missing.push dep
-      dependencies.missing = missing
-      pkg.scanned = true
+      unless pkg.scanned
+        archive = @get(pkg.source)
+        yield archive.tag files: [ 'package.json' ]
+        main = yield archive.resolve main
+        yield main.scan tag: true
 
-      output = yield @in('/registry/query').do
-        package: dependencies.$("required[used = true()]")
+        # TODO: may be a single match?
+        seen = {}
+        deps = archive.$("file[scanned = true()]/imports")?.filter (x) -> x?
+        deps = [].concat(deps...).filter (x) -> not seen[x] and seen[x] = true
+        debug? "[scan(#{name}@#{version})] found #{deps.length} pkg dependencies: #{deps}" if deps.length
+        missing = []
+        for dep in deps when dep not of process.binding('natives')
+          # TODO: deal with dep like 'foo/bar' (flag warning?)
+          d = dependencies.$("required/#{dep}")
+          if d? then d.used = true else missing.push dep
+        dependencies.missing = missing
+        pkg.scanned = true
+
+      requires = dependencies.$("required[used = true()]")
+      requires = [ requires ] if requires? and not Array.isArray requires
+      res = yield @in('/registry/query').do
+        package: requires
         filter: 'latest'
         sync: false
-      yield output.package.map (pkg) -> pkg.scan()
-      
-      return {
-        valid: true
-      }
+        
+      requires = {}
+      for dependency in res.package
+        key = "#{dependency.name}@#{dependency.version}"
+        if requires[key]?
+          @throw "circular dependency detected!"
+        requires[key] = [ name ]
+        # scan this dependency
+        # TODO: scanning results from above query doesn't preserve the scanned: true
+        res = yield dependency.scan()
+        for subdep in res.dependency
+          subkey = "#{subdep.name}@#{subdep.version}"
+          debug? "[scan] checking #{subkey}..."
+          requires[subkey] ?= []
+          requires[subkey].push subdep.dependents...
+      requires = (
+        for k, v of requires
+          [ n, ver ] = k.split('@')
+          name: n
+          version: ver
+          dependents: v
+      )
+      debug? "[scan(#{name}@#{version})] requires #{requires.length} dependencies: #{requires.map (x) -> x.name}"
+      valid: true
+      dependency: requires
 
-  'grouping(sources-list)/source/resolve': ->
+  'grouping(source-archive)/resolve': ->
     name = @input
     files = @in('../file')
     # TODO: handle case where 'name' is pointing at a directory with package.json
@@ -74,9 +99,44 @@ module.exports = require('../schema/node-package-manager.yang').bind {
       break if match?
     @output = match
 
-  'grouping(sources-list)/source/extract': ->
-    { to, essence } = @input
+  'grouping(source-archive)/file/scan': ->
+    { tag } = @input
+    archive = @get('../../..')
+    entry = @get('..')
+    basedir = path.join entry.name, '..'
+    isLocal = @schema.lookup('typedef','local-file-dependency').convert
     
+    @output = co =>
+      return valid: true if entry.scanned
+      file = yield entry.read()
+      seen = {}
+      debug? "[scan(#{entry.name})] detecting dependencies"
+      try requires = detect(file.data).filter (x) -> not seen[x] and seen[x] = true
+      catch e then @throw "unable to detect dependencies on #{entry.name}"
+        
+      debug? "[scan(#{entry.name})] requires: #{requires}"
+      imports  = []
+      includes = []
+      matches = []
+      for dep in requires
+        debug? "[scan(#{entry.name})] resolving #{dep}"
+        local = try isLocal dep catch then false
+        unless local
+          debug? "[scan(#{entry.name})] skip external dependency: #{dep}"
+          imports.push dep
+          continue
+        dep = path.join basedir, dep
+        match = yield archive.resolve dep
+        unless match?
+          @throw "unable to resolve local #{dep} for #{entry}"
+        debug? "[scan(#{entry.name})] found local dependency: #{match.name}"
+        includes.push match.name
+        matches.push match
+      debug? "[scan(#{entry.name}] found #{imports.length} imports and #{includes.length} includes"
+      entry.__.merge { tagged: tag, scanned: true, imports: imports, includes: includes }, force: true
+      
+      yield matches.map (x) => x.scan @input
+      valid: true
 
   '/specification': ->
     @content ?=
@@ -128,57 +188,6 @@ module.exports = require('../schema/node-package-manager.yang').bind {
       keys = [ keys ] unless Array.isArray keys
       @content = keys.map (x) -> name: x
 
-  # TODO: below should be bound to 'file-system' module
-  '/registry/source/files-count': ->
-    @content ?= @get('../file')?.length
-  '/registry/source/files-size': ->
-    @content ?= @get('../file')?.reduce ((size, i) -> size += i.size), 0
-  '/registry/source/file/read': ->
-    cachedir = @get('/npm:policy/cache/directory')
-    archive  = @get('../../../name')
-    entry    = @get('../name')
-    filename = path.resolve cachedir, archive, entry
-    debug? "[read(#{entry})] retrieving from the file system"
-    @output = co -> data: yield fs.readFile filename, 'utf-8'
-
-  '/registry/source/file/scan': ->
-    { tag } = @input
-    archive = @get('../../..')
-    entry = @get('..')
-    basedir = path.join entry.name, '..'
-    isLocal = @schema.lookup('typedef','local-file-dependency').convert
-    
-    @output = co =>
-      return valid: true if entry.scanned
-      file = yield @in('../read').do()
-      seen = {}
-      debug? "[scan(#{entry.name})] detecting dependencies"
-      try requires = detect(file.data).filter (x) -> not seen[x] and seen[x] = true
-      catch e then @throw "unable to detect dependencies on #{entry.name}"
-        
-      debug? "[scan(#{entry.name})] requires: #{requires}"
-      imports  = []
-      includes = []
-      matches = []
-      for dep in requires
-        debug? "[scan(#{entry.name})] resolving #{dep}"
-        local = try isLocal dep catch then false
-        unless local
-          debug? "[scan(#{entry.name})] skip external dependency: #{dep}"
-          imports.push dep
-          continue
-        dep = path.join basedir, dep
-        match = yield archive.resolve dep
-        unless match?
-          @throw "unable to resolve local #{dep} for #{entry}"
-        debug? "[scan(#{entry.name})] found local dependency: #{match.name}"
-        includes.push match.name
-        matches.push match
-      debug? "[scan(#{entry.name}] found #{imports.length} imports and #{includes.length} includes"
-      entry.__.merge { tagged: tag, scanned: true, imports: imports, includes: includes }, force: true
-      
-      yield matches.map (x) => x.scan @input
-      valid: true
         
   '/registry/projects-count': -> @content = @get('../project')?.length
   '/registry/packages-count': -> @content = @get('../package')?.length
@@ -256,8 +265,7 @@ module.exports = require('../schema/node-package-manager.yang').bind {
       }
 
   '/registry/query': ->
-    pkgs = @input.package
-    pkgs ?= [ @input ]
+    pkgs = @input.package ? [ @input ]
     @output = co =>
       if @input.sync then yield @in('/npm:registry/sync').do package: pkgs
       matches = []

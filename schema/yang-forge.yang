@@ -3,8 +3,8 @@ module yang-forge {
   prefix forge;
   yang-version 1.1;
 
-  import ietf-yang-types   { prefix yang; }
-  import yang-meta-types   { prefix meta; }
+  import ietf-yang-types      { prefix yang; }
+  import yang-meta-types      { prefix meta; }
   import node-package-manager { prefix npm; }
 
   organization
@@ -27,103 +27,10 @@ module yang-forge {
     description "Initial revision";
   }
 
-  identity component-provider;
-
-  typedef component-name {
-    type meta:meta-identifier;
-  }
   /*
    * Groupings
    */
-  grouping component {
-    leaf provider {
-      type identityref {
-        base component-provider;
-      }
-    }
-    leaf name {
-      type forge:component-name;
-    }
-    list build {
-      key "version";
-      leaf version {
-        type meta:semantic-version;
-      }
-      leaf timestamp {
-        type yang:date-and-time;
-      }
-      leaf manifest {
-        config false;
-        type instance-identifier;
-        require-instance true;
-      }
-      leaf source {
-        config false;
-        type instance-identifier;
-        require-instance true;
-      }
-      leaf schema {
-        config false;
-        type instance-identifier;
-        require-instance true;
-      }
-    }
-    leaf created {
-      config false;
-      type yang:date-and-time;
-    }
-    leaf modified {
-      config false;
-      type yang:date-and-time;
-    }
-    leaf latest {
-      config false;
-      type leafref {
-        path "../build/version";
-      }
-    }
-    container downloads {
-      config false;
-      leaf last-day {
-        type uint64;
-        default 0;
-      }
-      leaf last-week {
-        type uint64;
-        default 0;
-      }
-      leaf last-month {
-        type uint64;
-        default 0;
-      }
-      leaf total {
-        type uint64;
-        default 0;
-      }
-    }
-  }
-  grouping comopnents-list {
-    list component {
-      key 'name';
-      uses forge:component {
-        augment "component/build" {
-          unique "id";
-          leaf id {
-            config false;
-            type yang:uuid;
-          }
-          leaf-list dependencies {
-            config false;
-            type leafref {
-              path "/forge:catalog/component/build/id";
-            }
-          }
-        }
-      }
-      action update;
-    }
-  }
-  grouping core-manifest {
+  grouping core-essence {
     description
       "The core essence of the module contained in the package.";
     leaf id {
@@ -164,41 +71,36 @@ module yang-forge {
   }
   grouping cores-list {
     list core {
-      key "name version";
-      uses forge:core-manifest;
+      key "id";
+      uses forge:core-essence;
     }
   }
   /*
    * Configuration Data Node Extensions
    */
   augment "/npm:registry/package" {
-    leaf linked {
-      type boolean;
-      default false;
-    }
-    action link {
+    action build {
+      input {
+        leaf base {
+          type meta:file-name;
+          default "/tmp/npm-forge";
+        }
+      }
       output {
-        uses forge:component;
+
       }
     }
   }
   /*
    * Configuration Data Nodes
    */
-  container catalog {
-    uses forge:components-list;
-    action import {
-      input {
-        uses component-identifier;
-      }
-    }
-  }
+  
   /*
    * Remote Procedure Operations
    */
   rpc transform {
     description
-      "Transforms input JSON or JS object source into forge:package-analysis data model.";
+      "Transforms input JSON or JS object source into forge:core-essence data model.";
     input {
       anydata source {
         description "JSON text or JS object representing package.json content";
@@ -206,44 +108,7 @@ module yang-forge {
       }
     }
     output {
-      uses forge:package-analysis;
-    }
-  }
-  rpc analyze {
-    description
-      "Analyze a component "
-  }
-  
-  rpc query {
-    description
-      "Query NPM registry recursively for information about package(s)"
-    input {
-      uses npm:package-selection-list {
-        refine "package" {
-          min-elements 1;
-          max-elements 10;
-        }
-      }
-    }
-    output {
-      uses forge:package-analysis-list {
-        refine "package" {
-          min-elements 1;
-        }
-      }
-    }
-  }
-  rpc build {
-    description
-      "Build a core-manifest for a specified package.";
-    input {
-      uses npm:package-selection;
-    }
-    output {
-      uses forge:package-analysis-list {
-        
-      }
-      uses forge:package-analysis;
+      uses forge:core-essence;
     }
   }
 }

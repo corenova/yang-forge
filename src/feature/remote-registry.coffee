@@ -87,4 +87,5 @@ module.exports =
           debug? "[fetch] extracted #{files.length} files from #{pkgtag}"
           resolve
             name: shasum
+            directory: to
             file: files
