@@ -94,7 +94,7 @@ module file-system {
     }
     action extract {
       input {
-        leaf to {
+        leaf dest {
           type inet:uri;
           mandatory true;
         }

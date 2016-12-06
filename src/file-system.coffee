@@ -34,11 +34,10 @@ module.exports = require('../schema/file-system.yang').bind {
       @throw "unable to tag #{files.length} files: #{files}"
 
   'grouping(archive)/extract': ->
-    dest = @input.to
+    { dest, filter } = @input
     { name, store, directory } = archive = @get('..')
     files = archive.file
-    if @input.filter?
-      filter = @input.filter
+    if filter?
       files = files?.filter (file) ->
         for k, v of filter
           return false if file[k] isnt v 

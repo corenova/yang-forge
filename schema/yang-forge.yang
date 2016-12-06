@@ -27,6 +27,12 @@ module yang-forge {
     description "Initial revision";
   }
 
+  typedef yang-module-schema {
+    type string {
+      pattern '^module [-\w]+';
+    }
+  }
+  
   /*
    * Groupings
    */
@@ -79,13 +85,7 @@ module yang-forge {
    * Configuration Data Node Extensions
    */
   augment "/npm:registry/package" {
-    action build {
-      input {
-        leaf base {
-          type meta:file-name;
-          default "/tmp/npm-forge";
-        }
-      }
+    action load {
       output {
 
       }
@@ -94,21 +94,25 @@ module yang-forge {
   /*
    * Configuration Data Nodes
    */
+  container store {
+    uses cores-list;
+    action import {
+      description
+        "Imports matching NPM package(s) into the store";
+      input {
+        uses npm:package-selection;
+        leaf sync {
+          type boolean;
+          default true;
+        }
+      }
+    }
+  }
   
   /*
    * Remote Procedure Operations
    */
-  rpc transform {
-    description
-      "Transforms input JSON or JS object source into forge:core-essence data model.";
-    input {
-      anydata source {
-        description "JSON text or JS object representing package.json content";
-        mandatory true;
-      }
-    }
-    output {
-      uses forge:core-essence;
-    }
+  rpc create {
+    
   }
 }

@@ -124,6 +124,7 @@ module node-package-manager {
           }
           list dependency {
             key "name version";
+            
             leaf name {
               type npm:package-name;
               mandatory true;
@@ -135,6 +136,14 @@ module node-package-manager {
             leaf-list dependents {
               type npm:package-name;
             }
+          }
+        }
+      }
+      action extract {
+        input {
+          leaf dest {
+            type meta:file-name;
+            mandatory true;
           }
         }
       }
@@ -290,6 +299,7 @@ module node-package-manager {
               max-elements 50;
             }
           }
+          mandatory true;
         }
         leaf filter {
           type enumeration {

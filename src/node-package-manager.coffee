@@ -30,10 +30,6 @@ module.exports = require('../schema/node-package-manager.yang').bind {
 
   'feature(remote-registry)': -> @content ?= registry
   
-  'grouping(packages-list)/package/serialize': ->
-    manifest = @parent.toJSON(false)
-    # TODO need to convert back to package.json format
-
   'grouping(packages-list)/package/scan': ->
     { name, version, dependencies } = pkg = @get('..')
     main = path.normalize pkg.main.source
@@ -59,7 +55,9 @@ module.exports = require('../schema/node-package-manager.yang').bind {
         pkg.scanned = true
 
       requires = dependencies.$("required[used = true()]")
-      requires = [ requires ] if requires? and not Array.isArray requires
+      return valid: true, dependency: [] unless requires?
+      
+      requires = [ requires ] unless Array.isArray requires
       res = yield @in('/registry/query').do
         package: requires
         filter: 'latest'
@@ -89,6 +87,24 @@ module.exports = require('../schema/node-package-manager.yang').bind {
       debug? "[scan(#{name}@#{version})] requires #{requires.length} dependencies: #{requires.map (x) -> x.name}"
       valid: true
       dependency: requires
+
+  'grouping(packages-list)/package/extract': ->
+    { dest } = @input
+    pkg = @get('..')
+    @output = co =>
+      debug? "[extract(#{pkg.name}@#{pkg.version})] using #{pkg.source}"
+      res = yield pkg.scan()
+      archive = @get(pkg.source)
+      yield archive.extract dest: dest, filter: { tagged: true }
+      dest = path.join dest, 'node_modules'
+      for dep in res.dependency
+        debug? "[extract(#{pkg.name}@#{pkg.version})] unpacking #{dep.name} #{dep.version}"
+        depkg = @get("/npm:registry/package/#{dep.name}+#{dep.version}")
+        yield depkg.$('extract',true).do dest: path.join dest, dep.name
+    
+  'grouping(packages-list)/package/serialize': ->
+    manifest = @parent.toJSON(false)
+    # TODO need to convert back to package.json format
 
   'grouping(source-archive)/resolve': ->
     name = @input
@@ -265,6 +281,7 @@ module.exports = require('../schema/node-package-manager.yang').bind {
       }
 
   '/registry/query': ->
+    debug? @input
     pkgs = @input.package ? [ @input ]
     @output = co =>
       if @input.sync then yield @in('/npm:registry/sync').do package: pkgs
