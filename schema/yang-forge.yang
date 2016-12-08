@@ -27,10 +27,8 @@ module yang-forge {
     description "Initial revision";
   }
 
-  typedef yang-module-schema {
-    type string {
-      pattern '^module [-\w]+';
-    }
+  typedef core-identifier {
+    type npm:package-name;
   }
   
   /*
@@ -38,41 +36,35 @@ module yang-forge {
    */
   grouping core-essence {
     description
-      "The core essence of the module contained in the package.";
+      "The core essence of a software module.";
     leaf id {
-      config false;
       type yang:uuid;
     }
-    leaf package {
+    leaf main {
       type leafref {
-        path "/npm:registry/package/id";
-      }
-      mandatory true;
-    }
-    leaf source {
-      type leafref {
-        path "/npm:registry/source/id";
-      }
-      mandatory true;
-    }
-    leaf-list dependency {
-      type leafref {
-        path "/forge:registry/core/id";
+        path "../module/tag";
       }
     }
-    leaf-list dependent {
-      type leafref {
-        path "/forge:registry/core/id";
-      }
+    list module {
+      
     }
-    list model {
-      key name;
-      leaf name {
-        type yang:yang-identifier;
-      }
-      leaf source {
-        type meta:file-name;
-      }
+    list submodule {
+      
+    }
+    list extension {
+      
+    }
+    list typedef {
+      
+    }
+    action compose {
+      
+    }
+    action import {
+      
+    }
+    action export {
+      
     }
   }
   grouping cores-list {
@@ -82,37 +74,41 @@ module yang-forge {
     }
   }
   /*
-   * Configuration Data Node Extensions
+   * Augment external configuration data nodes
    */
-  augment "/npm:registry/package" {
-    action load {
-      output {
-
-      }
-    }
-  }
+  
   /*
-   * Configuration Data Nodes
+   * Operational state data nodes
    */
   container store {
+    config false;
     uses cores-list;
-    action import {
-      description
-        "Imports matching NPM package(s) into the store";
-      input {
-        uses npm:package-selection;
-        leaf sync {
-          type boolean;
-          default true;
-        }
-      }
-    }
   }
   
   /*
-   * Remote Procedure Operations
+   * Remote procedure operations
    */
+  rpc import {
+    description
+      "Imports generated core(s) of matching NPM package(s) into the runtime store";
+    input {
+      uses npm:package-selection;
+      leaf sync {
+        type boolean;
+        default true;
+      }
+    }
+    output {
+      leaf-list cores {
+        type instance-identifier;
+      }
+    }
+  }
   rpc create {
-    
+    output {
+      container core {
+        uses forge:core-essence;
+      }
+    }
   }
 }

@@ -13,7 +13,7 @@ module node-package-manager {
   contact
     "Peter K. Lee <peter@corenova.com>";
   description
-    "This module provides model-driven abstractions for Node.js Package Manager Registry";
+    "This module provides model-driven abstractions for Node.js Package Manager";
   revision 2016-11-08 {
     description
       "Initial revision.";
@@ -44,11 +44,11 @@ module node-package-manager {
         type instance-identifier;
       }
     }
-    leaf created {
+    leaf created-on {
       config false;
       type yang:date-and-time;
     }
-    leaf modified {
+    leaf modified-on {
       config false;
       type yang:date-and-time;
     }
@@ -107,6 +107,9 @@ module node-package-manager {
             default false;
           }
         }
+      }
+      leaf published-on {
+        type yang:date-and-time;
       }
       leaf source {
         type instance-identifier;

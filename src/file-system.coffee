@@ -14,9 +14,9 @@ module.exports = require('../schema/file-system.yang').bind {
     @output = @in(store).in('read').do name
 
   # TODO: this should perform implicit 'extract' if @input.file is specified
-  'grouping(archive)/read': ->
+  'grouping(archive)/read': (target) ->
     { name, store, directory } = @get('..')
-    name = path.join name, @input if @input
+    name = path.join name, target if target?
     if store?
       debug? "[read(#{name})] retrieving from #{store}"      
       @output = @in(store).in('read').do name

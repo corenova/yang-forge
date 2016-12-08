@@ -106,8 +106,7 @@ module.exports = require('../schema/node-package-manager.yang').bind {
     manifest = @parent.toJSON(false)
     # TODO need to convert back to package.json format
 
-  'grouping(source-archive)/resolve': ->
-    name = @input
+  'grouping(source-archive)/resolve': (name) ->
     files = @in('../file')
     # TODO: handle case where 'name' is pointing at a directory with package.json
     for check in [ name, name+'.js', path.join(name,'index.js') ]
@@ -174,11 +173,11 @@ module.exports = require('../schema/node-package-manager.yang').bind {
     .then (stat) -> downloads.content = stat
 
   '/registry/project/latest': ->
-    modified = @get('../modified')
+    modified = @get('../modified-on')
     @content = @get("../release[timestamp = '#{modified}']/version")
-  '/registry/project/created': ->
+  '/registry/project/created-on': ->
     @content ?= @get('../release[1]').timestamp
-  '/registry/project/modified': ->
+  '/registry/project/modified-on': ->
     releases = @get('../release')
     @content = releases[releases.length-1].timestamp
   '/registry/project/releases-count': ->
@@ -189,6 +188,10 @@ module.exports = require('../schema/node-package-manager.yang').bind {
     unless @content?
       match = @in("/npm:registry/package/#{name}+#{version}")
       @content = "#{match.path}" if match?
+
+  '/registry/package/published-on': ->
+    { name, version } = @get('..')
+    @content ?= @get("/npm:registry/project/#{name}/release/#{version}/timestamp")
 
   '/registry/package/source': ->
     shasum = @get("../dist/shasum")
@@ -281,7 +284,6 @@ module.exports = require('../schema/node-package-manager.yang').bind {
       }
 
   '/registry/query': ->
-    debug? @input
     pkgs = @input.package ? [ @input ]
     @output = co =>
       if @input.sync then yield @in('/npm:registry/sync').do package: pkgs
