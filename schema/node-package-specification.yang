@@ -34,7 +34,7 @@ submodule node-package-specification {
   }
   typedef local-file-dependency {
     type string {
-      pattern '^(file:|[.~/]|\.\.)';
+      pattern '^(file:|[./\\]|\.\.|~[a-zA-Z])';
     }
   }
   typedef dependency-match {

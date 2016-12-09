@@ -39,6 +39,10 @@ module node-package-manager {
       leaf timestamp {
         type yang:date-and-time;
       }
+      leaf stable {
+        config false;
+        type boolean;
+      }
       leaf manifest {
         config false;
         type instance-identifier;
@@ -148,6 +152,32 @@ module node-package-manager {
             type meta:file-name;
             mandatory true;
           }
+        }
+        output {
+          grouping extracted-module {
+            leaf name {
+              type npm:package-name;
+              mandatory true;
+            }
+            leaf version {
+              type meta:semantic-version;
+              mandatory true;
+            }
+            leaf-list files {
+              type meta:file-name;
+            }
+          }
+          grouping dependency-modules-list {
+            list module {
+              key "name version";
+              uses extracted-module;
+              uses dependency-modules-list {
+                when "../name";
+              }
+            }
+          }
+          uses extracted-module;
+          uses dependency-modules-list;
         }
       }
       action serialize {

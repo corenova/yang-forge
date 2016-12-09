@@ -42,14 +42,15 @@ module.exports = require('../schema/file-system.yang').bind {
         for k, v of filter
           return false if file[k] isnt v 
         return true
+    extractFile = co.wrap (file) ->
+      yield mkdirp path.join(dest, path.dirname file.name)
+      res = yield archive.read file.name
+      yield fs.writeFile path.join(dest, file.name), res.data
+      return file.name
     debug? "[extract(#{name})] #{files.length} files to #{dest}"
     @output = co =>
       yield mkdirp dest
-      yield files.map co.wrap (file) ->
-        yield mkdirp path.join(dest, path.dirname file.name)
-        res = yield archive.read file.name
-        yield fs.writeFile path.join(dest, file.name), res.data
-        return file.name
+      return files: yield files.map extractFile
   
   'grouping(archive)/files-count': ->
     @content ?= @get('../file')?.length
