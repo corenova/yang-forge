@@ -14,7 +14,7 @@ module.exports = require('../schema/yang-forge.yang').bind {
     debug? "[Core:compose] using #{pkg.name}@#{pkg.version}"
     Core = @get('..')
     # TODO: check if obj is Yang
-    main = Yang.compose exports: obj, tag: 'main'
+    main = Yang.compose { exports: obj }, tag: 'main'
 
     contact = switch
       when pkg.author?.value? then pkg.author.value
@@ -26,8 +26,10 @@ module.exports = require('../schema/yang-forge.yang').bind {
       when pkg.repository?.url?   then pkg.repository.url
       when pkg.dist?.tarball?     then pkg.dist.tarball
       else pkg.version
-    
-    @output = (Core """
+
+    dependencies = pkg.dependencies.$('required[used = true()]/name') ? []
+    dependencies = [ dependencies ] unless Array.isArray dependencies
+    @output = (Core.parse """
       module #{pkg.name} {
         namespace "urn:corenova:yang:#{pkg.name}";
         prefix #{pkg.name};
@@ -38,25 +40,26 @@ module.exports = require('../schema/yang-forge.yang').bind {
         contact "#{contact}";
         reference "#{reference}";
       }
-    """).extends main
+    """)
+    .extends dependencies.map (x) -> Core.parse "import #{x} { prefix #{x}; }"
+    .extends main
 
   'grouping(core-essence)/import': (pkg) ->
-    debug? "[Core:import] using #{pkg.name}@#{pkg.version}"
+    pkgkey = pkg.name + '@' + pkg.version
+    debug? "[Core:import] using #{pkgkey}"
     Core = @get('..')
-    dest = path.resolve '/tmp/yang-forge', "#{pkg.name}@#{pkg.version}"
+    dest = path.resolve '/tmp/yang-forge', pkgkey
+
+    # TODO: importDependency should perform forge:import
     importDependency = co.wrap (dep) =>
-      debug? "[importDependency] #{dep.name}"
-      # for sub in dep.module ? []
-      #   debug? "[importDependency] checking sub #{sub.name}"
-      #   yield importDependency sub
-      #yield dep.module.map importDependency if dep.module?
-      #return Core if Core.module?.some (x) -> x.tag is dep.name
+      debug? "[importDependency] #{dep.name}@#{dep.version}"
       try main = require path.join dest, 'node_modules', dep.name
       catch e
         @throw "unable to require module for #{dep.name}@#{dep.version} from #{dest}", e
       depkg = @get("/npm:registry/package/#{dep.name}+#{dep.version}")
       schema = yield Core.compose main, depkg
-      debug? "[importDependency] got schema for #{dep.name}"
+      debug? "[importDependency] got schema:"
+      debug? schema
       return Core.use schema
       
     @output = co =>
@@ -65,8 +68,10 @@ module.exports = require('../schema/yang-forge.yang').bind {
       catch e
         # broken build?
         @throw "unable to require module for #{pkg.name}@#{pkg.version} from #{dest}", e
-      yield extracted.module.map importDependency
+      yield importDependency dep for dep in extracted.module
       schema = yield Core.compose main, pkg
+      debug? "[Core:import] got schema:"
+      debug? schema
       return Core.use schema
 
   '/forge:store': -> @content ?= core: []
@@ -74,11 +79,11 @@ module.exports = require('../schema/yang-forge.yang').bind {
   import: ->
     @output = co =>
       res = yield @in('/npm:registry/query').do @input
-      cores = yield res.package.map (pkg) => @in('/forge:create').do pkg
+      cores = yield res.package.map (pkg) =>
+        pkg = @get("/npm:registry/package/#{pkg.name}+#{pkg.version}")
+        @in('/forge:create').do pkg
       cores = cores.map (x) -> x.core
       debug? "[import] merging #{cores.length} core(s) into internal store"
-      cores.forEach (core) ->
-        debug? core.module
       res = @in('/forge:store/core').merge cores, force: true
       return cores: res.content.map (core) -> "#{core.__.path}"
   
@@ -88,8 +93,7 @@ module.exports = require('../schema/yang-forge.yang').bind {
       class Core extends Yang
         @module: []
     @output = co =>
-      debug? "[create] using Core with existing #{Core.module.length} module(s)"
       yield Core.import pkg
-      debug? "[create] Core now contains #{Core.module.length} module(s)"
+      debug? "[create] Core contains #{Core.module.length} module(s)"
       return core: Core
 }

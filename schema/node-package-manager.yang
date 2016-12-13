@@ -131,14 +131,11 @@ module node-package-manager {
           }
           list dependency {
             key "name version";
-            
             leaf name {
               type npm:package-name;
-              mandatory true;
             }
             leaf version {
               type meta:semantic-version;
-              mandatory true;
             }
             leaf-list dependents {
               type npm:package-name;
@@ -319,7 +316,7 @@ module node-package-manager {
     }
     action query {
       description
-        "Query NPM registry for information about package(s)";
+        "Query NPM registry for available package(s)";
       input {
         choice select {
           case single {
@@ -348,7 +345,15 @@ module node-package-manager {
         }
       }
       output {
-        uses npm:packages-list;
+        list package {
+          key "name version";
+          leaf name {
+            type npm:package-name;
+          }
+          leaf version {
+            type meta:semantic-version;
+          }
+        }
       }
     }
   }

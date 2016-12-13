@@ -29,19 +29,19 @@ scripts2list = (obj) ->
 module.exports = require('../schema/node-package-manager.yang').bind {
 
   'feature(remote-registry)': -> @content ?= registry
-  
+
   'grouping(packages-list)/package/scan': ->
     { name, version, dependencies } = pkg = @get('..')
-    main = path.normalize pkg.main.source
-    debug? "[scan(#{name}@#{version})] using '#{main}' from #{pkg.source}"
     @output = co =>
       unless pkg.scanned
+        main = path.normalize pkg.main.source
+        debug? "[scan(#{name}@#{version})] using '#{main}' from #{pkg.source}"
         archive = @get(pkg.source)
         yield archive.tag files: [ 'package.json' ]
         main = yield archive.resolve main
         yield main.scan tag: true
 
-        # TODO: may be a single match?
+        # TODO: may be a single match? (should be atleast 2 in all cases...)
         seen = {}
         deps = archive.$("file[scanned = true()]/imports")?.filter (x) -> x?
         deps = [].concat(deps...).filter (x) -> not seen[x] and seen[x] = true
@@ -54,6 +54,7 @@ module.exports = require('../schema/node-package-manager.yang').bind {
         dependencies.missing = missing
         pkg.scanned = true
 
+      debug? "[scan(#{name}@#{version})] discovering required dependencies"
       requires = dependencies.$("required[used = true()]")
       return valid: true, dependency: [] unless requires?
 
@@ -64,20 +65,21 @@ module.exports = require('../schema/node-package-manager.yang').bind {
         sync: false
       requires = {}
       for dependency in res.package
-        key = "#{dependency.name}@#{dependency.version}"
-        continue if requires[key]?
-        requires[key] = [ name ]
+        key = dependency['@key']
         # scan this dependency
-        # TODO: scanning results from above query doesn't preserve the scanned: true
-        res = yield dependency.scan()
-        for subdep in res.dependency
-          subkey = "#{subdep.name}@#{subdep.version}"
-          debug? "[scan] checking #{subkey}..."
-          requires[subkey] ?= []
-          requires[subkey].push subdep.dependents...
+        unless key of requires
+          res = yield @get("/npm:registry/package/#{key}").scan()
+          for subdep in res.dependency
+            subkey = subdep['@key']
+            requires[subkey] ?= []
+            requires[subkey].push subdep.dependents...
+        requires[key] ?= []
+        requires[key].push name
+        # requires[key] = [ name ]
+          
       requires = (
         for k, v of requires
-          [ n, ver ] = k.split('@')
+          [ n, ver ] = k.split('+')
           name: n
           version: ver
           dependents: v
@@ -131,7 +133,7 @@ module.exports = require('../schema/node-package-manager.yang').bind {
       try requires = detect(file.data).filter (x) -> not seen[x] and seen[x] = true
       catch e then @throw "unable to detect dependencies on #{entry.name}"
         
-      debug? "[scan(#{entry.name})] requires: #{requires}"
+      debug? "[scan(#{entry.name})] requires: #{requires}" if requires?.length
       imports  = []
       includes = []
       matches = []
@@ -294,7 +296,7 @@ module.exports = require('../schema/node-package-manager.yang').bind {
       }
 
   '/registry/query': ->
-    debug? "[query] enter"
+    debug? "[query] enter with sync: #{@input.sync}"
     pkgs = @input.package ? [ @input ]
     @output = co =>
       if @input.sync then yield @in('/npm:registry/sync').do package: pkgs
@@ -311,10 +313,7 @@ module.exports = require('../schema/node-package-manager.yang').bind {
         res = switch @input.filter
           when 'earliest' then @get(revs[0].manifest)
           when 'latest'   then @get(revs[revs.length-1].manifest)
-          else revs.map (rev) =>
-            debug? rev.version
-            debug? rev.manifest
-            @get(rev.manifest)
+          else revs.map (rev) => @get(rev.manifest)
         if @input.filter is 'all'
           debug? "[query] #{name}@#{match} matched #{res.length} releases"
           matches.push res...
