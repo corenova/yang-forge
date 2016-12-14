@@ -124,6 +124,12 @@ module node-package-manager {
         default false;
       }
       action scan {
+        input {
+          leaf force {
+            type boolean;
+            default false;
+          }
+        }
         output {
           leaf valid {
             type boolean;
@@ -148,6 +154,10 @@ module node-package-manager {
           leaf dest {
             type meta:file-name;
             mandatory true;
+          }
+          leaf dependencies {
+            type boolean;
+            default true;
           }
         }
         output {
@@ -257,6 +267,33 @@ module node-package-manager {
       default "latest";
     }
   }
+  grouping package-query-input {
+    choice select {
+      case single {
+        uses npm:package-selection;
+      }
+      case multiple {
+        list package {
+          uses npm:package-selection;
+          min-elements 1;
+          max-elements 50;
+        }
+      }
+      mandatory true;
+    }
+    leaf filter {
+      type enumeration {
+        enum earliest;
+        enum latest;
+        enum all;
+      }
+      default all;
+    }
+    leaf sync {
+      type boolean;
+      default false;
+    }
+  }
   /*
    * Configuration data nodes
    */
@@ -318,31 +355,7 @@ module node-package-manager {
       description
         "Query NPM registry for available package(s)";
       input {
-        choice select {
-          case single {
-            uses npm:package-selection;
-          }
-          case multiple {
-            list package {
-              uses npm:package-selection;
-              min-elements 1;
-              max-elements 50;
-            }
-          }
-          mandatory true;
-        }
-        leaf filter {
-          type enumeration {
-            enum earliest;
-            enum latest;
-            enum all;
-          }
-          default all;
-        }
-        leaf sync {
-          type boolean;
-          default false;
-        }
+        uses npm:package-query-input;
       }
       output {
         list package {
@@ -383,6 +396,20 @@ module node-package-manager {
     }
     output {
       uses npm:package-manifest;
+    }
+  }
+
+  rpc install {
+    input {
+      uses npm:package-query-input;
+      leaf dest {
+        type meta:file-name;
+        default 'node_modules2';
+      }
+      leaf dependencies {
+        type boolean;
+        default true;
+      }
     }
   }
 }

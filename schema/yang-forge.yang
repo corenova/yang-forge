@@ -40,49 +40,45 @@ module yang-forge {
     leaf id {
       type yang:uuid;
     }
-    leaf main {
-      type leafref {
-        path "../module/tag";
+    list module {
+      key "tag";
+      leaf tag {
+        type yang:yang-identifier;
       }
     }
-    list module {
-      
-    }
-    list submodule {
-      
-    }
-    list extension {
-      
-    }
-    list typedef {
-      
-    }
-    action compose {
-      
-    }
-    action import {
-      
-    }
-    action export {
-      
-    }
-  }
-  grouping cores-list {
-    list core {
-      key "id";
-      uses forge:core-essence;
-    }
+    container exports;
   }
   /*
    * Augment external configuration data nodes
    */
+  augment "/npm:registry/package" {
+    container core {
+      uses forge:core-essence;
+    }
+    action build {
+      description
+        "Generate a core for this package entry and returns the primary module's schema";
+      input {
+        leaf force {
+          type boolean;
+          default false;
+        }
+      }
+      output {
+        
+      }
+    }
+  }
   
   /*
    * Operational state data nodes
    */
   container store {
     config false;
-    uses cores-list;
+    list core {
+      key 'id';
+      uses forge:core-essence;
+    }
   }
   
   /*
@@ -90,7 +86,7 @@ module yang-forge {
    */
   rpc import {
     description
-      "Imports generated core(s) of matching NPM package(s) into the runtime store";
+      "Imports matching NPM package(s) into the local registry and returns the generated core(s)";
     input {
       uses npm:package-selection;
       leaf sync {
@@ -100,7 +96,7 @@ module yang-forge {
     }
     output {
       leaf-list cores {
-        type instance-identifier;
+        type string;
       }
     }
   }
