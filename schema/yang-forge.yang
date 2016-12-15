@@ -88,11 +88,7 @@ module yang-forge {
     description
       "Imports matching NPM package(s) into the local registry and returns the generated core(s)";
     input {
-      uses npm:package-selection;
-      leaf sync {
-        type boolean;
-        default true;
-      }
+      uses npm:package-selection-choice;
     }
     output {
       leaf-list cores {

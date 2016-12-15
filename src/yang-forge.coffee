@@ -26,10 +26,13 @@ module.exports = require('../schema/yang-forge.yang').bind {
       debug? "[forge:build] generating Core for #{name}@#{version}"
       class Core extends Yang
         @module: []
-              
-      res = yield extracted.module.map (m) =>
-        @in("/npm:registry/package/#{m.name}+#{m.version}/forge:build").do()
-      Core.use schema for schema in res when schema instanceof Yang
+
+      # schedule dependency core generation to take place async in the background
+      process.nextTick co.wrap =>
+        res = yield extracted.module.map (m) =>
+          @in("/npm:registry/package/#{m.name}+#{m.version}/forge:build").do()
+        Core.use schema for schema in res when schema instanceof Yang
+        Core.exports.compile() # we compile the primary schema once all dependency schemas are loaded
 
       contact = switch
         when pkg.author?.value? then pkg.author.value
@@ -57,8 +60,8 @@ module.exports = require('../schema/yang-forge.yang').bind {
           contact "#{contact}";
           reference "#{reference}";
         }
-      """)
-      .extends dependencies.map (x) -> Core.parse "import #{x} { prefix #{x}; }"
+      """, compile: false)
+      .extends dependencies.map (x) -> Core.parse "import #{x} { prefix #{x}; }", compile: false
       .extends Yang.compose { exports: main }, tag: 'main'
       debug? "[forge:build] generated Core.exports for #{name}@#{version}"
       pkg.$('forge:core',true).set Core, force: true
@@ -70,6 +73,7 @@ module.exports = require('../schema/yang-forge.yang').bind {
   import: ->
     @output = co =>
       start = new Date
+      @input.sync = true
       res = yield @in('/npm:registry/query').do @input
       cores = yield res.package.map (pkg) =>
         @in("/npm:registry/package/#{pkg.name}+#{pkg.version}/forge:build").do()

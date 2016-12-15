@@ -31,6 +31,20 @@ module node-package-manager {
     leaf name {
       type npm:package-name;
     }
+    leaf created-on {
+      config false;
+      type yang:date-and-time;
+    }
+    leaf modified-on {
+      config false;
+      type yang:date-and-time;
+    }
+    leaf latest {
+      config false;
+      type leafref {
+        path "../release/version";
+      }
+    }
     list release {
       key "version";
       leaf version {
@@ -46,20 +60,6 @@ module node-package-manager {
       leaf manifest {
         config false;
         type instance-identifier;
-      }
-    }
-    leaf created-on {
-      config false;
-      type yang:date-and-time;
-    }
-    leaf modified-on {
-      config false;
-      type yang:date-and-time;
-    }
-    leaf latest {
-      config false;
-      type leafref {
-        path "../release/version";
       }
     }
     leaf releases-count {
@@ -126,6 +126,10 @@ module node-package-manager {
       action scan {
         input {
           leaf force {
+            type boolean;
+            default false;
+          }
+          leaf sync {
             type boolean;
             default false;
           }
@@ -252,29 +256,30 @@ module node-package-manager {
       uses npm:source-archive;
     }
   }
-  grouping package-selection {
-    leaf name {
-      type npm:package-name;
-      mandatory true;
-    }
-    leaf match {
-      type union {
-        type meta:semantic-version-match;
-        type string {
-          pattern "^latest$";
-        }
+  grouping package-selection-choice {
+    grouping package-selection {
+      leaf name {
+        type npm:package-name;
+        mandatory true;
       }
-      default "latest";
+      leaf match {
+        type union {
+          type meta:semantic-version-match;
+          type string {
+            pattern "^latest$";
+          }
+        }
+        default "latest";
+      }
     }
-  }
-  grouping package-query-input {
     choice select {
       case single {
-        uses npm:package-selection;
+        uses package-selection;
       }
       case multiple {
         list package {
-          uses npm:package-selection;
+          key "name match";
+          uses package-selection;
           min-elements 1;
           max-elements 50;
         }
@@ -288,10 +293,6 @@ module node-package-manager {
         enum all;
       }
       default all;
-    }
-    leaf sync {
-      type boolean;
-      default false;
     }
   }
   /*
@@ -325,6 +326,7 @@ module node-package-manager {
       description
         "Synchronize with NPM registry for information about package(s)";
       input {
+        uses npm:package-selection-choice;
         leaf host {
           type inet:uri;
           default "registry.npmjs.org";
@@ -333,11 +335,9 @@ module node-package-manager {
           type boolean;
           default false;
         }
-        list package {
-          key "name match";
-          uses npm:package-selection;
-          min-elements 1;
-          max-elements 50;
+        leaf recursive {
+          type boolean;
+          default false;
         }
       }
       output {
@@ -353,9 +353,15 @@ module node-package-manager {
     }
     action query {
       description
-        "Query NPM registry for available package(s)";
+        "Query local registry for matching package(s)";
       input {
-        uses npm:package-query-input;
+        uses npm:package-selection-choice;
+        leaf sync {
+          description
+            "When enabled, will perform sync with remote NPM registry";
+          type boolean;
+          default false;
+        }
       }
       output {
         list package {
@@ -399,17 +405,16 @@ module node-package-manager {
     }
   }
 
-  rpc install {
+  rpc view {
+    description
+      "View latest information about a specific package.";
     input {
-      uses npm:package-query-input;
-      leaf dest {
-        type meta:file-name;
-        default 'node_modules2';
+      leaf name {
+        type npm:package-name;
       }
-      leaf dependencies {
-        type boolean;
-        default true;
-      }
+    }
+    output {
+      uses npm:project
     }
   }
 }

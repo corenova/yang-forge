@@ -54,17 +54,18 @@ module.exports = require('../schema/node-package-manager.yang').bind {
           d = dependencies.$("required/#{dep}")
           if d? then d.used = true else missing.push dep
         dependencies.missing = missing
-        pkg.scanned = true
 
       debug? "[scan(#{name}@#{version})] discovering required dependencies"
       requires = dependencies.$("required[used = true()]")
       return valid: true, dependency: [] unless requires?
 
       requires = [ requires ] unless Array.isArray requires
+      if @input.sync
+        yield @in('/registry/sync').do package: requires, recursive: true
+        
       res = yield @in('/registry/query').do
         package: requires
         filter: 'latest'
-        sync: false
 
       requires = {}
       for dependency in res.package
@@ -87,28 +88,31 @@ module.exports = require('../schema/node-package-manager.yang').bind {
           version: ver
           dependents: v
       )
+      pkg.scanned = true
       debug? "[scan(#{name}@#{version})] requires #{requires.length} dependencies: #{requires.map (x) -> x.name}"
       debug? "[scan(#{name}@#{version})] took #{(new Date - start)/1000} seconds"
-      valid: true
-      dependency: requires
+      return {
+        valid: true
+        dependency: requires
+      }
 
   'grouping(packages-list)/package/extract': ->
     { dest, dependencies } = @input
-    pkg = @get('..')
+    { name, version } = pkg = @get('..')
     @output = co =>
-      debug? "[extract(#{pkg.name}@#{pkg.version})] using #{pkg.source}"
-      scanned = yield pkg.scan()
+      debug? "[extract(#{name}@#{version})] using #{pkg.source}"
+      scanned = yield pkg.scan sync: dependencies
       archive = @get(pkg.source)
       extracted = yield archive.extract dest: dest, filter: { tagged: true }
       if dependencies
-        debug? "[extract(#{pkg.name}@#{pkg.version})] unpacking #{scanned.dependency.length} dependencies"
+        debug? "[extract(#{name}@#{version})] unpacking #{scanned.dependency.length} dependencies"
         dest = path.join dest, 'node_modules'
         deps = yield scanned.dependency.map (dep) =>
-          debug? "[extract(#{pkg.name}@#{pkg.version})] unpacking #{dep.name} #{dep.version}"
+          debug? "[extract(#{name}@#{version})] unpacking #{dep.name} #{dep.version}"
           depkg = @get("/npm:registry/package/#{dep.name}+#{dep.version}")
           depkg.$('extract',true).do dependencies: false, dest: path.join dest, dep.name
-      name: pkg.name
-      version: pkg.version
+      name: name
+      version: version
       files: extracted.files
       module: deps ? []
     
@@ -243,24 +247,28 @@ module.exports = require('../schema/node-package-manager.yang').bind {
     # recursively discover new packages from registry
     checked = {}
     fetched = {}
-    discover = co.wrap (pkgs...) ->
+    discover = co.wrap (pkgs..., recursive=true) ->
       pkgs = pkgs.map (pkg) ->
         { name, match } = pkg
         unless force or match is 'latest'
-          exists = projects.get(name)
-          if exists? and semver.satisfies(exists.latest, match)
-            unless semver.valid(match)
-              match += " > #{exists.latest}"
-            else
-              checked["#{name}@#{match}"] = true
+          project = projects.get(name)
+          if project? then switch
+            when semver.valid(match) # explicit version
+              return if project.$("release/#{match}/manifest")?
+            when semver.satisfies(project.latest, match)
+              match += " > #{project.latest}"
+            when semver.gtr(project.latest, match)
+              return if project.release.every (rev) ->
+                not semver.satisfies(rev.version, match) or rev.manifest?
         "#{name}@#{match}"
-      pkgs = pkgs.filter (pkg) -> not checked[pkg] and checked[pkg] = true
-      debug? "[sync] checking npm registry for #{pkgs}"
+      pkgs = pkgs.filter (pkg) -> pkg? and not checked[pkg] and checked[pkg] = true
+      debug? "[sync:discover] checking npm registry for #{pkgs}"
       pkgs = yield registry.view pkgs...
+      debug? "[sync:discover] fetched #{pkgs.length} package manifests from npm registry"
       pkgs = pkgs.filter (pkg) ->
         key = "#{pkg.name}@#{pkg.version}"
         not fetched[key] and fetched[key] = true
-      debug? "[sync] match #{pkgs.length} package manifests from npm registry"
+      debug? "[sync:discover] found #{pkgs.length} unique package manifests"
       pkgs = yield pkgs.map (pkg) -> parse.do source: pkg
       deps = pkgs.reduce ((a, pkg) ->
         return a unless pkg.dependencies.required?
@@ -268,12 +276,13 @@ module.exports = require('../schema/node-package-manager.yang').bind {
           try return false if isLocal x.match
           return true
       ), []
-      return pkgs unless deps.length
+      return pkgs unless deps.length and recursive
       return pkgs.concat yield discover deps...
       
     @output = co =>
       start = new Date
-      pkgs = yield discover @input.package...
+      pkgs = @input.package ? [ @input ]
+      pkgs = yield discover pkgs..., @input.recursive
       pkgs = pkgs.filter (pkg) -> not packages.in("#{pkg.name}+#{pkg.version}")?
       debug? "[sync] found #{pkgs.length} new package manifests"
       srcs = yield registry.fetch cachedir, pkgs...
@@ -308,10 +317,10 @@ module.exports = require('../schema/node-package-manager.yang').bind {
 
   '/registry/query': ->
     debug? "[query] enter with sync: #{@input.sync}"
-    pkgs = @input.package ? [ @input ]
     @output = co =>
       start = new Date
-      if @input.sync then yield @in('/npm:registry/sync').do package: pkgs
+      if @input.sync then yield @in('/npm:registry/sync').do @input
+      pkgs = @input.package ? [ @input ]
       matches = []
       for { name, match } in pkgs
         project = @get("/npm:registry/project/#{name}")
@@ -392,12 +401,8 @@ module.exports = require('../schema/node-package-manager.yang').bind {
         publishing: src.publishConfig
       extras: extras
 
-  install: ->
+  view: (name) ->
     @output = co =>
-      start = new Date
-      res = yield @in('/npm:registry/query').do @input
-      yield res.package.map (pkg) =>
-        pkg = @get("/npm:registry/package/#{pkg.name}+#{pkg.version}")
-        pkg.extract @input
-      console.log "[install] took #{(new Date - start)/1000} seconds"
+      yield @in('/npm:registry/query').do name: name, sync: true
+      @get("/npm:registry/project/#{name}")
 }
