@@ -186,6 +186,10 @@ module.exports = require('../schema/node-package-manager.yang').bind {
     registry.stat @get('../name')
     .then (stat) -> downloads.content = stat
 
+  '/registry/project/description': ->
+    proj = @get('..')
+    manifest = @get(proj.release.$(proj.latest).manifest)
+    @content = manifest.description
   '/registry/project/latest': ->
     stables = @get('../release[stable = true()]')
     return unless stables?

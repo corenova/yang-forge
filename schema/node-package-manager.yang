@@ -31,6 +31,9 @@ module node-package-manager {
     leaf name {
       type npm:package-name;
     }
+    leaf description {
+      type meta:description;
+    }
     leaf created-on {
       config false;
       type yang:date-and-time;
@@ -414,7 +417,7 @@ module node-package-manager {
       }
     }
     output {
-      uses npm:project
+      uses npm:project;
     }
   }
 }
