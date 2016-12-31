@@ -392,6 +392,14 @@ module node-package-manager {
     }
   }
   /*
+   * Notifications
+   */
+  notification npm-registry-change {
+    description
+      "Generated when the set of packages in the internal registry has
+       changed.";
+  }
+  /*
    * Remote Procedure Operations
    */
   rpc parse {
