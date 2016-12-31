@@ -50,8 +50,8 @@ module.exports = require('../schema/yang-forge.yang').bind {
 
       debug? "[forge:build] generating Core.exports for #{name}@#{version}"
       Core.exports = (Core.parse """
-        module #{pkg.name} {
-          namespace "urn:corenova:yang:#{pkg.name}";
+        module #{pkg.owner}-#{pkg.name} {
+          namespace "urn:corenova:yang:#{pkg.owner}-#{pkg.name}";
           prefix #{pkg.name};
           yang-version 1.1;
 
@@ -61,7 +61,7 @@ module.exports = require('../schema/yang-forge.yang').bind {
           reference "#{reference}";
         }
       """, compile: false)
-      .extends dependencies.map (x) -> Core.parse "import #{x} { prefix #{x}; }", compile: false
+      .extends dependencies.map (x) -> Core.parse "import #{pkg.owner}-#{x} { prefix #{x}; }", compile: false
       .extends Yang.compose { exports: main }, tag: 'main'
       debug? "[forge:build] generated Core.exports for #{name}@#{version}"
       pkg.$('forge:core',true).set Core, force: true

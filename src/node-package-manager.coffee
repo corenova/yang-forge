@@ -1,6 +1,7 @@
 require 'yang-js'
 debug = require('debug')('yang-forge:npm') if process.env.DEBUG?
 co = require 'co'
+path = require 'path'
 semver = require 'semver'
 detect = require 'detective'
 registry = require './feature/remote-registry'
@@ -292,9 +293,15 @@ module.exports = require('../schema/node-package-manager.yang').bind {
       srcs = yield registry.fetch cachedir, pkgs...
 
       debug? "[sync] merging #{pkgs.length} package(s) into internal registry"
-      packages.merge pkgs, force: true
+      scans = packages.merge(pkgs, force: true).in('scan')
+      scans = [ scans ] unless Array.isArray scans
       debug? "[sync] merging #{srcs.length} source(s) into internal registry"
       sources.merge srcs, force: true
+
+      # trigger notification
+
+      process.nextTick co.wrap -> scans.forEach (f) -> f?.do sync: true
+      
       seen = {}
       projs = pkgs.filter (pkg) ->
         return false if projects.in(pkg.name)? or seen[pkg.name]
